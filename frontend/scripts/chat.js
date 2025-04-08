@@ -515,35 +515,49 @@ class ChatManager {
         this._scrollToBottom();
     }
     
+// Modification à apporter au fichier frontend/scripts/chat.js
     /**
      * Ajoute du texte à l'indicateur de frappe (pour le streaming)
      * @param {string} text - Texte à ajouter
      */
     _appendToTypingIndicator(text) {
         console.log(`Ajout au typing indicator: "${text}"`);
-        const typingTextEl = document.getElementById('typing-text');
-        const typingEl = document.getElementById('typing-indicator');
+        const typingIndicator = document.getElementById('typing-indicator');
         
-        if (typingTextEl && typingEl) {
-            // Ajouter le texte à l'élément caché qui stocke le contenu complet
-            typingTextEl.textContent += text;
-            
-            // Afficher une version visible du texte en cours
-            const visibleTextNode = typingEl.querySelector('.visible-text') || (() => {
-                const node = document.createElement('div');
-                node.className = 'visible-text';
-                node.style.display = 'block';
-                typingEl.appendChild(node);
-                return node;
-            })();
-            
-            visibleTextNode.textContent = typingTextEl.textContent;
-            
-            // Défiler vers le bas
-            this._scrollToBottom();
-        } else {
-            console.error("Element typing-text ou typing-indicator non trouvé!");
+        if (!typingIndicator) {
+            console.error("L'indicateur de frappe n'existe pas!");
+            this._showTypingIndicator(); // Recréer l'indicateur s'il n'existe pas
+            return this._appendToTypingIndicator(text); // Réessayer
         }
+        
+        // S'assurer que l'élément pour stocker le texte complet existe
+        let typingTextEl = document.getElementById('typing-text');
+        if (!typingTextEl) {
+            typingTextEl = document.createElement('div');
+            typingTextEl.id = 'typing-text';
+            typingTextEl.style.display = 'none';
+            typingIndicator.appendChild(typingTextEl);
+        }
+        
+        // Ajouter le texte à l'élément caché qui stocke le contenu complet
+        typingTextEl.textContent += text;
+        
+        // Obtenir ou créer l'élément pour le texte visible
+        let visibleTextEl = typingIndicator.querySelector('.visible-text');
+        if (!visibleTextEl) {
+            visibleTextEl = document.createElement('div');
+            visibleTextEl.className = 'visible-text';
+            typingIndicator.appendChild(visibleTextEl);
+        }
+        
+        // Afficher le conteneur de texte visible
+        visibleTextEl.style.display = 'block';
+        
+        // Mettre à jour le texte visible
+        visibleTextEl.textContent = typingTextEl.textContent;
+        
+        // Défiler vers le bas
+        this._scrollToBottom();
     }
 
     /**

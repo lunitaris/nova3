@@ -76,6 +76,8 @@ class WebSocketManager {
                 resolve(this.socket);
             };
             
+        // Modification à apporter au fichier frontend/scripts/websocket.js
+        // Améliorer le handler des messages WebSocket dans la méthode connectChat()
             this.socket.onmessage = (event) => {
                 try {
                     console.log("Raw WebSocket message received:", event.data);
@@ -91,9 +93,9 @@ class WebSocketManager {
                             }
                             break;
                         case 'token':
-                            console.log(`🔤 TOKEN received: "${data.content}"`);
                             if (this.streamingCallbacks.token) {
                                 this.streamingCallbacks.token(data.content);
+                                console.log(`🔤 TOKEN handled: "${data.content}"`);
                             } else {
                                 console.error("No token callback configured!");
                             }
@@ -101,12 +103,6 @@ class WebSocketManager {
                         case 'end':
                             console.log("🏁 END message received with content:", data.content);
                             if (this.streamingCallbacks.end) {
-                                // Important: s'assurer que le contenu est bien définit
-                                if (!data.content && data.conversation_id) {
-                                    // Si le contenu n'est pas défini, essayer de le récupérer d'une autre manière
-                                    console.warn("Message END reçu sans contenu");
-                                    // On laisse le callback gérer ce cas
-                                }
                                 this.streamingCallbacks.end(data);
                             } else {
                                 console.error("No end callback configured!");
