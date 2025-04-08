@@ -36,7 +36,13 @@ data/
 *.model
 *.h5
 ollama_models/
+
+# Ignore tout le dossier models
 models/
+# MAIS pas les fichiers .py dans models/ (comprends les éventuels sous dossiers)
+!models/**/*.py
+
+
 
 # Fichiers de logs et données générées
 *.log
