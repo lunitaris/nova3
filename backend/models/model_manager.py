@@ -24,22 +24,61 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
         """Initialise le handler avec un WebSocket optionnel."""
         self.websocket = websocket
         self.is_active = True
-        self.buffer = ""
         
-
     def on_llm_new_token(self, token: str, **kwargs) -> None:
         """Appelé à chaque nouveau token généré par le LLM."""
-        if self.websocket and self.is_active:
+        if not self.websocket or not self.is_active:
+            return
+            
+        try:
+            # La solution la plus simple : stocker les tokens et laisser le message de fin les envoyer
+            # Cette approche contourne le problème de boucle d'événements
+            
+            # Logger le token pour le débogage
+            logger.debug(f"Token généré: '{token}'")
+            
+            # Envoyer le token de façon synchrone (solution de contournement)
             try:
-                # Accumulate token in buffer and send if it contains a word or punctuation
-                self.buffer += token
+                import asyncio
+                loop = asyncio.get_event_loop()
+            except RuntimeError:
+                # Si pas de boucle d'événements, en créer une nouvelle
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+            
+            # Utiliser une approche qui ne bloque pas
+            if not loop.is_running():
+                # Exécuter directement si la boucle n'est pas en cours d'exécution
+                fut = asyncio.run_coroutine_threadsafe(self._send_token(token), loop)
+                # Attendre avec un court timeout
+                try:
+                    fut.result(timeout=0.1)
+                except:
+                    pass  # Ignorer les timeouts
+            else:
+                # Si la boucle est en cours d'exécution, planifier pour plus tard
+                loop.call_soon_threadsafe(lambda: asyncio.create_task(self._send_token(token)))
                 
-                # Send immediately for better user experience
-                asyncio.create_task(self._send_token(token))
-                
-            except Exception as e:
-                self.is_active = False
-                logger.error(f"Impossible d'envoyer un token via WebSocket: {str(e)}")
+        except Exception as e:
+            self.is_active = False
+            logger.error(f"Impossible d'envoyer un token via WebSocket: {str(e)}")
+            # Ne pas lever l'exception pour ne pas interrompre la génération
+    
+    async def _send_token(self, token: str):
+        """Envoie un token via WebSocket."""
+        if not self.websocket or not self.is_active:
+            return
+            
+        try:
+            # Envoyer le token
+            await self.websocket.send_json({
+                "type": "token",
+                "content": token
+            })
+            logger.debug(f"Token envoyé: '{token}'")
+        except Exception as e:
+            self.is_active = False
+            logger.error(f"Échec d'envoi de token: {str(e)}")
 
     async def _send_token(self, token: str):
         """Envoie un token via WebSocket."""

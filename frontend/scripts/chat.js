@@ -515,50 +515,56 @@ class ChatManager {
         this._scrollToBottom();
     }
     
+
+
 // Modification à apporter au fichier frontend/scripts/chat.js
-    /**
-     * Ajoute du texte à l'indicateur de frappe (pour le streaming)
-     * @param {string} text - Texte à ajouter
-     */
-    _appendToTypingIndicator(text) {
-        console.log(`Ajout au typing indicator: "${text}"`);
-        const typingIndicator = document.getElementById('typing-indicator');
-        
-        if (!typingIndicator) {
-            console.error("L'indicateur de frappe n'existe pas!");
-            this._showTypingIndicator(); // Recréer l'indicateur s'il n'existe pas
-            return this._appendToTypingIndicator(text); // Réessayer
-        }
-        
-        // S'assurer que l'élément pour stocker le texte complet existe
-        let typingTextEl = document.getElementById('typing-text');
-        if (!typingTextEl) {
-            typingTextEl = document.createElement('div');
-            typingTextEl.id = 'typing-text';
-            typingTextEl.style.display = 'none';
-            typingIndicator.appendChild(typingTextEl);
-        }
-        
-        // Ajouter le texte à l'élément caché qui stocke le contenu complet
-        typingTextEl.textContent += text;
-        
-        // Obtenir ou créer l'élément pour le texte visible
-        let visibleTextEl = typingIndicator.querySelector('.visible-text');
-        if (!visibleTextEl) {
-            visibleTextEl = document.createElement('div');
-            visibleTextEl.className = 'visible-text';
-            typingIndicator.appendChild(visibleTextEl);
-        }
-        
-        // Afficher le conteneur de texte visible
-        visibleTextEl.style.display = 'block';
-        
-        // Mettre à jour le texte visible
-        visibleTextEl.textContent = typingTextEl.textContent;
-        
-        // Défiler vers le bas
-        this._scrollToBottom();
+// Remplacer la méthode _appendToTypingIndicator avec cette version améliorée:
+
+/**
+ * Ajoute du texte à l'indicateur de frappe (pour le streaming)
+ * @param {string} text - Texte à ajouter
+ */
+_appendToTypingIndicator(text) {
+    console.log(`Ajout au typing indicator: "${text}"`);
+    const typingIndicator = document.getElementById('typing-indicator');
+    
+    if (!typingIndicator) {
+        console.error("L'indicateur de frappe n'existe pas!");
+        this._showTypingIndicator(); // Recréer l'indicateur s'il n'existe pas
+        return this._appendToTypingIndicator(text); // Réessayer
     }
+    
+    // S'assurer que l'élément pour stocker le texte complet existe
+    let typingTextEl = document.getElementById('typing-text');
+    if (!typingTextEl) {
+        typingTextEl = document.createElement('div');
+        typingTextEl.id = 'typing-text';
+        typingTextEl.style.display = 'none';
+        typingIndicator.appendChild(typingTextEl);
+    }
+    
+    // Ajouter le texte à l'élément caché qui stocke le contenu complet
+    typingTextEl.textContent += text;
+    
+    // Obtenir ou créer l'élément pour le texte visible
+    let visibleTextEl = typingIndicator.querySelector('.visible-text');
+    if (!visibleTextEl) {
+        visibleTextEl = document.createElement('div');
+        visibleTextEl.className = 'visible-text';
+        typingIndicator.appendChild(visibleTextEl);
+    }
+    
+    // Afficher le conteneur de texte visible
+    visibleTextEl.style.display = 'block';
+    
+    // Mettre à jour le texte visible
+    visibleTextEl.textContent = typingTextEl.textContent;
+    
+    // Défiler vers le bas
+    this._scrollToBottom();
+}
+
+
 
     /**
      * Supprime l'indicateur de frappe

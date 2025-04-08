@@ -182,37 +182,66 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     continue
                 
                 # Envoyer un message de début explicite
-                try:
-                    await websocket.send_json({
-                        "type": "start",
-                        "content": "",
-                        "conversation_id": conversation_id
-                    })
-                    logger.debug("Message de début envoyé avec succès")
-                except Exception as e:
-                    logger.error(f"Erreur lors de l'envoi du message de début: {e}")
-
+                await websocket.send_json({
+                    "type": "start",
+                    "content": "",
+                    "conversation_id": conversation_id
+                })
                 
-                # Traiter la requête normalement
-                response = await conversation_manager.process_user_input(
-                    conversation_id=conversation_id,
-                    user_input=content,
-                    user_id=user_id,
-                    mode=mode,
-                    websocket=websocket
-                )
+                # Ajouter le message utilisateur
+                conversation = conversation_manager.get_conversation(conversation_id, user_id)
+                message = conversation.add_message(content, role="user", metadata={"mode": mode})
                 
-                # Envoyer un message de fin explicite
+                # Créer une version simplifiée de la génération avec streaming manuel
                 try:
+                    # Préparer le prompt
+                    prompt = "Répondez de manière simple et concise: " + content
+                    
+                    # Utiliser le model manager pour obtenir le modèle adapté, mais sans streaming
+                    model = model_manager._get_appropriate_model(prompt, "auto", None)
+                    
+                    # Générer la réponse complète sans streaming
+                    response_text = await model.ainvoke(prompt)
+                    
+                    # Simuler le streaming en envoyant des tokens manuellement
+                    last_sent = 0
+                    token_size = 5  # Envoyer 5 caractères à la fois
+                    
+                    while last_sent < len(response_text):
+                        # Extraire le prochain "token"
+                        end = min(last_sent + token_size, len(response_text))
+                        token = response_text[last_sent:end]
+                        last_sent = end
+                        
+                        # Envoyer le token
+                        await websocket.send_json({
+                            "type": "token",
+                            "content": token
+                        })
+                        
+                        # Pause pour simuler le streaming naturel
+                        await asyncio.sleep(0.1)
+                    
+                    # Ajouter la réponse à la conversation
+                    conversation.add_message(response_text, role="assistant", metadata={"mode": mode})
+                    
+                    # Envoyer le message de fin
                     await websocket.send_json({
                         "type": "end",
-                        "content": response["response"],
-                        "conversation_id": response["conversation_id"],
-                        "timestamp": response["timestamp"]
+                        "content": response_text,
+                        "conversation_id": conversation.conversation_id,
+                        "timestamp": datetime.now().isoformat()
                     })
-                    logger.debug(f"Message de fin envoyé avec succès: {response['response'][:50]}...")
+                    
                 except Exception as e:
-                    logger.error(f"Erreur lors de l'envoi du message de fin: {e}")
+                    logger.error(f"Erreur lors de la génération: {str(e)}")
+                    import traceback
+                    logger.error(traceback.format_exc())
+                    
+                    await websocket.send_json({
+                        "type": "error",
+                        "content": f"Erreur: {str(e)}"
+                    })
                 
             except json.JSONDecodeError:
                 logger.error(f"Format JSON invalide: {data}")
