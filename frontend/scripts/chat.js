@@ -52,13 +52,13 @@ class ChatManager {
             end: (data) => {
                 console.log("Callback de fin de streaming appelé avec contenu:", data.content);
                 
-                // S'assurer que l'indicateur est supprimé
+                // S'assurer que l'indicateur est supprimé et récupérer le texte accumulé
                 const accumulatedText = this._removeTypingIndicator();
                 console.log("Texte accumulé localement:", accumulatedText);
                 
-                // Utiliser le texte fourni par le backend
+                // Ajouter le message permanent en utilisant le texte du backend
                 this._addMessage(data.content, 'assistant', true);
-                console.log("Message ajouté à l'interface");
+                console.log("Message permanent ajouté à l'interface");
                 
                 // Mettre à jour la liste des conversations
                 this.loadConversations();

@@ -30,27 +30,26 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
         """Appelé à chaque nouveau token généré par le LLM."""
         if self.websocket and self.is_active:
             try:
-                logger.debug(f"Nouveau token reçu: {token}")  # LOG 5
-                # Utiliser synchronize pour exécuter un appel asynchrone depuis un contexte synchrone
-                loop = asyncio.get_event_loop()
-                if loop.is_running():
-                    # Si une boucle d'événements est en cours d'exécution, créer une tâche
-                    asyncio.create_task(self._send_token(token))
-                    logger.debug("Tâche d'envoi créée avec boucle existante")  # LOG 6
-                else:
-                    # Sinon, exécuter de manière synchrone
-                    asyncio.run(self._send_token(token))
-                    logger.debug("Token envoyé avec nouvelle boucle")  # LOG 7
-            except RuntimeError as e:
-                logger.debug(f"Erreur de boucle d'événements: {str(e)}")  # LOG 8
-                # En cas d'erreur "no running event loop"
+                # Utiliser une variable pour suivre si le token a été envoyé
+                token_sent = False
+                
+                # Essayer d'obtenir une boucle d'événements existante
                 try:
-                    # Essayer d'exécuter de manière synchrone
+                    loop = asyncio.get_event_loop()
+                    if loop.is_running():
+                        # Si une boucle d'événements est en cours d'exécution, créer une tâche
+                        asyncio.create_task(self._send_token(token))
+                        token_sent = True
+                except RuntimeError:
+                    pass
+                    
+                # Si le token n'a pas été envoyé, utiliser asyncio.run
+                if not token_sent:
                     asyncio.run(self._send_token(token))
-                    logger.debug("Token envoyé après récupération d'erreur")  # LOG 9
-                except Exception as e:
-                    self.is_active = False
-                    logger.debug(f"Impossible d'envoyer un token via WebSocket: {str(e)}")  # LOG 10
+                    
+            except Exception as e:
+                self.is_active = False
+                logger.debug(f"Impossible d'envoyer un token via WebSocket: {str(e)}")
 
     async def _send_token(self, token: str):
         """Envoie un token via WebSocket."""
