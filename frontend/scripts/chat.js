@@ -499,23 +499,23 @@ class ChatManager {
      * @param {string} text - Texte à ajouter
      */
     _appendToTypingIndicator(text) {
+        console.log(`Ajout au typing indicator: "${text}"`);
         const typingTextEl = document.getElementById('typing-text');
         if (typingTextEl) {
+            // Assurez-vous d'ajouter uniquement le nouveau texte
             typingTextEl.textContent += text;
-            // Rendre le texte visible directement
             typingTextEl.style.display = 'block';
         } else {
             console.error("Element typing-text non trouvé!");
         }
     }
-    
+
     /**
      * Supprime l'indicateur de frappe
      * @returns {string} Le texte accumulé
      */
     _removeTypingIndicator() {
         const typingEl = document.getElementById('typing-indicator');
-        
         let accumulatedText = '';
         
         // Récupérer le texte accumulé

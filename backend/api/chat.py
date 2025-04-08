@@ -191,26 +191,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     logger.debug("Message de début envoyé avec succès")
                 except Exception as e:
                     logger.error(f"Erreur lors de l'envoi du message de début: {e}")
-                
-                # Pour le débogage, envoyer quelques tokens manuellement
-                try:
-                    await websocket.send_json({
-                        "type": "token",
-                        "content": "Test "
-                    })
-                    await asyncio.sleep(0.1)
-                    await websocket.send_json({
-                        "type": "token",
-                        "content": "de "
-                    })
-                    await asyncio.sleep(0.1)
-                    await websocket.send_json({
-                        "type": "token",
-                        "content": "streaming."
-                    })
-                    logger.debug("Tokens de test envoyés avec succès")
-                except Exception as e:
-                    logger.error(f"Erreur lors de l'envoi des tokens de test: {e}")
+
                 
                 # Traiter la requête normalement
                 response = await conversation_manager.process_user_input(
