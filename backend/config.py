@@ -17,10 +17,11 @@ class ModelConfig(BaseModel):
     parameters: Dict[str, Union[str, int, float, bool]] = {}
 
 class VoiceConfig(BaseModel):
-    stt_model: str = "small"
-    tts_model: str = "fr_FR-siwis-medium"  # Modèle Piper par défaut
+    stt_model: str = "/opt/whisper.cpp/models/ggml-base.bin"
+    stt_binary: str = "/opt/whisper.cpp/whisper-cli"
+    stt_device: str = "cpu"  # Whisper.cpp utilise le CPU par défaut
+    tts_model: str = "fr_FR-siwis-medium"
     tts_sample_rate: int = 22050
-    stt_device: str = "cpu"  # ou "cuda" si disponible
 
 class MemoryConfig(BaseModel):
     vector_dimension: int = 1536  # Dimension des vecteurs FAISS
