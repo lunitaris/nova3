@@ -92,9 +92,9 @@ class ModelManager:
             top_k=model_config.parameters.get("top_k", 40),
             num_ctx=model_config.context_window,
             base_url=model_config.api_base,
-            callback_manager=CallbackManager([StreamingStdOutCallbackHandler()])
+            callbacks=[StreamingStdOutCallbackHandler()]  # Utiliser callbacks au lieu de callback_manager
         )
-    
+        
     def _get_appropriate_model(self, prompt: str, complexity: str = "auto", websocket=None):
         """
         Sélectionne le modèle le plus approprié selon le contexte.
@@ -152,18 +152,15 @@ class ModelManager:
                 temperature=model_config.parameters.get("temperature", 0.7),
                 max_tokens=model_config.parameters.get("max_tokens", 1024),
                 streaming=bool(websocket),
-                callback_manager=CallbackManager(callbacks) if callbacks else None
+                callbacks=callbacks  # Utiliser callbacks directement
             )
         
         # Pour les modèles locaux
         model = self.models[model_id]
         
         # Si WebSocket fourni et streaming demandé, configurer le callback
-        if websocket and hasattr(model, 'callback_manager'):
-            callbacks = list(model.callback_manager.handlers)
-            callbacks.append(StreamingWebSocketCallbackHandler(websocket))
-            model.callback_manager = CallbackManager(callbacks)
-        
+        if websocket and hasattr(model, 'callbacks'):               # Nouvelle façon (si le modèle supporte les callbacks dynamiques):
+            model.callbacks.append(StreamingWebSocketCallbackHandler(websocket))
         return model
     
     async def generate_response(
