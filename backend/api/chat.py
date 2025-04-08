@@ -166,6 +166,7 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             try:
                 # Analyser le message JSON
                 message_data = json.loads(data)
+                logger.debug(f"Message WebSocket reçu: {message_data}")
                 
                 # Extraire les informations
                 conversation_id = message_data.get("conversation_id")
@@ -180,32 +181,60 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     })
                     continue
                 
-                # Traiter le message en temps réel avec streaming
-                # Envoyer un message de début
-                await websocket.send_json({
-                    "type": "start",
-                    "content": "",
-                    "conversation_id": conversation_id
-                })
+                # Envoyer un message de début explicite
+                try:
+                    await websocket.send_json({
+                        "type": "start",
+                        "content": "",
+                        "conversation_id": conversation_id
+                    })
+                    logger.debug("Message de début envoyé avec succès")
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'envoi du message de début: {e}")
                 
-                # Traiter la requête
+                # Pour le débogage, envoyer quelques tokens manuellement
+                try:
+                    await websocket.send_json({
+                        "type": "token",
+                        "content": "Test "
+                    })
+                    await asyncio.sleep(0.1)
+                    await websocket.send_json({
+                        "type": "token",
+                        "content": "de "
+                    })
+                    await asyncio.sleep(0.1)
+                    await websocket.send_json({
+                        "type": "token",
+                        "content": "streaming."
+                    })
+                    logger.debug("Tokens de test envoyés avec succès")
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'envoi des tokens de test: {e}")
+                
+                # Traiter la requête normalement
                 response = await conversation_manager.process_user_input(
                     conversation_id=conversation_id,
                     user_input=content,
                     user_id=user_id,
                     mode=mode,
-                    websocket=websocket  # Pour le streaming direct
+                    websocket=websocket
                 )
                 
-                # Envoyer un message de fin avec la réponse complète
-                await websocket.send_json({
-                    "type": "end",
-                    "content": response["response"],
-                    "conversation_id": response["conversation_id"],
-                    "timestamp": response["timestamp"]
-                })
+                # Envoyer un message de fin explicite
+                try:
+                    await websocket.send_json({
+                        "type": "end",
+                        "content": response["response"],
+                        "conversation_id": response["conversation_id"],
+                        "timestamp": response["timestamp"]
+                    })
+                    logger.debug(f"Message de fin envoyé avec succès: {response['response'][:50]}...")
+                except Exception as e:
+                    logger.error(f"Erreur lors de l'envoi du message de fin: {e}")
                 
             except json.JSONDecodeError:
+                logger.error(f"Format JSON invalide: {data}")
                 await websocket.send_json({
                     "type": "error",
                     "content": "Format JSON invalide"

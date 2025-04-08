@@ -25,27 +25,33 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
         self.websocket = websocket
         self.is_active = True
         
+
     def on_llm_new_token(self, token: str, **kwargs) -> None:
         """Appelé à chaque nouveau token généré par le LLM."""
         if self.websocket and self.is_active:
             try:
+                logger.debug(f"Nouveau token reçu: {token}")  # LOG 5
                 # Utiliser synchronize pour exécuter un appel asynchrone depuis un contexte synchrone
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
                     # Si une boucle d'événements est en cours d'exécution, créer une tâche
                     asyncio.create_task(self._send_token(token))
+                    logger.debug("Tâche d'envoi créée avec boucle existante")  # LOG 6
                 else:
                     # Sinon, exécuter de manière synchrone
                     asyncio.run(self._send_token(token))
-            except RuntimeError:
+                    logger.debug("Token envoyé avec nouvelle boucle")  # LOG 7
+            except RuntimeError as e:
+                logger.debug(f"Erreur de boucle d'événements: {str(e)}")  # LOG 8
                 # En cas d'erreur "no running event loop"
                 try:
                     # Essayer d'exécuter de manière synchrone
                     asyncio.run(self._send_token(token))
+                    logger.debug("Token envoyé après récupération d'erreur")  # LOG 9
                 except Exception as e:
                     self.is_active = False
-                    logger.debug(f"Impossible d'envoyer un token via WebSocket: {str(e)}")
-    
+                    logger.debug(f"Impossible d'envoyer un token via WebSocket: {str(e)}")  # LOG 10
+
     async def _send_token(self, token: str):
         """Envoie un token via WebSocket."""
         try:
@@ -53,10 +59,13 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
                 "type": "token",
                 "content": token
             })
+            logger.debug(f"Token envoyé avec succès: {token}")  # LOG 11
         except Exception as e:
             # Si l'envoi échoue, désactiver ce handler
             self.is_active = False
-            logger.debug(f"Désactivation du streaming WebSocket: {str(e)}")
+            logger.debug(f"Échec d'envoi de token: {str(e)}")  # LOG 12
+
+
 
 class ModelManager:
     """

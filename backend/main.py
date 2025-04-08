@@ -22,7 +22,7 @@ sys.path.insert(0, current_dir)
 
 # Configuration du logging
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.DEBUG,  # Changé de INFO à DEBUG
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)

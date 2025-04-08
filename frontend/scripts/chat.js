@@ -42,14 +42,15 @@ class ChatManager {
         // Configurer les callbacks de streaming
         wsManager.setStreamingCallbacks({
             start: (data) => {
-                console.log("Début de la réponse streaming");
+                console.log("LOG17: Callback de début de streaming appelé");  // LOG 17
                 this._showTypingIndicator();
             },
             token: (token) => {
+                console.log(`LOG18: Callback de token appelé avec: ${token}`);  // LOG 18
                 this._appendToTypingIndicator(token);
             },
             end: (data) => {
-                console.log("Fin de la réponse streaming", data);
+                console.log("LOG19: Callback de fin de streaming appelé");  // LOG 19
                 this._removeTypingIndicator();
                 this._addMessage(data.content, 'assistant');
                 
@@ -57,7 +58,7 @@ class ChatManager {
                 this.loadConversations();
             },
             error: (data) => {
-                console.error("Erreur de streaming:", data);
+                console.error("LOG20: Erreur de streaming reçue:", data);  // LOG 20
                 this._removeTypingIndicator();
                 this._showError(data.content || "Erreur lors de la génération de la réponse.");
             }
@@ -470,6 +471,8 @@ class ChatManager {
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
+            <div id="typing-text" style="display: none;"></div>
+
         `;
         typingEl.id = 'typing-indicator';
         
@@ -491,9 +494,13 @@ class ChatManager {
      * @param {string} text - Texte à ajouter
      */
     _appendToTypingIndicator(text) {
+        console.log(`Adding token to typing indicator: "${text}"`);
         const typingTextEl = document.getElementById('typing-text');
         if (typingTextEl) {
             typingTextEl.textContent += text;
+            console.log("Current accumulated text:", typingTextEl.textContent);
+        } else {
+            console.error("CRITICAL: typing-text element not found in DOM!");
         }
     }
     

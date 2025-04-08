@@ -66,37 +66,47 @@ class WebSocketManager {
             
             this.socket.onmessage = (event) => {
                 try {
+                    console.log("Raw WebSocket message received:", event.data);
                     const data = JSON.parse(event.data);
-                    console.log("WebSocket message reçu:", data);
+                    console.log("WebSocket message parsed:", data);
                     
                     // Router selon le type de message
                     switch(data.type) {
                         case 'start':
+                            console.log("⭐ START message received");
                             if (this.streamingCallbacks.start) {
                                 this.streamingCallbacks.start(data);
                             }
                             break;
                         case 'token':
+                            console.log(`🔤 TOKEN received: "${data.content}"`);
                             if (this.streamingCallbacks.token) {
                                 this.streamingCallbacks.token(data.content);
+                            } else {
+                                console.error("No token callback configured!");
                             }
                             break;
                         case 'end':
+                            console.log("🏁 END message received with content:", data.content);
                             if (this.streamingCallbacks.end) {
                                 this.streamingCallbacks.end(data);
+                            } else {
+                                console.error("No end callback configured!");
                             }
                             break;
                         case 'error':
+                            console.error("⚠️ ERROR message received:", data);
                             if (this.streamingCallbacks.error) {
                                 this.streamingCallbacks.error(data);
                             }
                             break;
                         default:
                             // Transmettre aux callbacks génériques
+                            console.log("⚠️ UNKNOWN message type:", data.type);
                             this._triggerCallbacks(this.onMessageCallbacks, data);
                     }
                 } catch (error) {
-                    console.error("Erreur de parsing WebSocket:", error, event.data);
+                    console.error("❌ Error parsing WebSocket message:", error, event.data);
                     if (this.streamingCallbacks.error) {
                         this.streamingCallbacks.error({
                             type: 'error',
