@@ -50,11 +50,17 @@ class ChatManager {
                 this._appendToTypingIndicator(token);
             },
             end: (data) => {
-                console.log("LOG19: Callback de fin de streaming appelé");  // LOG 19
-                this._removeTypingIndicator();
-                this._addMessage(data.content, 'assistant');
+                console.log("Callback de fin de streaming appelé avec contenu:", data.content);
                 
-                // Charger les conversations pour mettre à jour la liste
+                // S'assurer que l'indicateur est supprimé
+                const accumulatedText = this._removeTypingIndicator();
+                console.log("Texte accumulé localement:", accumulatedText);
+                
+                // Utiliser le texte fourni par le backend
+                this._addMessage(data.content, 'assistant', true);
+                console.log("Message ajouté à l'interface");
+                
+                // Mettre à jour la liste des conversations
                 this.loadConversations();
             },
             error: (data) => {
@@ -428,33 +434,32 @@ class ChatManager {
      * @param {boolean} scroll - Défilement automatique
      */
     _addMessage(content, role, scroll = true) {
+        console.log(`Ajout de message: role=${role}, contenu=${content.substring(0, 30)}...`);
+        
         // Cloner le template
         const messageEl = this.messageTemplate.content.cloneNode(true);
         const container = messageEl.querySelector('.message');
         
-        // Définir la classe selon le rôle
+        // Ajouter les classes et contenu
         container.classList.add(role);
-        
-        // Définir l'icône
         const iconEl = container.querySelector('.message-avatar i');
         iconEl.className = role === 'user' ? 'fas fa-user' : 'fas fa-robot';
         
-        // Définir le contenu
         const contentEl = container.querySelector('.message-text');
         contentEl.textContent = content;
         
-        // Définir l'heure
         const timeEl = container.querySelector('.message-time');
-        const now = new Date();
-        timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        timeEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
         
         // Ajouter à la zone de messages
         this.messagesContainer.appendChild(container);
         
-        // Défiler vers le bas si demandé
+        // Défiler si demandé
         if (scroll) {
             this._scrollToBottom();
         }
+        
+        return container;
     }
     
     /**
@@ -471,7 +476,7 @@ class ChatManager {
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
             <div class="typing-dot"></div>
-            <div id="typing-text" style="display: none;"></div>
+            <div id="typing-text" style=""></div>
 
         `;
         typingEl.id = 'typing-indicator';
@@ -494,13 +499,13 @@ class ChatManager {
      * @param {string} text - Texte à ajouter
      */
     _appendToTypingIndicator(text) {
-        console.log(`Adding token to typing indicator: "${text}"`);
         const typingTextEl = document.getElementById('typing-text');
         if (typingTextEl) {
             typingTextEl.textContent += text;
-            console.log("Current accumulated text:", typingTextEl.textContent);
+            // Rendre le texte visible directement
+            typingTextEl.style.display = 'block';
         } else {
-            console.error("CRITICAL: typing-text element not found in DOM!");
+            console.error("Element typing-text non trouvé!");
         }
     }
     
