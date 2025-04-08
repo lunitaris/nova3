@@ -37,10 +37,12 @@ data/
 *.h5
 ollama_models/
 
-# Ignore tout le dossier models
-models/
-# MAIS pas les fichiers .py dans models/ (comprends les éventuels sous dossiers)
-!models/**/*.py
+# Pour ignorer tout contenu dans opt/whisper.cpp/models/
+opt/whisper.cpp/models/*
+
+# Autorise les fichiers .py dans backend/models/
+!backend/models/
+!backend/models/**/*.py
 
 
 
