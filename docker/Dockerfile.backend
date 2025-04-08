@@ -1,0 +1,43 @@
+FROM python:3.10-slim
+
+WORKDIR /app
+
+# Installer les dépendances systèmes nécessaires
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    cmake \
+    ffmpeg \
+    libsndfile1 \
+    wget \
+    git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copier les fichiers de requirements
+COPY backend/requirements.txt .
+
+# Installer les dépendances Python
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Installer Piper TTS pour la synthèse vocale
+RUN pip install --no-cache-dir piper-tts
+
+# Télécharger les modèles Piper (voix française)
+RUN mkdir -p /usr/local/share/piper-voices/ && \
+    cd /usr/local/share/piper-voices/ && \
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR-siwis-medium/fr_FR-siwis-medium.onnx && \
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR-siwis-medium/fr_FR-siwis-medium.onnx.json && \
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US-amy-medium/en_US-amy-medium.onnx && \
+    wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US-amy-medium/en_US-amy-medium.onnx.json
+
+# Configurer la variable d'environnement pour Piper
+ENV PIPER_VOICES_DIR=/usr/local/share/piper-voices
+
+# Créer les répertoires de données
+RUN mkdir -p /app/data/memories /app/data/conversations /app/data/audio
+
+# Exposer le port
+EXPOSE 8000
+
+# Commande de démarrage
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assistant IA Local</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="assets/icons/assistant-icon.png">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar pour la navigation et les conversations -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <h1>Assistant IA</h1>
+                <button id="new-chat-btn" class="btn primary">
+                    <i class="fas fa-plus"></i> Nouvelle conversation
+                </button>
+            </div>
+            <div class="conversation-list" id="conversation-list">
+                <!-- Liste des conversations générée dynamiquement -->
+                <div class="loading-spinner">
+                    <i class="fas fa-spinner fa-spin"></i>
+                </div>
+            </div>
+            <div class="sidebar-footer">
+                <button id="toggle-mode-btn" class="btn secondary">
+                    <i class="fas fa-comments"></i> Mode Chat
+                </button>
+                <button id="settings-btn" class="btn secondary">
+                    <i class="fas fa-cog"></i> Paramètres
+                </button>
+            </div>
+        </aside>
+
+        <!-- Contenu principal avec la conversation -->
+        <main class="main-content">
+            <!-- Entête avec info de conversation -->
+            <header class="main-header">
+                <div class="conversation-info">
+                    <h2 id="conversation-title">Nouvelle conversation</h2>
+                    <span id="conversation-mode">Mode Chat</span>
+                </div>
+                <div class="header-actions">
+                    <button id="clear-conversation-btn" class="btn secondary">
+                        <i class="fas fa-broom"></i> Effacer
+                    </button>
+                    <button id="delete-conversation-btn" class="btn secondary">
+                        <i class="fas fa-trash"></i> Supprimer
+                    </button>
+                </div>
+            </header>
+
+            <!-- Zone des messages -->
+            <div class="messages-container" id="messages-container">
+                <div class="welcome-message">
+                    <h3>Bienvenue sur votre Assistant IA Local</h3>
+                    <p>Je suis là pour vous aider. Posez-moi vos questions ou demandez-moi d'accomplir des tâches.</p>
+                    <div class="features">
+                        <div class="feature">
+                            <i class="fas fa-comments"></i>
+                            <h4>Mode Chat</h4>
+                            <p>Discutez avec moi par texte</p>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-microphone"></i>
+                            <h4>Mode Vocal</h4>
+                            <p>Parlez-moi et je vous répondrai</p>
+                        </div>
+                        <div class="feature">
+                            <i class="fas fa-brain"></i>
+                            <h4>Mémoire</h4>
+                            <p>Je me souviens de nos conversations</p>
+                        </div>
+                    </div>
+                </div>
+                <!-- Messages générés dynamiquement -->
+            </div>
+
+            <!-- Barre de saisie -->
+            <div class="input-container">
+                <!-- Mode Chat -->
+                <div id="chat-input-area" class="input-area active">
+                    <textarea id="chat-input" placeholder="Écrivez votre message..." class="chat-input"></textarea>
+                    <button id="send-button" class="btn primary">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                
+                <!-- Mode Vocal -->
+                <div id="voice-input-area" class="input-area">
+                    <button id="mic-button" class="btn mic-btn">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    <div class="voice-status">
+                        <span id="voice-status-text">Prêt à écouter</span>
+                        <div id="voice-visualization" class="voice-wave">
+                            <!-- Visualisation audio générée dynamiquement -->
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                            <div class="wave-bar"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Modal pour les paramètres -->
+        <div id="settings-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Paramètres</h2>
+                    <button class="close-modal-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div class="settings-section">
+                        <h3>Modèles LLM</h3>
+                        <div class="setting-item">
+                            <label for="model-preference">Modèle préféré:</label>
+                            <select id="model-preference">
+                                <option value="auto">Auto (Recommandé)</option>
+                                <option value="fast">Rapide (gemma:2b)</option>
+                                <option value="balanced">Équilibré (zephyr)</option>
+                                <option value="cloud">Cloud (gpt-3.5-turbo)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Voix</h3>
+                        <div class="setting-item">
+                            <label for="tts-voice">Voix TTS:</label>
+                            <select id="tts-voice">
+                                <option value="fr_FR-siwis-medium">Français (Siwis)</option>
+                                <option value="en_US-amy-medium">Anglais (Amy)</option>
+                                <!-- D'autres voix disponibles -->
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="speech-rate">Vitesse de parole:</label>
+                            <input type="range" id="speech-rate" min="0.5" max="2" step="0.1" value="1">
+                            <span id="speech-rate-value">1.0</span>
+                        </div>
+                    </div>
+                    <div class="settings-section">
+                        <h3>Interface</h3>
+                        <div class="setting-item">
+                            <label for="theme-select">Thème:</label>
+                            <select id="theme-select">
+                                <option value="light">Clair</option>
+                                <option value="dark">Sombre</option>
+                                <option value="system">Système</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-settings-btn" class="btn primary">Enregistrer</button>
+                    <button class="btn secondary close-modal-btn">Annuler</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Modal pour mémoire explicite -->
+        <div id="memory-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Mémorisation explicite</h2>
+                    <button class="close-modal-btn">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Que souhaitez-vous que je mémorise?</p>
+                    <textarea id="memory-content" placeholder="Entrez l'information à mémoriser..." class="memory-textarea"></textarea>
+                    <div class="setting-item">
+                        <label for="memory-topic">Sujet:</label>
+                        <input type="text" id="memory-topic" placeholder="ex: préférences, contact, etc." value="user_info">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button id="save-memory-btn" class="btn primary">Mémoriser</button>
+                    <button class="btn secondary close-modal-btn">Annuler</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Templates HTML pour messages -->
+    <template id="message-template">
+        <div class="message">
+            <div class="message-avatar">
+                <i class="fas"></i>
+            </div>
+            <div class="message-content">
+                <div class="message-text"></div>
+                <div class="message-time"></div>
+            </div>
+        </div>
+    </template>
+
+    <template id="conversation-item-template">
+        <div class="conversation-item">
+            <div class="conversation-title"></div>
+            <div class="conversation-time"></div>
+            <button class="delete-conversation-item-btn">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </template>
+
+    <!-- Scripts JavaScript -->
+    <script src="scripts/config.js"></script>
+    <script src="scripts/websocket.js"></script>
+    <script src="scripts/chat.js"></script>
+    <script src="scripts/voice.js"></script>
+    <script src="scripts/ui.js"></script>
+    <script src="scripts/memory.js"></script>
+    <script src="scripts/main.js"></script>
+</body>
+</html>

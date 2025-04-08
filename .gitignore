@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Environnements virtuels
+.env
+.venv
+.python-venv/
+
+# Données et modèles
+data/
+*.onnx
+*.json
+*.bin
+*.pt
+*.model
+*.h5
+ollama_models/
+models/
+
+# Fichiers de logs et données générées
+*.log
+logs/
+audio/
+*.wav
+*.mp3
+*.pcm
+*.temp
+memories/
+conversations/
+
+# IDEs et editeurs
+.idea/
+.vscode/
+*.swp
+*.swo
+*.swn
+*~
+.DS_Store
+.history
+
+# Fichiers Docker
+.dockerignore
+
+# JavaScript/Frontend
+node_modules/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnp/
+.pnp.js
+.cache/
+dist/
+coverage/
+.eslintcache
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Fichiers système
+.directory
+.Trash-*
+ehthumbs.db
+Thumbs.db

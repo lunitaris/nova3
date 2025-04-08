@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # Service Backend FastAPI
+  backend:
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile.backend
+    container_name: assistant-ia-backend
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./data:/app/data
+    environment:
+      - DEBUG=True
+      - HOST=0.0.0.0
+      - PORT=8000
+      - FRONTEND_URL=http://localhost:3000
+    depends_on:
+      - ollama
+    networks:
+      - assistant-network
+
+  # Service Frontend
+  frontend:
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile.frontend
+    container_name: assistant-ia-frontend
+    ports:
+      - "3000:80"
+    volumes:
+      - ./frontend:/usr/share/nginx/html
+    depends_on:
+      - backend
+    networks:
+      - assistant-network
+
+  # Service Ollama (pour les modèles LLM)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: assistant-ia-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ./ollama_models:/root/.ollama
+    networks:
+      - assistant-network
+
+networks:
+  assistant-network:
+    driver: bridge
