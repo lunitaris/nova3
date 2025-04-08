@@ -103,6 +103,7 @@ class WebSocketManager {
                         case 'end':
                             console.log("🏁 END message received with content:", data.content);
                             if (this.streamingCallbacks.end) {
+                                // S'assurer que l'indicateur de frappe est bien nettoyé
                                 this.streamingCallbacks.end(data);
                             } else {
                                 console.error("No end callback configured!");

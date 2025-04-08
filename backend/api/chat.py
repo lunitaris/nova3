@@ -5,6 +5,8 @@ from typing import Optional, List, Dict, Any
 import json
 import logging
 import asyncio
+from datetime import datetime
+
 
 # Importations absolues au lieu d'importations relatives
 from memory.conversation import conversation_manager

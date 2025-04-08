@@ -40,23 +40,26 @@ class ChatManager {
             this._showError("Impossible de se connecter au serveur. Vérifiez votre connexion.");
         });
         
-        // Configurer les callbacks de streaming
         wsManager.setStreamingCallbacks({
             start: (data) => {
-                console.log("LOG17: Callback de début de streaming appelé");  // LOG 17
+                console.log("LOG17: Callback de début de streaming appelé"); 
                 this._showTypingIndicator();
             },
             token: (token) => {
-                console.log(`LOG18: Callback de token appelé avec: ${token}`);  // LOG 18
+                console.log(`LOG18: Callback de token appelé avec: ${token}`);
                 this._appendToTypingIndicator(token);
             },
             end: (data) => {
                 console.log("Callback de fin de streaming appelé avec contenu:", data.content);
                 
-                // Supprimer l'indicateur de frappe et récupérer le texte accumulé
-                const accumulatedText = this._removeTypingIndicator();
+                // Récupérer le texte accumulé avant de supprimer l'indicateur
+                const textElement = document.getElementById('typing-text');
+                const accumulatedText = textElement ? textElement.textContent : '';
                 
-                // Important: Utiliser le texte accumulé localement plutôt que data.content qui peut être incomplet
+                // Supprimer l'indicateur de frappe
+                this._removeTypingIndicator();
+                
+                // Important: Utiliser le texte accumulé ou celui du message de fin
                 const finalContent = accumulatedText || data.content;
                 
                 // Ajouter le message à l'historique de conversation de façon permanente
@@ -66,12 +69,11 @@ class ChatManager {
                 this.loadConversations();
             },
             error: (data) => {
-                console.error("LOG20: Erreur de streaming reçue:", data);  // LOG 20
+                console.error("LOG20: Erreur de streaming reçue:", data);
                 this._removeTypingIndicator();
                 this._showError(data.content || "Erreur lors de la génération de la réponse.");
             }
         });
-    }
 
 
     // Ajouter une méthode pour vérifier et nettoyer les éléments résiduels
@@ -516,53 +518,59 @@ class ChatManager {
     }
     
 
-
-// Modification à apporter au fichier frontend/scripts/chat.js
-// Remplacer la méthode _appendToTypingIndicator avec cette version améliorée:
-
-/**
- * Ajoute du texte à l'indicateur de frappe (pour le streaming)
- * @param {string} text - Texte à ajouter
- */
-_appendToTypingIndicator(text) {
-    console.log(`Ajout au typing indicator: "${text}"`);
-    const typingIndicator = document.getElementById('typing-indicator');
-    
-    if (!typingIndicator) {
-        console.error("L'indicateur de frappe n'existe pas!");
-        this._showTypingIndicator(); // Recréer l'indicateur s'il n'existe pas
-        return this._appendToTypingIndicator(text); // Réessayer
+    /**
+     * Ajoute du texte à l'indicateur de frappe (pour le streaming)
+     * @param {string} text - Texte à ajouter
+     */
+    _appendToTypingIndicator(text) {
+        console.log(`Ajout au typing indicator: "${text}"`);
+        const typingIndicator = document.getElementById('typing-indicator');
+        
+        if (!typingIndicator) {
+            console.log("L'indicateur de frappe n'existe pas!");
+            this._showTypingIndicator(); // Recréer l'indicateur s'il n'existe pas
+        }
+        
+        // Après avoir recréé l'indicateur, on le récupère à nouveau
+        const refreshedIndicator = document.getElementById('typing-indicator');
+        
+        // S'assurer que l'élément pour stocker le texte complet existe
+        let typingTextEl = document.getElementById('typing-text');
+        if (!typingTextEl && refreshedIndicator) {
+            typingTextEl = document.createElement('div');
+            typingTextEl.id = 'typing-text';
+            typingTextEl.style.display = 'none';
+            refreshedIndicator.appendChild(typingTextEl);
+        }
+        
+        // Ajouter le texte à l'élément caché qui stocke le contenu complet
+        if (typingTextEl) {
+            typingTextEl.textContent = (typingTextEl.textContent || '') + text;
+        }
+        
+        // Obtenir ou créer l'élément pour le texte visible
+        let visibleTextEl = refreshedIndicator ? refreshedIndicator.querySelector('.visible-text') : null;
+        if (!visibleTextEl && refreshedIndicator) {
+            visibleTextEl = document.createElement('div');
+            visibleTextEl.className = 'visible-text';
+            refreshedIndicator.appendChild(visibleTextEl);
+        }
+        
+        // Afficher le conteneur de texte visible
+        if (visibleTextEl) {
+            visibleTextEl.style.display = 'block';
+            
+            // Mettre à jour le texte visible
+            if (typingTextEl) {
+                visibleTextEl.textContent = typingTextEl.textContent;
+            } else {
+                visibleTextEl.textContent = (visibleTextEl.textContent || '') + text;
+            }
+        }
+        
+        // Défiler vers le bas
+        this._scrollToBottom();
     }
-    
-    // S'assurer que l'élément pour stocker le texte complet existe
-    let typingTextEl = document.getElementById('typing-text');
-    if (!typingTextEl) {
-        typingTextEl = document.createElement('div');
-        typingTextEl.id = 'typing-text';
-        typingTextEl.style.display = 'none';
-        typingIndicator.appendChild(typingTextEl);
-    }
-    
-    // Ajouter le texte à l'élément caché qui stocke le contenu complet
-    typingTextEl.textContent += text;
-    
-    // Obtenir ou créer l'élément pour le texte visible
-    let visibleTextEl = typingIndicator.querySelector('.visible-text');
-    if (!visibleTextEl) {
-        visibleTextEl = document.createElement('div');
-        visibleTextEl.className = 'visible-text';
-        typingIndicator.appendChild(visibleTextEl);
-    }
-    
-    // Afficher le conteneur de texte visible
-    visibleTextEl.style.display = 'block';
-    
-    // Mettre à jour le texte visible
-    visibleTextEl.textContent = typingTextEl.textContent;
-    
-    // Défiler vers le bas
-    this._scrollToBottom();
-}
 
 
 
@@ -571,20 +579,41 @@ _appendToTypingIndicator(text) {
      * @returns {string} Le texte accumulé
      */
     _removeTypingIndicator() {
-        const typingEl = document.getElementById('typing-indicator');
+        // Récupérer d'abord le texte accumulé
         let accumulatedText = '';
-        
-        // Récupérer le texte accumulé
         const typingTextEl = document.getElementById('typing-text');
         if (typingTextEl) {
             accumulatedText = typingTextEl.textContent;
         }
         
-        // Supprimer l'indicateur
-        if (typingEl) {
-            typingEl.remove();
-        }
+        // Approche plus agressive pour nettoyer tous les éléments liés au typing
+        const cleanupElements = [
+            document.getElementById('typing-indicator'),
+            ...Array.from(document.querySelectorAll('.typing-indicator')),
+            ...Array.from(document.querySelectorAll('.typing-dot')),
+            ...Array.from(document.querySelectorAll('.dots-container')),
+            ...Array.from(document.querySelectorAll('.visible-text'))
+        ];
         
+        // Supprimer chaque élément trouvé
+        cleanupElements.forEach(el => {
+            if (el && el.parentNode) {
+                el.parentNode.removeChild(el);
+            }
+        });
+        
+        // Forcer une micro pause pour permettre au DOM de se mettre à jour
+        setTimeout(() => {
+            // Double vérification après la pause
+            const remainingIndicators = document.querySelectorAll('.typing-indicator, .typing-dot');
+            remainingIndicators.forEach(el => {
+                if (el && el.parentNode) {
+                    el.parentNode.removeChild(el);
+                }
+            });
+        }, 0);
+        
+        console.log("Indicateur de frappe supprimé, texte accumulé:", accumulatedText);
         return accumulatedText;
     }
     
