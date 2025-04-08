@@ -8,9 +8,18 @@ import whisper
 import numpy as np
 import torch
 
-from ..config import config
+from config import config
 
 logger = logging.getLogger(__name__)
+
+
+
+### DESACTIVATION DE TOUTES ACCELERATIONS MATERIELLES POSSIBLES (FOPRCE MODE CPU)
+if torch.backends.mps.is_available():
+    logger.warning("Désactivation de MPS pour éviter les erreurs de segmentation sur macOS.")
+    os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "0"
+    torch.backends.mps.is_available = lambda: False
+#############################################################################################
 
 class WhisperSTT:
     """

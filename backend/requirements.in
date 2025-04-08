@@ -1,0 +1,31 @@
+# pip-tools requirements.in config file
+# ------------------------------------------
+# When new module is needed, update this file with the new module, then run: 
+#    pip-compile --upgrade requirements.in
+#
+# Then: pip install -r requirements.txt
+
+
+# Dépendances principales
+fastapi
+uvicorn
+websockets
+pydantic
+
+# Gestion des LLM et agents
+transformers==4.36.2
+langchain
+langchain-community
+langchain_ollama
+faiss-cpu
+openai
+
+# Reconnaissance et synthèse vocale
+openai-whisper
+piper-tts
+sentence-transformers
+
+# Utilitaires
+python-dotenv
+httpx
+numpy<2.0.0

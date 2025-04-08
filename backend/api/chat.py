@@ -6,8 +6,9 @@ import json
 import logging
 import asyncio
 
-from ..memory.conversation import conversation_manager
-from ..models.model_manager import model_manager
+# Importations absolues au lieu d'importations relatives
+from memory.conversation import conversation_manager
+from models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 

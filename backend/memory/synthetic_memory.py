@@ -5,10 +5,10 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 
-from ..models.model_manager import model_manager
-from ..models.prompt_templates import MEMORY_SYNTHESIS_TEMPLATE
-from .vector_store import vector_store
-from ..config import config
+# Remplacer l'importation relative par une importation absolue
+from models.model_manager import model_manager
+from memory.vector_store import vector_store
+from config import config
 
 logger = logging.getLogger(__name__)
 

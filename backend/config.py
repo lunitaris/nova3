@@ -17,8 +17,8 @@ class ModelConfig(BaseModel):
     parameters: Dict[str, Union[str, int, float, bool]] = {}
 
 class VoiceConfig(BaseModel):
-    stt_model: str = "whisper-small"
-    tts_model: str = "en_US-amy-medium"  # Modèle Piper par défaut
+    stt_model: str = "small"
+    tts_model: str = "fr_FR-siwis-medium"  # Modèle Piper par défaut
     tts_sample_rate: int = 22050
     stt_device: str = "cpu"  # ou "cuda" si disponible
 

@@ -1,3 +1,4 @@
+
 import os
 import json
 import uuid
@@ -6,9 +7,10 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import asyncio
 
-from ..config import config
-from .synthetic_memory import synthetic_memory
-from ..models.model_manager import model_manager
+from config import config
+# Corriger l'importation pour utiliser le chemin complet
+from memory.synthetic_memory import synthetic_memory
+from models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 

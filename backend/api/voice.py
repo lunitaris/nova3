@@ -9,9 +9,9 @@ import io
 import tempfile
 import os
 
-from ..voice.stt import stt_engine
-from ..voice.tts import tts_engine
-from ..memory.conversation import conversation_manager
+from voice.stt import stt_engine
+from voice.tts import tts_engine
+from memory.conversation import conversation_manager
 
 logger = logging.getLogger(__name__)
 

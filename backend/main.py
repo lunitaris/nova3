@@ -1,4 +1,5 @@
 import os
+import sys
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -6,6 +7,18 @@ from typing import Optional, List, Dict, Any
 import asyncio
 import logging
 import uvicorn
+
+
+## Désactiver l'accélération (pour fix les pb avec vectors embeddings)
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
+os.environ["USE_TORCH"] = "0"
+os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
+
+# Ajouter le répertoire parent au chemin Python pour permettre les importations absolues
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
 
 # Configuration du logging
 logging.basicConfig(
@@ -30,6 +43,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Modèles de données
+class ChatMessage(BaseModel):
+    content: str
+    mode: str = "chat"  # "chat" ou "voice"
+
+class ChatResponse(BaseModel):
+    response: str
+    sources: Optional[List[Dict[str, Any]]] = None
+
 # Gestionnaire de connexions WebSocket
 class ConnectionManager:
     def __init__(self):
@@ -52,15 +74,6 @@ class ConnectionManager:
             await connection.send_text(message)
 
 manager = ConnectionManager()
-
-# Modèles de données
-class ChatMessage(BaseModel):
-    content: str
-    mode: str = "chat"  # "chat" ou "voice"
-
-class ChatResponse(BaseModel):
-    response: str
-    sources: Optional[List[Dict[str, Any]]] = None
 
 # Endpoint de santé
 @app.get("/health")
@@ -109,6 +122,24 @@ async def remember_info(info: Dict[str, Any]):
     """
     # Implémentation à compléter
     return {"status": "stored", "info": info}
+
+# Importer les routers après la définition de l'application
+# pour éviter les importations circulaires
+try:
+    # Importer les routers d'API
+    from api.chat import router as chat_router
+    from api.voice import router as voice_router
+    from api.memory import router as memory_router
+
+    # Inclure les routers
+    app.include_router(chat_router)
+    app.include_router(voice_router)
+    app.include_router(memory_router)
+    
+    logger.info("Tous les routers API ont été chargés avec succès")
+except Exception as e:
+    logger.error(f"Erreur lors du chargement des routers: {str(e)}")
+    raise
 
 # Point d'entrée pour l'exécution directe
 if __name__ == "__main__":
