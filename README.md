@@ -199,6 +199,14 @@ Modifiez `config.py` pour ajouter de nouveaux modèles dans la section `models` 
 
 Ce projet est sous licence MIT.
 
+
+## 2do
+
+A faire:
+- Remplacer whisper version python par whisper.cpp (plus rapide).
+
+
+
 ## Remerciements
 
 Ce projet utilise plusieurs technologies open-source :
