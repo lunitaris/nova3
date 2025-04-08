@@ -40,40 +40,41 @@ class ChatManager {
             this._showError("Impossible de se connecter au serveur. Vérifiez votre connexion.");
         });
         
+        // Configurer les callbacks de streaming
         wsManager.setStreamingCallbacks({
             start: (data) => {
-                console.log("LOG17: Callback de début de streaming appelé"); 
+                console.log("LOG17: Callback de début de streaming appelé");  // LOG 17
                 this._showTypingIndicator();
             },
             token: (token) => {
-                console.log(`LOG18: Callback de token appelé avec: ${token}`);
+                console.log(`LOG18: Callback de token appelé avec: ${token}`);  // LOG 18
                 this._appendToTypingIndicator(token);
             },
             end: (data) => {
                 console.log("Callback de fin de streaming appelé avec contenu:", data.content);
+    
+                // Supprimer l'indicateur de frappe AVANT d'ajouter le message final
+                const accumulatedText = this._removeTypingIndicator();
                 
-                // Récupérer le texte accumulé avant de supprimer l'indicateur
-                const textElement = document.getElementById('typing-text');
-                const accumulatedText = textElement ? textElement.textContent : '';
-                
-                // Supprimer l'indicateur de frappe
-                this._removeTypingIndicator();
-                
-                // Important: Utiliser le texte accumulé ou celui du message de fin
-                const finalContent = accumulatedText || data.content;
-                
-                // Ajouter le message à l'historique de conversation de façon permanente
-                this._addMessage(finalContent, 'assistant');
-                
-                // Mettre à jour la liste des conversations
-                this.loadConversations();
+                // Petit délai pour s'assurer que le DOM est mis à jour
+                setTimeout(() => {
+                    // Utiliser le texte accumulé ou le contenu du message de fin
+                    const finalContent = accumulatedText || data.content;
+                    
+                    // Ajouter le message à l'historique
+                    this._addMessage(finalContent, 'assistant');
+                    
+                    // Mettre à jour la liste des conversations
+                    this.loadConversations();
+                }, 10);
             },
             error: (data) => {
-                console.error("LOG20: Erreur de streaming reçue:", data);
+                console.error("LOG20: Erreur de streaming reçue:", data);  // LOG 20
                 this._removeTypingIndicator();
                 this._showError(data.content || "Erreur lors de la génération de la réponse.");
             }
         });
+    }
 
 
     // Ajouter une méthode pour vérifier et nettoyer les éléments résiduels
@@ -527,46 +528,37 @@ class ChatManager {
         const typingIndicator = document.getElementById('typing-indicator');
         
         if (!typingIndicator) {
-            console.log("L'indicateur de frappe n'existe pas!");
+            console.error("L'indicateur de frappe n'existe pas!");
+            typingIndicator.classList.add('message-finished');
             this._showTypingIndicator(); // Recréer l'indicateur s'il n'existe pas
+            return this._appendToTypingIndicator(text); // Réessayer
         }
-        
-        // Après avoir recréé l'indicateur, on le récupère à nouveau
-        const refreshedIndicator = document.getElementById('typing-indicator');
         
         // S'assurer que l'élément pour stocker le texte complet existe
         let typingTextEl = document.getElementById('typing-text');
-        if (!typingTextEl && refreshedIndicator) {
+        if (!typingTextEl) {
             typingTextEl = document.createElement('div');
             typingTextEl.id = 'typing-text';
             typingTextEl.style.display = 'none';
-            refreshedIndicator.appendChild(typingTextEl);
+            typingIndicator.appendChild(typingTextEl);
         }
         
         // Ajouter le texte à l'élément caché qui stocke le contenu complet
-        if (typingTextEl) {
-            typingTextEl.textContent = (typingTextEl.textContent || '') + text;
-        }
+        typingTextEl.textContent += text;
         
         // Obtenir ou créer l'élément pour le texte visible
-        let visibleTextEl = refreshedIndicator ? refreshedIndicator.querySelector('.visible-text') : null;
-        if (!visibleTextEl && refreshedIndicator) {
+        let visibleTextEl = typingIndicator.querySelector('.visible-text');
+        if (!visibleTextEl) {
             visibleTextEl = document.createElement('div');
             visibleTextEl.className = 'visible-text';
-            refreshedIndicator.appendChild(visibleTextEl);
+            typingIndicator.appendChild(visibleTextEl);
         }
         
         // Afficher le conteneur de texte visible
-        if (visibleTextEl) {
-            visibleTextEl.style.display = 'block';
-            
-            // Mettre à jour le texte visible
-            if (typingTextEl) {
-                visibleTextEl.textContent = typingTextEl.textContent;
-            } else {
-                visibleTextEl.textContent = (visibleTextEl.textContent || '') + text;
-            }
-        }
+        visibleTextEl.style.display = 'block';
+        
+        // Mettre à jour le texte visible
+        visibleTextEl.textContent = typingTextEl.textContent;
         
         // Défiler vers le bas
         this._scrollToBottom();
