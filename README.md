@@ -52,6 +52,13 @@ L'assistant sera accessible à l'adresse: [http://localhost:3000](http://localho
 
 ### 2. Installation du backend
 
+En premier, setup le venv à la racine du projet:
+```bash
+python3.10 -m venv venv
+source venv/bin/activate
+```
+
+
 ```bash
 cd backend
 pip install -r requirements.txt
