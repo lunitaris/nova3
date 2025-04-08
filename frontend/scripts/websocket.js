@@ -46,11 +46,23 @@ class WebSocketManager {
      * Connecte au serveur WebSocket pour le chat
      * @returns {Promise} Promesse résolue quand la connexion est établie
      */
+
+
     connectChat() {
         return new Promise((resolve, reject) => {
-            if (this.socket && this.isConnected) {
-                resolve();
+            // Si déjà connecté, résoudre immédiatement
+            if (this.socket && this.socket.readyState === WebSocket.OPEN) {
+                resolve(this.socket);
                 return;
+            }
+            
+            // Si une connexion est en cours, fermer d'abord
+            if (this.socket) {
+                try {
+                    this.socket.close();
+                } catch (e) {
+                    console.warn("Erreur lors de la fermeture du socket existant:", e);
+                }
             }
             
             const url = `${CONFIG.WEBSOCKET_BASE_URL}${CONFIG.API.CHAT}/ws/${this.clientId}`;
@@ -89,6 +101,12 @@ class WebSocketManager {
                         case 'end':
                             console.log("🏁 END message received with content:", data.content);
                             if (this.streamingCallbacks.end) {
+                                // Important: s'assurer que le contenu est bien définit
+                                if (!data.content && data.conversation_id) {
+                                    // Si le contenu n'est pas défini, essayer de le récupérer d'une autre manière
+                                    console.warn("Message END reçu sans contenu");
+                                    // On laisse le callback gérer ce cas
+                                }
                                 this.streamingCallbacks.end(data);
                             } else {
                                 console.error("No end callback configured!");
@@ -141,6 +159,8 @@ class WebSocketManager {
         });
     }
     
+
+
     /**
      * Connecte au serveur WebSocket pour le streaming vocal
      * @param {string} conversationId - ID de la conversation
@@ -352,6 +372,42 @@ class WebSocketManager {
             }
         }
     }
+
+
+
+    reset() {
+        // Fermer toutes les connexions existantes
+        if (this.socket) {
+            try {
+                this.socket.close();
+            } catch (e) {
+                console.warn("Erreur lors de la fermeture du socket:", e);
+            }
+            this.socket = null;
+        }
+        
+        if (this.voiceSocket) {
+            try {
+                this.voiceSocket.close();
+            } catch (e) {
+                console.warn("Erreur lors de la fermeture du socket vocal:", e);
+            }
+            this.voiceSocket = null;
+        }
+        
+        // Réinitialiser l'état
+        this.isConnected = false;
+        this.reconnectAttempts = 0;
+        
+        // Générer un nouveau clientId
+        this.clientId = this._generateClientId();
+        
+        console.log("WebSocketManager réinitialisé avec clientId:", this.clientId);
+    }
+
+
+
+
 }
 
 // Instance globale

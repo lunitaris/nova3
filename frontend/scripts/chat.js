@@ -19,6 +19,7 @@ class ChatManager {
         this.messageTemplate = document.getElementById('message-template');
         this.conversationItemTemplate = document.getElementById('conversation-item-template');
         
+        this._cleanupTypingIndicator();         // Nettoyer les indicateurs résiduels
         // Démarrer les WebSockets
         this._initWebSocket();
         
@@ -53,10 +54,13 @@ class ChatManager {
                 console.log("Callback de fin de streaming appelé avec contenu:", data.content);
                 
                 // Supprimer l'indicateur de frappe et récupérer le texte accumulé
-                this._removeTypingIndicator();
+                const accumulatedText = this._removeTypingIndicator();
+                
+                // Important: Utiliser le texte accumulé localement plutôt que data.content qui peut être incomplet
+                const finalContent = accumulatedText || data.content;
                 
                 // Ajouter le message à l'historique de conversation de façon permanente
-                this._addMessage(data.content, 'assistant');
+                this._addMessage(finalContent, 'assistant');
                 
                 // Mettre à jour la liste des conversations
                 this.loadConversations();
@@ -67,6 +71,16 @@ class ChatManager {
                 this._showError(data.content || "Erreur lors de la génération de la réponse.");
             }
         });
+    }
+
+
+    // Ajouter une méthode pour vérifier et nettoyer les éléments résiduels
+    _cleanupTypingIndicator() {
+        // S'assurer qu'il n'y a pas d'éléments typing-indicator résiduels au chargement
+        const oldIndicators = document.querySelectorAll('#typing-indicator');
+        if (oldIndicators.length > 0) {
+            oldIndicators.forEach(el => el.remove());
+        }
     }
     
     /**
@@ -470,20 +484,29 @@ class ChatManager {
         // Créer l'indicateur
         const typingEl = document.createElement('div');
         typingEl.className = 'typing-indicator';
-        typingEl.innerHTML = `
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div class="typing-dot"></div>
-            <div id="typing-text" style=""></div>
-
-        `;
         typingEl.id = 'typing-indicator';
+        
+        // Ajouter les points d'animation
+        const dotsContainer = document.createElement('div');
+        dotsContainer.className = 'dots-container';
+        dotsContainer.innerHTML = `
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+            <div class="typing-dot"></div>
+        `;
+        typingEl.appendChild(dotsContainer);
         
         // Ajouter l'élément spécial pour accumuler le texte pendant le streaming
         const hiddenTextEl = document.createElement('div');
         hiddenTextEl.style.display = 'none';
         hiddenTextEl.id = 'typing-text';
         typingEl.appendChild(hiddenTextEl);
+        
+        // Créer un espace visible pour le texte
+        const visibleTextEl = document.createElement('div');
+        visibleTextEl.className = 'visible-text';
+        visibleTextEl.style.display = 'none'; // Initialement caché, apparaît quand du texte est ajouté
+        typingEl.appendChild(visibleTextEl);
         
         // Ajouter à la zone de messages
         this.messagesContainer.appendChild(typingEl);
@@ -499,12 +522,27 @@ class ChatManager {
     _appendToTypingIndicator(text) {
         console.log(`Ajout au typing indicator: "${text}"`);
         const typingTextEl = document.getElementById('typing-text');
-        if (typingTextEl) {
-            // Assurez-vous d'ajouter uniquement le nouveau texte
+        const typingEl = document.getElementById('typing-indicator');
+        
+        if (typingTextEl && typingEl) {
+            // Ajouter le texte à l'élément caché qui stocke le contenu complet
             typingTextEl.textContent += text;
-            typingTextEl.style.display = 'block';
+            
+            // Afficher une version visible du texte en cours
+            const visibleTextNode = typingEl.querySelector('.visible-text') || (() => {
+                const node = document.createElement('div');
+                node.className = 'visible-text';
+                node.style.display = 'block';
+                typingEl.appendChild(node);
+                return node;
+            })();
+            
+            visibleTextNode.textContent = typingTextEl.textContent;
+            
+            // Défiler vers le bas
+            this._scrollToBottom();
         } else {
-            console.error("Element typing-text non trouvé!");
+            console.error("Element typing-text ou typing-indicator non trouvé!");
         }
     }
 
