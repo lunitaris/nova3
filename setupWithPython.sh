@@ -1,4 +1,10 @@
 #!/bin/bash
+# USE THIS SCRIPT WHEN YOU DON'T WANT TO RUN FROM DOCKER.
+# FOR DEBUGGING, DEV PURPOSE, SOULD BE USED
+#
+#   1) Setup Python3.10 venv
+#   2) Install backend Python requirements
+
 
 
 echo "Installing python venv..."
