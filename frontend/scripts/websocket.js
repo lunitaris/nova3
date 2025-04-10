@@ -46,8 +46,6 @@ class WebSocketManager {
      * Connecte au serveur WebSocket pour le chat
      * @returns {Promise} Promesse résolue quand la connexion est établie
      */
-
-
     connectChat() {
         return new Promise((resolve, reject) => {
             // Si déjà connecté, résoudre immédiatement
@@ -66,97 +64,102 @@ class WebSocketManager {
             }
             
             const url = `${CONFIG.WEBSOCKET_BASE_URL}${CONFIG.API.CHAT}/ws/${this.clientId}`;
-            this.socket = new WebSocket(url);
+            console.log("Connexion au WebSocket:", url);
             
-            this.socket.onopen = () => {
-                console.log("WebSocket connecté");
-                this.isConnected = true;
-                this.reconnectAttempts = 0;
-                this._triggerCallbacks(this.onConnectCallbacks, this.socket);
-                resolve(this.socket);
-            };
-            
-
-        this.socket.onmessage = (event) => {
             try {
-                console.log("Raw WebSocket message received:", event.data);
-                const data = JSON.parse(event.data);
-                console.log("WebSocket message parsed:", data);
+                this.socket = new WebSocket(url);
                 
-                // Router selon le type de message
-                switch(data.type) {
-                    case 'start':
-                        console.log("⭐ START message received", data);
-                        if (this.streamingCallbacks.start) {
-                            this.streamingCallbacks.start(data);
+                this.socket.onopen = () => {
+                    console.log("WebSocket connecté avec succès");
+                    this.isConnected = true;
+                    this.reconnectAttempts = 0;
+                    this._triggerCallbacks(this.onConnectCallbacks, this.socket);
+                    resolve(this.socket);
+                };
+                
+                this.socket.onmessage = (event) => {
+                    try {
+                        console.log("Raw WebSocket message received:", event.data);
+                        const data = JSON.parse(event.data);
+                        console.log("WebSocket message parsed:", data);
+                        
+                        // Router selon le type de message
+                        switch(data.type) {
+                            case 'start':
+                                console.log("⭐ START message received", data);
+                                if (this.streamingCallbacks.start) {
+                                    this.streamingCallbacks.start(data);
+                                }
+                                break;
+                            case 'token':
+                                if (this.streamingCallbacks.token) {
+                                    this.streamingCallbacks.token(data.content);
+                                } else {
+                                    console.error("No token callback configured!");
+                                }
+                                break;
+                            case 'end':
+                                console.log("🏁 END message received with content:", data);
+                                if (this.streamingCallbacks.end) {
+                                    // Assurer que les données contiennent un ID de conversation si présent
+                                    if (data.conversation_id) {
+                                        console.log(`Conversation ID dans la réponse: ${data.conversation_id}`);
+                                    }
+                                    this.streamingCallbacks.end(data);
+                                } else {
+                                    console.error("No end callback configured!");
+                                }
+                                break;
+                            case 'error':
+                                console.error("⚠️ ERROR message received:", data);
+                                if (this.streamingCallbacks.error) {
+                                    this.streamingCallbacks.error(data);
+                                }
+                                break;
+                            default:
+                                // Transmettre aux callbacks génériques
+                                console.log("⚠️ UNKNOWN message type:", data.type);
+                                this._triggerCallbacks(this.onMessageCallbacks, data);
                         }
-                        break;
-                    case 'token':
-                        if (this.streamingCallbacks.token) {
-                            this.streamingCallbacks.token(data.content);
-                        } else {
-                            console.error("No token callback configured!");
-                        }
-                        break;
-                    case 'end':
-                        console.log("🏁 END message received with content:", data);
-                        if (this.streamingCallbacks.end) {
-                            // Assurer que les données contiennent un ID de conversation si présent
-                            if (data.conversation_id) {
-                                console.log(`Conversation ID dans la réponse: ${data.conversation_id}`);
-                            }
-                            this.streamingCallbacks.end(data);
-                        } else {
-                            console.error("No end callback configured!");
-                        }
-                        break;
-                    case 'error':
-                        console.error("⚠️ ERROR message received:", data);
+                    } catch (error) {
+                        console.error("❌ Error parsing WebSocket message:", error, event.data);
                         if (this.streamingCallbacks.error) {
-                            this.streamingCallbacks.error(data);
+                            this.streamingCallbacks.error({
+                                type: 'error',
+                                content: "Erreur de communication avec le serveur."
+                            });
                         }
-                        break;
-                    default:
-                        // Transmettre aux callbacks génériques
-                        console.log("⚠️ UNKNOWN message type:", data.type);
-                        this._triggerCallbacks(this.onMessageCallbacks, data);
-                }
-            } catch (error) {
-                console.error("❌ Error parsing WebSocket message:", error, event.data);
-                if (this.streamingCallbacks.error) {
-                    this.streamingCallbacks.error({
-                        type: 'error',
-                        content: "Erreur de communication avec le serveur."
-                    });
-                }
-            }
-        };
-            
-            this.socket.onclose = (event) => {
-                console.log("WebSocket déconnecté", event.code, event.reason);
-                this.isConnected = false;
-                this._triggerCallbacks(this.onDisconnectCallbacks, event);
+                    }
+                };
                 
-                // Tentative de reconnexion automatique
-                if (this.reconnectAttempts < this.maxReconnectAttempts) {
-                    console.log(`Tentative de reconnexion dans ${this.reconnectDelay}ms...`);
-                    setTimeout(() => {
-                        this.reconnectAttempts++;
-                        this.connectChat().catch(error => {
-                            console.error("Échec de la reconnexion:", error);
-                        });
-                    }, this.reconnectDelay);
-                }
-            };
-            
-            this.socket.onerror = (error) => {
-                console.error("Erreur WebSocket:", error);
-                this._triggerCallbacks(this.onErrorCallbacks, error);
+                this.socket.onclose = (event) => {
+                    console.log("WebSocket déconnecté", event.code, event.reason);
+                    this.isConnected = false;
+                    this._triggerCallbacks(this.onDisconnectCallbacks, event);
+                    
+                    // Tentative de reconnexion automatique
+                    if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                        console.log(`Tentative de reconnexion dans ${this.reconnectDelay}ms...`);
+                        setTimeout(() => {
+                            this.reconnectAttempts++;
+                            this.connectChat().catch(error => {
+                                console.error("Échec de la reconnexion:", error);
+                            });
+                        }, this.reconnectDelay);
+                    }
+                };
+                
+                this.socket.onerror = (error) => {
+                    console.error("Erreur WebSocket:", error);
+                    this._triggerCallbacks(this.onErrorCallbacks, error);
+                    reject(error);
+                };
+            } catch (error) {
+                console.error("Erreur lors de la création du WebSocket:", error);
                 reject(error);
-            };
+            }
         });
     }
-    
 
 
     /**
@@ -237,7 +240,7 @@ class WebSocketManager {
      */
     sendMessage(message) {
         if (!this.socket || !this.isConnected) {
-            console.error("WebSocket non connecté");
+            console.error("WebSocket non connecté, impossible d'envoyer le message");
             return false;
         }
         
@@ -245,9 +248,12 @@ class WebSocketManager {
             // Convertir en chaîne si ce n'est pas déjà le cas
             const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
             
-            // Ajouter un log pour déboguer
-            if (typeof message === 'object' && message.conversation_id) {
-                console.log(`Envoi du message avec conversation_id: ${message.conversation_id}`);
+            // Ajouter des logs détaillés pour déboguer
+            if (typeof message === 'object') {
+                console.log("Détails du message envoyé:", message);
+                if (message.conversation_id) {
+                    console.log(`Envoi WebSocket avec conversation_id: ${message.conversation_id}`);
+                }
             }
             
             // Envoyer le message

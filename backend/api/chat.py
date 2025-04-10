@@ -60,19 +60,24 @@ async def send_message(message: ChatMessage):
 
 @router.get("/conversations", response_model=List[ConversationInfo])
 async def list_conversations(
-    user_id: str = "anonymous",
+    user_id: str = Query("anonymous", alias="user_id"),
     limit: int = Query(10, ge=1, le=100),
-    offset: int = Query(0, ge=0)
+    offset: int = Query(0, ge=0),
+    include_latest: bool = Query(True)  # Nouveau paramètre pour inclure la dernière conversation
 ):
     """
     Liste les conversations disponibles.
     """
     try:
+        # Récupérer les conversations normalement
         conversations = conversation_manager.list_conversations(
             user_id=user_id,
             limit=limit,
             offset=offset
         )
+        
+        # Log pour débogage
+        logger.info(f"Récupération de {len(conversations)} conversations pour l'utilisateur {user_id}")
         
         return conversations
     
