@@ -322,12 +322,13 @@
     text-align: center;
   }
   
-  /* Messages */
-  .message {
-    display: flex;
-    gap: var(--spacing-md);
-    max-width: 80%;
-  }
+/* Assurer un espacement cohérent entre les messages */
+.message {
+  display: flex;
+  gap: var(--spacing-md);
+  max-width: 80%;
+  margin-bottom: var(--spacing-md);
+}
   
   .message.user {
     align-self: flex-end;
@@ -381,10 +382,12 @@
     color: var(--text-on-primary);
   }
   
-  .message-text {
-    margin-bottom: var(--spacing-xs);
-    white-space: pre-wrap;
-  }
+/* Assurer que le texte du message est correctement formaté */
+.message-text {
+  margin-bottom: var(--spacing-xs);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
   
   .message-time {
     text-align: right;
@@ -730,33 +733,41 @@
   }
   
   /* État de frappe */
-  .typing-indicator {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: var(--spacing-sm) var(--spacing-md);
-    background-color: var(--card-bg);
-    border-radius: var(--border-radius-md);
-    box-shadow: var(--shadow-sm);
-    align-self: flex-start;
-    margin-left: 50px;
-    max-width: 80%;
+.typing-indicator {
+  display: flex;
+  flex-direction: column;
+  align-self: flex-start;
+  background-color: var(--card-bg);
+  border-radius: var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-md);
+  margin: var(--spacing-md) 0;
+  margin-left: 50px; /* Alignement avec les autres messages de l'assistant */
+  min-width: 100px;
+  max-width: 80%;
 }
 
 .typing-indicator .dots-container {
   display: flex;
   gap: 4px;
+  margin-bottom: var(--spacing-xs);
 }
+  
 
 .typing-indicator .visible-text {
-  margin-top: 4px;
-  white-space: pre-wrap;
   font-size: var(--font-size-md);
   color: var(--text-primary);
   max-height: 300px;
   overflow-y: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
+
+/* S'assurer que les indicateurs de frappe sont correctement masqués à la fin */
+.typing-indicator.finished {
+  display: none !important;
+}
   
 .typing-dot {
   width: 8px;
