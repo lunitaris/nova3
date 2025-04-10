@@ -76,60 +76,61 @@ class WebSocketManager {
                 resolve(this.socket);
             };
             
-        // Modification à apporter au fichier frontend/scripts/websocket.js
-        // Améliorer le handler des messages WebSocket dans la méthode connectChat()
-            this.socket.onmessage = (event) => {
-                try {
-                    console.log("Raw WebSocket message received:", event.data);
-                    const data = JSON.parse(event.data);
-                    console.log("WebSocket message parsed:", data);
-                    
-                    // Router selon le type de message
-                    switch(data.type) {
-                        case 'start':
-                            console.log("⭐ START message received");
-                            if (this.streamingCallbacks.start) {
-                                this.streamingCallbacks.start(data);
+
+        this.socket.onmessage = (event) => {
+            try {
+                console.log("Raw WebSocket message received:", event.data);
+                const data = JSON.parse(event.data);
+                console.log("WebSocket message parsed:", data);
+                
+                // Router selon le type de message
+                switch(data.type) {
+                    case 'start':
+                        console.log("⭐ START message received", data);
+                        if (this.streamingCallbacks.start) {
+                            this.streamingCallbacks.start(data);
+                        }
+                        break;
+                    case 'token':
+                        if (this.streamingCallbacks.token) {
+                            this.streamingCallbacks.token(data.content);
+                        } else {
+                            console.error("No token callback configured!");
+                        }
+                        break;
+                    case 'end':
+                        console.log("🏁 END message received with content:", data);
+                        if (this.streamingCallbacks.end) {
+                            // Assurer que les données contiennent un ID de conversation si présent
+                            if (data.conversation_id) {
+                                console.log(`Conversation ID dans la réponse: ${data.conversation_id}`);
                             }
-                            break;
-                        case 'token':
-                            if (this.streamingCallbacks.token) {
-                                this.streamingCallbacks.token(data.content);
-                                console.log(`🔤 TOKEN handled: "${data.content}"`);
-                            } else {
-                                console.error("No token callback configured!");
-                            }
-                            break;
-                        case 'end':
-                            console.log("🏁 END message received with content:", data.content);
-                            if (this.streamingCallbacks.end) {
-                                // S'assurer que l'indicateur de frappe est bien nettoyé
-                                this.streamingCallbacks.end(data);
-                            } else {
-                                console.error("No end callback configured!");
-                            }
-                            break;
-                        case 'error':
-                            console.error("⚠️ ERROR message received:", data);
-                            if (this.streamingCallbacks.error) {
-                                this.streamingCallbacks.error(data);
-                            }
-                            break;
-                        default:
-                            // Transmettre aux callbacks génériques
-                            console.log("⚠️ UNKNOWN message type:", data.type);
-                            this._triggerCallbacks(this.onMessageCallbacks, data);
-                    }
-                } catch (error) {
-                    console.error("❌ Error parsing WebSocket message:", error, event.data);
-                    if (this.streamingCallbacks.error) {
-                        this.streamingCallbacks.error({
-                            type: 'error',
-                            content: "Erreur de communication avec le serveur."
-                        });
-                    }
+                            this.streamingCallbacks.end(data);
+                        } else {
+                            console.error("No end callback configured!");
+                        }
+                        break;
+                    case 'error':
+                        console.error("⚠️ ERROR message received:", data);
+                        if (this.streamingCallbacks.error) {
+                            this.streamingCallbacks.error(data);
+                        }
+                        break;
+                    default:
+                        // Transmettre aux callbacks génériques
+                        console.log("⚠️ UNKNOWN message type:", data.type);
+                        this._triggerCallbacks(this.onMessageCallbacks, data);
                 }
-            };
+            } catch (error) {
+                console.error("❌ Error parsing WebSocket message:", error, event.data);
+                if (this.streamingCallbacks.error) {
+                    this.streamingCallbacks.error({
+                        type: 'error',
+                        content: "Erreur de communication avec le serveur."
+                    });
+                }
+            }
+        };
             
             this.socket.onclose = (event) => {
                 console.log("WebSocket déconnecté", event.code, event.reason);
@@ -241,7 +242,15 @@ class WebSocketManager {
         }
         
         try {
+            // Convertir en chaîne si ce n'est pas déjà le cas
             const messageStr = typeof message === 'string' ? message : JSON.stringify(message);
+            
+            // Ajouter un log pour déboguer
+            if (typeof message === 'object' && message.conversation_id) {
+                console.log(`Envoi du message avec conversation_id: ${message.conversation_id}`);
+            }
+            
+            // Envoyer le message
             this.socket.send(messageStr);
             return true;
         } catch (error) {
@@ -344,7 +353,29 @@ class WebSocketManager {
      * @param {Object} callbacks - Objet contenant les callbacks
      */
     setStreamingCallbacks(callbacks) {
-        this.streamingCallbacks = { ...this.streamingCallbacks, ...callbacks };
+        // Stocker les anciens callbacks
+        const oldCallbacks = { ...this.streamingCallbacks };
+        
+        // Mettre à jour avec les nouveaux callbacks, mais envelopper 'end' pour assurer le nettoyage
+        this.streamingCallbacks = {
+            ...oldCallbacks,
+            ...callbacks,
+            // Surcharger le callback 'end' pour s'assurer que le nettoyage est fait
+            end: (data) => {
+                // Forcer le nettoyage de tous les indicateurs de frappe
+                const typingIndicators = document.querySelectorAll('.typing-indicator, #typing-indicator');
+                typingIndicators.forEach(indicator => {
+                    if (indicator && indicator.parentNode) {
+                        indicator.parentNode.removeChild(indicator);
+                    }
+                });
+                
+                // Puis appeler le callback original s'il existe
+                if (callbacks.end) {
+                    callbacks.end(data);
+                }
+            }
+        };
     }
     
     /**
