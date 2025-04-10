@@ -7,6 +7,8 @@ class ChatManager {
         this.currentConversationId = null;
         this.isTyping = false;
         this.messageQueue = [];
+        this.streamingText = ""; // Pour stocker le texte en cours de streaming
+
         
         // Éléments DOM
         this.messagesContainer = document.getElementById('messages-container');
@@ -14,6 +16,10 @@ class ChatManager {
         this.sendButton = document.getElementById('send-button');
         this.conversationList = document.getElementById('conversation-list');
         this.conversationTitle = document.getElementById('conversation-title');
+
+        // Pour le streaming
+        this.accumulatedTokens = "";
+        this.isStreaming = false;
         
         // Template pour les messages
         this.messageTemplate = document.getElementById('message-template');
@@ -43,38 +49,44 @@ class ChatManager {
         // Configurer les callbacks de streaming
         wsManager.setStreamingCallbacks({
             start: (data) => {
-                console.log("LOG17: Callback de début de streaming appelé");  // LOG 17
+                console.log("Callback de début de streaming appelé");
+                this.isStreaming = true;
+                this.accumulatedTokens = ""; // Réinitialiser au début
                 this._showTypingIndicator();
             },
             token: (token) => {
-                console.log(`LOG18: Callback de token appelé avec: ${token}`);  // LOG 18
+                console.log(`Callback de token appelé avec: ${token}`);
+                // Accumuler le token, que l'indicateur existe ou non
+                this.accumulatedTokens += token;
                 this._appendToTypingIndicator(token);
             },
             end: (data) => {
                 console.log("Callback de fin de streaming appelé avec contenu:", data.content);
-    
-                // Supprimer l'indicateur de frappe AVANT d'ajouter le message final
-                const accumulatedText = this._removeTypingIndicator();
                 
-                // Petit délai pour s'assurer que le DOM est mis à jour
-                setTimeout(() => {
-                    // Utiliser le texte accumulé ou le contenu du message de fin
-                    const finalContent = accumulatedText || data.content;
-                    
-                    // Ajouter le message à l'historique
-                    this._addMessage(finalContent, 'assistant');
-                    
-                    // Mettre à jour la liste des conversations
-                    this.loadConversations();
-                }, 10);
+                // Nettoyer l'indicateur
+                this._removeTypingIndicator();
+                this.isStreaming = false;
+                
+                // Utiliser le contenu accumulé ou celui du message final
+                const finalContent = this.accumulatedTokens || data.content;
+                this.accumulatedTokens = ""; // Réinitialiser
+                
+                // Ajouter le message
+                this._addMessage(finalContent, 'assistant');
+                
+                // Mettre à jour les conversations
+                this.loadConversations();
             },
             error: (data) => {
-                console.error("LOG20: Erreur de streaming reçue:", data);  // LOG 20
+                console.error("Erreur de streaming reçue:", data);
                 this._removeTypingIndicator();
+                this.isStreaming = false;
+                this.accumulatedTokens = ""; // Réinitialiser
                 this._showError(data.content || "Erreur lors de la génération de la réponse.");
             }
         });
     }
+    
 
 
     // Ajouter une méthode pour vérifier et nettoyer les éléments résiduels
@@ -523,49 +535,46 @@ class ChatManager {
      * Ajoute du texte à l'indicateur de frappe (pour le streaming)
      * @param {string} text - Texte à ajouter
      */
+
+
+
+// Remplacement complet de la méthode qui gère le streaming
     _appendToTypingIndicator(text) {
-        console.log(`Ajout au typing indicator: "${text}"`);
-        const typingIndicator = document.getElementById('typing-indicator');
+    // Ajouter le texte au tampon de streaming
+    this.streamingText += text;
+    
+    // Trouver ou créer l'indicateur
+    let indicator = document.getElementById('typing-indicator');
+    if (!indicator) {
+        // Créer un élément simple
+        indicator = document.createElement('div');
+        indicator.id = 'typing-indicator';
+        indicator.className = 'message assistant';
         
-        if (!typingIndicator) {
-            console.error("L'indicateur de frappe n'existe pas!");
-            typingIndicator.classList.add('message-finished');
-            this._showTypingIndicator(); // Recréer l'indicateur s'il n'existe pas
-            return this._appendToTypingIndicator(text); // Réessayer
-        }
+        // Ajouter des points d'animation
+        const dotsContainer = document.createElement('div');
+        dotsContainer.className = 'dots-container';
+        dotsContainer.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+        indicator.appendChild(dotsContainer);
         
-        // S'assurer que l'élément pour stocker le texte complet existe
-        let typingTextEl = document.getElementById('typing-text');
-        if (!typingTextEl) {
-            typingTextEl = document.createElement('div');
-            typingTextEl.id = 'typing-text';
-            typingTextEl.style.display = 'none';
-            typingIndicator.appendChild(typingTextEl);
-        }
+        // Créer un conteneur pour le texte
+        const textContainer = document.createElement('div');
+        textContainer.className = 'message-text';
+        indicator.appendChild(textContainer);
         
-        // Ajouter le texte à l'élément caché qui stocke le contenu complet
-        typingTextEl.textContent += text;
-        
-        // Obtenir ou créer l'élément pour le texte visible
-        let visibleTextEl = typingIndicator.querySelector('.visible-text');
-        if (!visibleTextEl) {
-            visibleTextEl = document.createElement('div');
-            visibleTextEl.className = 'visible-text';
-            typingIndicator.appendChild(visibleTextEl);
-        }
-        
-        // Afficher le conteneur de texte visible
-        visibleTextEl.style.display = 'block';
-        
-        // Mettre à jour le texte visible
-        visibleTextEl.textContent = typingTextEl.textContent;
-        
-        // Défiler vers le bas
-        this._scrollToBottom();
+        // Ajouter à la zone des messages
+        this.messagesContainer.appendChild(indicator);
     }
-
-
-
+    
+    // Mettre à jour le texte
+    const textContainer = indicator.querySelector('.message-text');
+    if (textContainer) {
+        textContainer.textContent = this.streamingText;
+    }
+    
+    // Défiler vers le bas
+    this._scrollToBottom();
+    }
     /**
      * Supprime l'indicateur de frappe
      * @returns {string} Le texte accumulé
