@@ -50,65 +50,51 @@ class ChatManager {
         });
         
         // Configurer les callbacks de streaming
-        wsManager.setStreamingCallbacks({
-            start: (data) => {
-                console.log("Début du streaming");
-                this.isStreaming = true;
-                this.accumulatedTokens = ""; // Réinitialiser au début
-                this.streamingText = ""; // Réinitialiser le texte de streaming
-                this._showTypingIndicator();
-            },
-            token: (token) => {
-                // Accumuler le token
-                this.accumulatedTokens += token;
-                // Mettre à jour l'indicateur de frappe
-                this._appendToTypingIndicator(token);
-            },
-            end: (data) => {
-                console.log("Fin du streaming, données reçues:", data);
-                // Récupérer le texte accumulé
-                const finalContent = this.accumulatedTokens || data.content;
-                
-                // Nettoyer l'indicateur et réinitialiser les variables
-                this._removeTypingIndicator();
-                this.isStreaming = false;
-                this.accumulatedTokens = "";
-                this.streamingText = "";
-                
-                // Ajouter le message final
-                this._addMessage(finalContent, 'assistant');
-                
-                // Si un ID de conversation est reçu
-                if (data.conversation_id) {
-                    console.log(`ID de conversation reçu: ${data.conversation_id}`);
+            wsManager.setStreamingCallbacks({
+                start: (data) => {
+                    console.log("Début du streaming");
                     
-                    // Mettre à jour l'ID
-                    this.currentConversationId = data.conversation_id;
-                    
-                    // Mettre à jour le titre si nécessaire
-                    if (this.conversationTitle.textContent === 'Nouvelle conversation') {
-                        const tempTitle = finalContent.split('.')[0];
-                        if (tempTitle.length > 30) {
-                            this.conversationTitle.textContent = tempTitle.substring(0, 30) + '...';
-                        } else {
-                            this.conversationTitle.textContent = tempTitle;
-                        }
+                    // FIX: Si conversation_id est renvoyé, on l'utilise comme ID officiel
+                    if (data.conversation_id && chatManager.currentConversationId?.startsWith('temp_')) {
+                        chatManager.currentConversationId = data.conversation_id;
+                        console.log("🔁 ID temporaire remplacé par l’ID officiel :", data.conversation_id);
                     }
-                    
-                    // SOLUTION DE DÉBOGAGE: Tenter la réparation forcée des conversations
-                    setTimeout(() => {
-                        this.debugFixConversations();
-                    }, 500);
-                }
                 
-                // Synthèse vocale si nécessaire
-                if (userPreferences.get('CONVERSATION_MODE') === 'voice') {
-                    const voiceEvent = new CustomEvent('voiceResponse', {
-                        detail: { text: finalContent }
-                    });
-                    document.dispatchEvent(voiceEvent);
-                }
-            },
+                    chatManager.isStreaming = true;
+                    chatManager.accumulatedTokens = "";
+                    chatManager.streamingText = "";
+                    chatManager._showTypingIndicator();
+                },
+                token: (token) => {
+                    // Ignore les tokens s’il y a eu un switch de conversation
+                    if (!chatManager.isStreaming) return;
+                
+                    chatManager.accumulatedTokens += token;
+                    chatManager._appendToTypingIndicator(token);
+                },
+                end: (data) => {
+                    if (data.conversation_id !== chatManager.currentConversationId) {
+                        console.warn("⛔ Réponse reçue pour une autre conversation, ignorée");
+                        return;
+                    }
+                
+                    const finalContent = data.content || chatManager.accumulatedTokens || "";
+                    chatManager.currentConversationId = data.conversation_id;
+                    chatManager._handleEndOfStreaming(finalContent, data.conversation_id);
+                
+                    // ✅ Attendre plus longtemps (700ms) avant de charger les conversations depuis le backend
+                    setTimeout(() => {
+                        chatManager.loadConversations(); 
+                    }, 700);  // <- augmente à 700ms minimum
+                
+
+                    if (userPreferences.get('CONVERSATION_MODE') === 'voice') {
+                        const voiceEvent = new CustomEvent('voiceResponse', {
+                            detail: { text: finalContent }
+                        });
+                        document.dispatchEvent(voiceEvent);
+                    }
+                },
             error: (data) => {
                 console.error("Erreur de streaming:", data);
                 this._removeTypingIndicator();
@@ -119,6 +105,144 @@ class ChatManager {
             }
         });
     }
+
+
+//------------------------------------------------------------------------------------------------------------------------
+
+    /**
+     * Gère la fin du streaming de manière fiable
+     * @param {string} finalContent - Contenu final du message
+     * @param {string} conversationId - ID de la conversation
+     */
+    _handleEndOfStreaming(finalContent, conversationId) {
+        console.log("HANDLER: Gestion de fin de streaming", {
+            finalContent: finalContent.substring(0, 30) + "...",
+            conversationId: conversationId
+        });
+        
+        // Stocker ces informations dans des variables globales pour récupération d'urgence
+        window._lastFinalContent = finalContent;
+        window._lastConversationId = conversationId;
+        
+        // 1. Supprimer tous les indicateurs de frappe existants
+        const indicators = document.querySelectorAll('#typing-indicator, .typing-indicator');
+        indicators.forEach(indicator => {
+            if (indicator && indicator.parentNode) {
+                indicator.parentNode.removeChild(indicator);
+            }
+        });
+        
+        // 2. Réinitialiser toutes les variables d'état
+        this.isStreaming = false;
+        this.accumulatedTokens = "";
+        this.streamingText = "";
+        
+        // 3. Ajouter le message finalisé au DOM après un petit délai
+        setTimeout(() => {
+            try {
+                // Vérifier si le message existe déjà (éviter les doublons)
+                const messageId = `msg_${Date.now()}`;
+                const existingMessages = Array.from(document.querySelectorAll('.message.assistant .message-text'));
+                const messageExists = existingMessages.some(el => el.textContent === finalContent);
+                
+                if (!messageExists) {
+                    console.log("HANDLER: Ajout du message au DOM");
+                    
+                    // Créer le message manuellement 
+                    const messageContainer = document.createElement('div');
+                    messageContainer.className = 'message assistant';
+                    messageContainer.id = messageId;
+                    
+                    messageContainer.innerHTML = `
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <div class="message-text">${finalContent}</div>
+                            <div class="message-time">${new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}</div>
+                        </div>
+                    `;
+                    
+                    // IMPORTANT: S'assurer que le message est ajouté au bon container
+                    if (this.messagesContainer) {
+                        this.messagesContainer.appendChild(messageContainer);
+
+                        //-------------------------------------------------------------------------------------
+                        // 🎯 Surveillance du message assistant injecté
+                        const observer = new MutationObserver((mutations) => {
+                            mutations.forEach(mutation => {
+                                mutation.removedNodes.forEach(node => {
+                                    if (node === messageContainer) {
+                                        console.warn("🧨 MESSAGE ASSISTANT SUPPRIMÉ DU DOM !");
+                                        console.log("Timestamp suppression:", new Date().toLocaleTimeString());
+                                        debugger; // ← ça déclenchera l'inspecteur Chrome/Firefox si ouvert
+                                    }
+                                });
+                            });
+                        });
+
+                        observer.observe(this.messagesContainer, { childList: true });
+                        //-------------------------------------------------------------------------------------
+                        
+                        // Force browser reflow/repaint
+                        void this.messagesContainer.offsetHeight;
+                        
+                        // Forcer un repaint + scroll en cascade
+                        requestAnimationFrame(() => {
+                            requestAnimationFrame(() => {
+                                this._scrollToBottom();
+                            });
+                        });
+                    }
+                    
+                    // Vérifier après un court délai que le message est toujours là
+                    setTimeout(() => {
+                        const addedMessage = document.getElementById(messageId);
+                        console.log("HANDLER: Vérification après ajout:", addedMessage ? "Message présent" : "Message ABSENT!");
+                        
+                        // Si le message a disparu, tenter de le restaurer
+                        if (!addedMessage && this.messagesContainer) {
+                            console.warn("RESTAURATION: Le message a disparu, tentative de restauration...");
+                            const restoredMessage = messageContainer.cloneNode(true);
+                            restoredMessage.id = messageId + "_restored";
+                            this.messagesContainer.appendChild(restoredMessage);
+                            this._scrollToBottom();
+                        }
+                    }, 200);
+                } else {
+                    console.log("HANDLER: Message déjà présent, pas de duplication");
+                }
+            } catch (error) {
+                console.error("HANDLER ERROR:", error);
+            }
+            
+            // 4. Mettre à jour les métadonnées de conversation
+            try {
+                if (conversationId) {
+                    this.currentConversationId = conversationId;
+                    
+                    // Titre de la conversation
+                    if (this.conversationTitle.textContent === 'Nouvelle conversation') {
+                        const tempTitle = finalContent.split('.')[0];
+                        this.conversationTitle.textContent = tempTitle.length > 30 
+                            ? tempTitle.substring(0, 30) + '...' 
+                            : tempTitle;
+                    }
+                    
+                    // Rafraîchir la liste après un délai
+                    setTimeout(() => {
+                        this.loadConversations();
+                    }, 300);
+                }
+            } catch (error) {
+                console.error("HANDLER ERROR (conversationId):", error);
+            }
+        }, 100);
+    }
+
+//------------------------------------------------------------------------------------------------------------------------
+
+
 
 
     async debugFixConversations() {
@@ -282,7 +406,7 @@ class ChatManager {
      * Nettoie les éléments résiduels qui pourraient rester d'une session précédente
      */
     _cleanupResidualElements() {
-        // Supprimer tous les indicateurs de frappe résiduels
+        // Supprimer uniquement les indicateurs de frappe, pas les messages
         const residualIndicators = document.querySelectorAll('#typing-indicator, .typing-indicator');
         residualIndicators.forEach(el => {
             if (el && el.parentNode) {
@@ -503,12 +627,16 @@ class ChatManager {
      */
     async selectConversation(conversationId) {
         this.currentConversationId = conversationId;
+        console.log("📥 selectConversation triggered for:", conversationId);
+        console.log("📥 DOM message count BEFORE:", this.messagesContainer.querySelectorAll('.message').length);
+
         
         // Mettre à jour la liste de conversations (pour l'élément actif)
         this._updateConversationList();
         
         // Vider la zone de messages
         this.messagesContainer.innerHTML = '';
+        console.warn("🧹 messagesContainer vidé !");
         
         try {
             // Charger les messages
@@ -546,6 +674,9 @@ class ChatManager {
         // Générer un ID temporaire unique
         const tempId = 'temp_' + Date.now();
         this.currentConversationId = tempId;
+        
+        // Ne pas sélectionner immédiatement : on va construire la liste mais ne pas recharger
+        this._rebuildConversationList(); // OK visuellement
         
         // Vider la zone de messages
         this.messagesContainer.innerHTML = `
@@ -787,34 +918,58 @@ class ChatManager {
      * @param {string} role - Rôle ('user' ou 'assistant')
      * @param {boolean} scroll - Défilement automatique
      */
+/**
+ * Ajoute un message à l'interface
+ * @param {string} content - Contenu du message
+ * @param {string} role - Rôle ('user' ou 'assistant')
+ * @param {boolean} scroll - Défiler automatiquement (par défaut true)
+ */
     _addMessage(content, role, scroll = true) {
         console.log(`Ajout de message: role=${role}, contenu=${content.substring(0, 30)}...`);
-        
+
         // Cloner le template
         const messageEl = this.messageTemplate.content.cloneNode(true);
         const container = messageEl.querySelector('.message');
-        
-        // Ajouter les classes et contenu
+
+        // Ajouter la classe du rôle
         container.classList.add(role);
+
+        // Définir les icônes en fonction du rôle
         const iconEl = container.querySelector('.message-avatar i');
         iconEl.className = role === 'user' ? 'fas fa-user' : 'fas fa-robot';
-        
+
+        // Ajouter le contenu
         const contentEl = container.querySelector('.message-text');
         contentEl.textContent = content;
-        
+
+        // Ajouter l'heure
         const timeEl = container.querySelector('.message-time');
-        timeEl.textContent = new Date().toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'});
-        
-        // Ajouter à la zone de messages
+        timeEl.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+        // Ajouter au DOM
         this.messagesContainer.appendChild(container);
-        
-        // Défiler si demandé
+
+        // ✅ Forcer un reflow pour certains navigateurs (important pour Chrome et Safari)
+        void container.offsetHeight;
+
+        // ✅ Forcer scroll ET render proprement
         if (scroll) {
-            this._scrollToBottom();
+            requestAnimationFrame(() => {
+                requestAnimationFrame(() => {
+                    container.scrollIntoView({ behavior: "smooth", block: "end" });
+
+                    // Double sécurité avec scroll direct
+                    this._scrollToBottom();
+                });
+            });
         }
-        
+
+        // ✅ Debug DOM
+        console.log("Message DOM injecté :", container.outerHTML);
+
         return container;
     }
+
 
     /**
      * Ajoute du texte à l'indicateur de frappe (pour le streaming)
@@ -864,7 +1019,7 @@ class ChatManager {
         // Réinitialiser le texte accumulé
         this.streamingText = '';
         
-        // Supprimer l'indicateur de frappe
+        // Supprimer l'indicateur de frappe SEULEMENT, sans toucher aux messages
         const indicator = document.getElementById('typing-indicator');
         if (indicator && indicator.parentNode) {
             indicator.parentNode.removeChild(indicator);
