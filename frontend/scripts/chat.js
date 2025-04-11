@@ -253,6 +253,7 @@ class ChatManager {
      * @param {string} conversationId - ID de la conversation
      * @param {string} title - Titre de la conversation
      */
+    // Ajouter cette méthode à la classe ChatManager
     _addLocalConversation(conversationId, title) {
         // Vérifier si la conversation existe déjà dans notre liste locale
         const exists = this.conversations.some(conv => conv.conversation_id === conversationId);
@@ -265,7 +266,7 @@ class ChatManager {
                 conversation_id: conversationId,
                 title: title || 'Nouvelle conversation',
                 last_updated: new Date().toISOString(),
-                message_count: 1,
+                message_count: 0,
                 summary: ""
             };
             
@@ -377,8 +378,6 @@ class ChatManager {
     
     // Nouvelle méthode qui reconstruit complètement la liste des conversations
     _rebuildConversationList() {
-        console.log("Reconstruction complète de la liste des conversations");
-        
         // Vider complètement la liste actuelle
         this.conversationList.innerHTML = '';
         
@@ -391,15 +390,17 @@ class ChatManager {
             return;
         }
         
+        // Fragment pour améliorer les performances
+        const fragment = document.createDocumentFragment();
+        
         // Créer un élément pour chaque conversation
         this.conversations.forEach(conv => {
             const item = document.createElement('div');
             item.className = 'conversation-item';
-            item.dataset.id = conv.conversation_id;
-            
             if (conv.conversation_id === this.currentConversationId) {
                 item.classList.add('active');
             }
+            item.dataset.id = conv.conversation_id;
             
             // Formater la date
             const date = new Date(conv.last_updated);
@@ -427,10 +428,11 @@ class ChatManager {
                 this.deleteConversation(conv.conversation_id);
             });
             
-            this.conversationList.appendChild(item);
+            fragment.appendChild(item);
         });
         
-        console.log(`Liste reconstruite avec ${this.conversations.length} conversations`);
+        // Ajouter tous les éléments en une seule opération DOM
+        this.conversationList.appendChild(fragment);
     }
     
     /**
@@ -540,16 +542,12 @@ class ChatManager {
     /**
      * Démarre une nouvelle conversation
      */
-    startNewConversation(clearConversationId = true) {
-        // Réinitialiser l'ID de conversation si demandé
-        if (clearConversationId) {
-            this.currentConversationId = null;
-        }
+    startNewConversation() {
+        // Générer un ID temporaire unique
+        const tempId = 'temp_' + Date.now();
+        this.currentConversationId = tempId;
         
         // Vider la zone de messages
-        this.messagesContainer.innerHTML = '';
-        
-        // Afficher le message de bienvenue
         this.messagesContainer.innerHTML = `
             <div class="welcome-message">
                 <h3>Bienvenue sur votre Assistant IA Local</h3>
@@ -577,14 +575,25 @@ class ChatManager {
         // Mettre à jour le titre
         this.conversationTitle.textContent = 'Nouvelle conversation';
         
-        // Mettre à jour la liste
-        this._updateConversationList();
+        // Créer l'objet conversation et l'ajouter en tête de liste
+        const newConversation = {
+            conversation_id: tempId,
+            title: 'Nouvelle conversation',
+            last_updated: new Date().toISOString(),
+            message_count: 0
+        };
         
-        // Vider l'input
+        // Insérer en première position
+        this.conversations.unshift(newConversation);
+        
+        // Utiliser la méthode _rebuildConversationList pour une reconstruction complète
+        // au lieu de _updateConversationList
+        this._rebuildConversationList();
+        
+        // Vider et focus l'input
         this.chatInput.value = '';
         this.chatInput.focus();
     }
-    
     /**
      * Envoie un message
      */
@@ -676,21 +685,17 @@ class ChatManager {
             
             const data = await response.json();
             
-            // CORRECTION: Si nous recevons un nouvel ID de conversation, mettre à jour et ajouter à la liste
+            // Si nous recevons un nouvel ID de conversation, mettre à jour
             if (data.conversation_id) {
                 const isNewConversation = !this.currentConversationId || 
+                                        this.currentConversationId.startsWith('temp_') ||
                                         this.currentConversationId !== data.conversation_id;
                 
                 this.currentConversationId = data.conversation_id;
-                
+            
                 if (isNewConversation) {
-                    console.log("Nouvelle conversation détectée via REST:", data.conversation_id);
-                    
-                    // Ajouter localement avant de rafraîchir depuis le serveur
-                    this._addLocalConversation(data.conversation_id, this.conversationTitle.textContent);
-                    
-                    // Rafraîchir après un délai
-                    setTimeout(() => this.loadConversations(), 1000);
+                    // Rafraîchir complètement depuis le serveur
+                    await this.loadConversations();
                 }
             }
             
