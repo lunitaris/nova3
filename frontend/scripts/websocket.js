@@ -79,9 +79,7 @@ class WebSocketManager {
                 
                 this.socket.onmessage = (event) => {
                     try {
-                        console.log("Raw WebSocket message received:", event.data);
                         const data = JSON.parse(event.data);
-                        console.log("WebSocket message parsed:", data);
                         
                         // Router selon le type de message
                         switch(data.type) {

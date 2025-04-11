@@ -348,7 +348,7 @@ class ChatManager {
         try {
             console.log("Chargement des conversations...");
             
-            // CORRECTION: Ajouter un cache-busting pour éviter les problèmes de cache
+            // Ajouter un cache-busting pour éviter les problèmes de cache
             const cacheBuster = `?_=${Date.now()}`;
             const response = await fetch(`${CONFIG.API_BASE_URL}${CONFIG.API.CHAT}/conversations${cacheBuster}`);
             
@@ -360,46 +360,11 @@ class ChatManager {
             console.log(`${conversations.length} conversations chargées`);
             console.log("Conversation active:", this.currentConversationId);
             
-            // CORRECTION: Vérifier si la liste des conversations a réellement changé
-            let hasChanged = false;
-            
-            if (this.conversations.length !== conversations.length) {
-                hasChanged = true;
-            } else {
-                // Vérifier si les IDs correspondent
-                const oldIds = this.conversations.map(c => c.conversation_id).sort().join(',');
-                const newIds = conversations.map(c => c.conversation_id).sort().join(',');
-                hasChanged = oldIds !== newIds;
-            }
-            
-            // Mettre à jour la liste locale
+            // Mise à jour critique: toujours mettre à jour la liste, même si elle semble identique
             this.conversations = conversations;
             
-            // CORRECTION: Vérifier si notre conversation actuelle est dans la liste
-            const currentConversationExists = this.currentConversationId && 
-                                            conversations.some(conv => conv.conversation_id === this.currentConversationId);
-            
-            console.log("Conversation actuelle existe dans la liste:", currentConversationExists);
-            
-            // Si la liste a changé ou si la conversation active a changé, mettre à jour l'interface
-            if (hasChanged || !currentConversationExists) {
-                this._updateConversationList();
-            }
-            
-            // Si pas de conversation active ou si elle n'existe plus, gérer en conséquence
-            if (!this.currentConversationId) {
-                if (conversations.length > 0) {
-                    console.log(`Sélection automatique de la première conversation: ${conversations[0].conversation_id}`);
-                    this.selectConversation(conversations[0].conversation_id);
-                } else {
-                    console.log("Aucune conversation existante, prêt pour une nouvelle");
-                    // Ne pas créer de nouvelle conversation automatiquement, seulement préparer l'interface
-                    this.startNewConversation(false);
-                }
-            } else if (!currentConversationExists && conversations.length > 0) {
-                console.log(`Conversation actuelle ${this.currentConversationId} non trouvée, sélection de la première`);
-                this.selectConversation(conversations[0].conversation_id);
-            }
+            // Forcer la mise à jour de l'interface quelle que soit la situation
+            this._rebuildConversationList();
             
             return conversations;
         } catch (error) {
@@ -407,6 +372,65 @@ class ChatManager {
             this._showError("Impossible de charger les conversations.");
             return [];
         }
+    }
+
+    
+    // Nouvelle méthode qui reconstruit complètement la liste des conversations
+    _rebuildConversationList() {
+        console.log("Reconstruction complète de la liste des conversations");
+        
+        // Vider complètement la liste actuelle
+        this.conversationList.innerHTML = '';
+        
+        // Si pas de conversations, afficher un message
+        if (this.conversations.length === 0) {
+            const emptyMessage = document.createElement('div');
+            emptyMessage.className = 'empty-conversations';
+            emptyMessage.textContent = 'Aucune conversation';
+            this.conversationList.appendChild(emptyMessage);
+            return;
+        }
+        
+        // Créer un élément pour chaque conversation
+        this.conversations.forEach(conv => {
+            const item = document.createElement('div');
+            item.className = 'conversation-item';
+            item.dataset.id = conv.conversation_id;
+            
+            if (conv.conversation_id === this.currentConversationId) {
+                item.classList.add('active');
+            }
+            
+            // Formater la date
+            const date = new Date(conv.last_updated);
+            const formattedDate = date.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+            
+            item.innerHTML = `
+                <div class="conversation-title">${conv.title || 'Nouvelle conversation'}</div>
+                <div class="conversation-time">${formattedDate}</div>
+                <button class="delete-conversation-item-btn">
+                    <i class="fas fa-times"></i>
+                </button>
+            `;
+            
+            // Gérer le clic pour sélectionner
+            item.addEventListener('click', (e) => {
+                if (!e.target.closest('.delete-conversation-item-btn')) {
+                    this.selectConversation(conv.conversation_id);
+                }
+            });
+            
+            // Gérer le clic sur le bouton de suppression
+            const deleteBtn = item.querySelector('.delete-conversation-item-btn');
+            deleteBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.deleteConversation(conv.conversation_id);
+            });
+            
+            this.conversationList.appendChild(item);
+        });
+        
+        console.log(`Liste reconstruite avec ${this.conversations.length} conversations`);
     }
     
     /**
@@ -582,7 +606,7 @@ class ChatManager {
         const mode = userPreferences.get('CONVERSATION_MODE', 'chat');
         
         // CORRECTION: Logging pour déboguer l'envoi de l'ID de conversation
-        console.log("État avant envoi du message:");
+        console.log("------------------------------------------- État avant envoi du message:");
         console.log("- ID de conversation actuel:", this.currentConversationId);
         console.log("- WebSocket connecté:", wsManager.isConnected);
         
@@ -602,7 +626,6 @@ class ChatManager {
         // Utiliser WebSocket si disponible, sinon REST
         if (wsManager.isConnected) {
             const success = wsManager.sendMessage(messageData);
-            console.log("Message envoyé via WebSocket:", success);
             
             // Si l'envoi a échoué, essayer via REST
             if (!success) {
@@ -761,16 +784,6 @@ class ChatManager {
      */
     _addMessage(content, role, scroll = true) {
         console.log(`Ajout de message: role=${role}, contenu=${content.substring(0, 30)}...`);
-        
-        // Ne jamais remplacer de message: toujours ajouter un nouveau
-        // Supprimer cette condition problématique
-        /*
-        if (this.isStreaming && role === 'assistant') {
-            // Juste mettre à jour le texte visible sans créer un nouveau message
-            console.log("Streaming en cours, mise à jour du texte visible");
-            return;
-        }
-        */
         
         // Cloner le template
         const messageEl = this.messageTemplate.content.cloneNode(true);
