@@ -1,4 +1,3 @@
-
 import os
 import json
 import uuid
@@ -8,9 +7,11 @@ from datetime import datetime
 import asyncio
 
 from config import config
-# Corriger l'importation pour utiliser le chemin complet
+# Import complet des modules de mémoire
 from memory.synthetic_memory import synthetic_memory
+from memory.symbolic_memory import symbolic_memory
 from models.model_manager import model_manager
+from models.langchain_manager import langchain_manager
 
 logger = logging.getLogger(__name__)
 
@@ -127,7 +128,31 @@ class Conversation:
         self.metadata["updated_at"] = datetime.now().isoformat()
         self._save_conversation()
         
+        # Si c'est un message utilisateur, mettre à jour la mémoire symbolique
+        if role == "user":
+            asyncio.create_task(self._update_symbolic_memory(content))
+        
         return message
+    
+    async def _update_symbolic_memory(self, content: str):
+        """
+        Met à jour la mémoire symbolique avec le contenu du message.
+        
+        Args:
+            content: Contenu du message
+        """
+        try:
+            # Uniquement traiter les messages suffisamment longs
+            if len(content.split()) < 5:
+                return
+                
+            logger.info(f"Mise à jour de la mémoire symbolique pour la conversation {self.conversation_id}")
+            update_stats = await symbolic_memory.update_graph_from_text(content)
+            
+            if update_stats.get("entities_added", 0) > 0 or update_stats.get("relations_added", 0) > 0:
+                logger.info(f"Graph mis à jour: {update_stats.get('entities_added', 0)} entités, {update_stats.get('relations_added', 0)} relations")
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour de la mémoire symbolique: {str(e)}")
     
     async def _synthesize_old_messages(self):
         """Synthétise les messages anciens avant qu'ils ne soient supprimés."""
@@ -455,9 +480,6 @@ class ConversationManager:
             # Récupérer ou créer la conversation
             conversation = self.get_conversation(conversation_id, user_id)
             
-            # Analyser la complexité de la requête
-            complexity = "low" if len(user_input.split()) < 15 else "medium"
-            
             # Ajouter le message utilisateur
             conversation.add_message(user_input, role="user", metadata={"mode": mode})
             
@@ -472,43 +494,21 @@ class ConversationManager:
                     # Stocker dans la mémoire explicite
                     memory_id = synthetic_memory.remember_explicit_info(info_to_memorize)
                     
+                    # Mettre également à jour la mémoire symbolique
+                    asyncio.create_task(symbolic_memory.update_graph_from_text(info_to_memorize))
+                    
                     # Réponse de confirmation
                     response_text = f"J'ai mémorisé cette information : \"{info_to_memorize}\""
                 else:
                     response_text = "Je n'ai pas compris ce que je dois mémoriser. Pourriez-vous reformuler?"
             
             else:
-                # Préparer le contexte avec l'historique récent
-                context = conversation.get_context_for_model(max_messages=10)
-                
-                # Récupérer des souvenirs pertinents pour enrichir le contexte
-                memories = synthetic_memory.get_relevant_memories(
-                    query=user_input,
-                    topic=conversation.metadata.get("topic", "general"),
-                    max_results=3
-                )
-                
-                memory_context = ""
-                if memories:
-                    memory_context = "Voici des informations pertinentes de mes souvenirs:\n"
-                    for i, memory in enumerate(memories, 1):
-                        memory_context += f"{i}. {memory.get('content', '')}\n"
-                
-                # Construire le prompt complet
-                prompt = f"""Conversation précédente:
-{context}
-
-{memory_context}
-
-Utilisateur: {user_input}
-
-Réponds de manière utile et concise. Si tu dois générer une réponse longue, structure-la de façon claire."""
-
-                # Générer la réponse avec streaming si WebSocket fourni
-                response_text = await model_manager.generate_response(
-                    prompt, 
+                # Utiliser LangChain pour générer la réponse
+                response_text = await langchain_manager.process_message(
+                    message=user_input,
+                    conversation_history=conversation.get_messages(max_messages=10),
                     websocket=websocket,
-                    complexity=complexity
+                    mode=mode
                 )
             
             # Ajouter la réponse à la conversation
