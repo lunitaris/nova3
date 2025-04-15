@@ -3,7 +3,7 @@ from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import logging
 
-from memory.synthetic_memory import synthetic_memory
+from backend.memory.synthetic_memory import synthetic_memory
 from memory.vector_store import vector_store
 
 logger = logging.getLogger(__name__)

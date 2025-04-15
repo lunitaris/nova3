@@ -13,7 +13,7 @@ import wave
 from typing import Callable, Optional, List, Dict, Any
 from queue import Queue
 
-from config import config
+from backend.config import config
 
 logger = logging.getLogger(__name__)
 

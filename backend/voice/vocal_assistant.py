@@ -10,13 +10,14 @@ import tempfile
 import wave
 from typing import Optional, Callable, Dict, Any
 
-from voice.hotword_detector import HotwordDetector, ContinuousVoiceProcessor
-from voice.stt import stt_engine
-from voice.tts import tts_engine
-from memory.conversation import conversation_manager
-from models.langchain_manager import langchain_manager
-from models.skills.manager import skills_manager
-from config import config
+# Après (fonctionne quand backend est dans PYTHONPATH)
+from backend.voice.hotword_detector import HotwordDetector, ContinuousVoiceProcessor
+from backend.voice.stt import stt_engine
+from backend.voice.tts import tts_engine
+from backend.memory.conversation import conversation_manager
+from backend.models.langchain_manager import langchain_manager
+from backend.models.skills.manager import skills_manager
+from backend.config import config  # ✅ ← ajoute ça ici
 
 logger = logging.getLogger(__name__)
 

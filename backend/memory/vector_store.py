@@ -11,7 +11,7 @@ import pickle
 # Remplacer HuggingFaceEmbeddings par FakeEmbeddings pour le développement
 from langchain_community.embeddings import FakeEmbeddings
 
-from config import config
+from backend.config import config
 
 logger = logging.getLogger(__name__)
 

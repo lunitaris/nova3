@@ -13,7 +13,7 @@ from langchain_community.chat_models import ChatOpenAI
 from langchain_core.callbacks import CallbackManager, StreamingStdOutCallbackHandler
 from langchain_core.callbacks.base import BaseCallbackHandler
 
-from config import config
+from backend.config import config
 
 logger = logging.getLogger(__name__)
 

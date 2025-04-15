@@ -13,12 +13,12 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
-from models.model_manager import model_manager
-from memory.vector_store import vector_store
-from memory.synthetic_memory import synthetic_memory
-from memory.symbolic_memory import symbolic_memory
-from models.skills.manager import skills_manager
-from config import config
+from backend.models.model_manager import model_manager
+from backend.memory.vector_store import vector_store
+from backend.memory.synthetic_memory import synthetic_memory
+from backend.memory.symbolic_memory import symbolic_memory
+from backend.models.skills.manager import skills_manager
+from backend.config import config
 
 
 

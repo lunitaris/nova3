@@ -8,7 +8,7 @@ from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import io
 
-from config import config
+from backend.config import config
 
 logger = logging.getLogger(__name__)
 

@@ -6,7 +6,7 @@ import subprocess
 import json
 from typing import Dict, Any
 
-from config import config
+from backend.config import config
 
 logger = logging.getLogger(__name__)
 

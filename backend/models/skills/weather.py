@@ -6,7 +6,7 @@ import logging
 import random
 from typing import Dict, List, Any
 
-from models.skills.base import Skill
+from backend.models.skills.base import Skill
 
 logger = logging.getLogger(__name__)
 

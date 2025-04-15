@@ -6,9 +6,9 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 # Remplacer l'importation relative par une importation absolue
-from models.model_manager import model_manager
-from memory.vector_store import vector_store
-from config import config
+from backend.models.model_manager import model_manager
+from backend.memory.vector_store import vector_store
+from backend.config import config
 
 logger = logging.getLogger(__name__)
 

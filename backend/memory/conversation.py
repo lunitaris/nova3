@@ -6,12 +6,12 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 import asyncio
 
-from config import config
+from backend.config import config
 # Import complet des modules de mémoire
-from memory.synthetic_memory import synthetic_memory
-from memory.symbolic_memory import symbolic_memory
-from models.model_manager import model_manager
-from models.langchain_manager import langchain_manager
+from backend.memory.synthetic_memory import synthetic_memory
+from backend.memory.symbolic_memory import symbolic_memory
+from backend.models.model_manager import model_manager
+from backend.models.langchain_manager import langchain_manager
 
 logger = logging.getLogger(__name__)
 

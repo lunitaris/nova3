@@ -12,6 +12,7 @@ uvicorn
 websockets
 pydantic
 python-multipart
+pyaudio
 
 # Gestion des LLM et agents
 transformers==4.36.2

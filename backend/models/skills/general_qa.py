@@ -4,8 +4,8 @@ Compétence de questions-réponses générales pour l'assistant IA.
 import logging
 from typing import Dict, List, Any
 
-from models.skills.base import Skill
-from models.model_manager import model_manager
+from backend.models.skills.base import Skill
+from backend.models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 

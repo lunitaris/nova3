@@ -8,8 +8,8 @@ import time
 from typing import Dict, List, Any, Optional, Set, Tuple
 from datetime import datetime
 
-from models.model_manager import model_manager
-from config import config
+from backend.models.model_manager import model_manager
+from backend.config import config
 
 logger = logging.getLogger(__name__)
 

@@ -10,15 +10,15 @@ import logging
 import asyncio
 from typing import Dict, List, Any, Type, Optional
 
-from models.model_manager import model_manager
-from config import config
-from models.skills.base import Skill
+from backend.models.model_manager import model_manager
+from backend.config import config
+from backend.models.skills.base import Skill
 
 # Importer explicitement les compétences disponibles
-from models.skills.weather import WeatherSkill
-from models.skills.home_automation import HomeAutomationSkill
-from models.skills.timer_reminder import TimerReminderSkill
-from models.skills.general_qa import GeneralQASkill
+from backend.models.skills.weather import WeatherSkill
+from backend.models.skills.home_automation import HomeAutomationSkill
+from backend.models.skills.timer_reminder import TimerReminderSkill
+from backend.models.skills.general_qa import GeneralQASkill
 
 logger = logging.getLogger(__name__)
 
