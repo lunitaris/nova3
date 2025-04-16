@@ -141,6 +141,40 @@ except Exception as e:
     logger.error(f"Erreur lors du chargement des routers: {str(e)}")
     raise
 
+
+
+
+
+"""
+/////////////////////// ADMIN PAGE //////////////////////////////////////////////////////////////
+"""
+
+# Importer les routers après la définition de l'application
+# pour éviter les importations circulaires
+try:
+    # Importer les routers d'API
+    from api.chat import router as chat_router
+    from api.voice import router as voice_router
+    from api.memory import router as memory_router
+    from api.admin import router as admin_router
+
+    # Inclure les routers
+    app.include_router(chat_router)
+    app.include_router(voice_router)
+    app.include_router(memory_router)
+    app.include_router(admin_router)
+    
+    logger.info("Tous les routers API ont été chargés avec succès")
+except Exception as e:
+    logger.error(f"Erreur lors du chargement des routers: {str(e)}")
+    raise
+
+# Assurez-vous que le frontend est servi statiquement
+# app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
+
+
+
+
 # Point d'entrée pour l'exécution directe
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
