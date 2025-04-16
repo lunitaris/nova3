@@ -5,8 +5,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import asyncio
-import logging
 import uvicorn
+
+import logging
+from logging.handlers import RotatingFileHandler
 
 
 ## Désactiver l'accélération (pour fix les pb avec vectors embeddings)
@@ -20,12 +22,9 @@ os.environ["TOKENIZERS_PARALLELISM"] = "false"
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
 
-# Configuration du logging
-logging.basicConfig(
-    level=logging.DEBUG,  # Changé de INFO à DEBUG
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+# Configuration du logger (console + file)
 logger = logging.getLogger(__name__)
+
 
 # Initialisation de l'application FastAPI
 app = FastAPI(

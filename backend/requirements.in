@@ -31,3 +31,7 @@ sentence-transformers
 python-dotenv
 httpx
 numpy<2.0.0
+
+
+# Skills
+phue

@@ -110,7 +110,7 @@ langchain-core==0.3.52
     #   langchain-community
     #   langchain-ollama
     #   langchain-text-splitters
-langchain-ollama==0.3.1
+langchain-ollama==0.3.2
     # via -r requirements.in
 langchain-text-splitters==0.3.8
     # via langchain
@@ -147,7 +147,7 @@ ollama==0.4.7
     # via langchain-ollama
 onnxruntime==1.21.0
     # via piper-tts
-openai==1.74.0
+openai==1.75.0
     # via -r requirements.in
 orjson==3.10.16
     # via langsmith
@@ -160,6 +160,8 @@ packaging==24.2
     #   marshmallow
     #   onnxruntime
     #   transformers
+phue==1.1
+    # via -r requirements.in
 pillow==11.2.1
     # via sentence-transformers
 piper-phonemize==1.1.0
