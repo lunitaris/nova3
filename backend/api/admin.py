@@ -630,22 +630,31 @@ async def get_lights():
         
         # Tenter d'utiliser le contrôleur Hue si disponible
         if hue_controller and hue_controller.is_available:
-            # Récupérer les lumières Hue
+            # Récupérer les pièces d'abord pour construire la carte de correspondance
+            rooms = hue_controller.get_rooms()
+            
+            # Créer une map des lumières aux pièces
+            light_to_room_map = {}
+            
+            # Pour chaque pièce, enregistrer à quelle pièce appartient chaque lumière
+            for room in rooms:
+                room_name = room["name"]
+                for light_id in room.get("lights", []):
+                    light_id_str = str(light_id)
+                    light_to_room_map[light_id_str] = room_name
+            
+            # Maintenant, récupérer les lumières
             hue_lights = hue_controller.get_all_lights()
             
-            # Récupérer les pièces pour associer les lumières
-            rooms = hue_controller.get_rooms()
-            room_map = {}
-            
-            # Créer une map des pièces pour recherche rapide
-            for room in rooms:
-                for light_id in room.get("lights", []):
-                    room_map[light_id] = room["name"]
-            
             for light in hue_lights:
-                room_name = room_map.get(light["id"], None)
+                # Convertir les IDs en strings pour la validation Pydantic
+                light_id = str(light["id"])
+                
+                # Trouver la pièce à laquelle cette lumière appartient
+                room_name = light_to_room_map.get(light_id, "Non assignée")
+                
                 lights.append(LightInfo(
-                    id=light["id"],
+                    id=light_id,
                     name=light["name"],
                     room=room_name,
                     state=LightState(
@@ -653,7 +662,7 @@ async def get_lights():
                         brightness=light["state"].get("brightness", 0),
                         xy=light["state"].get("xy", None)
                     ),
-                    supports_color=True,  # La plupart des Hue supportent la couleur
+                    supports_color=True,
                     supports_brightness=True
                 ))
         
@@ -668,14 +677,14 @@ async def get_lights():
             for name, device in simulated_devices.items():
                 if "lumière" in name or device["type"] == "light":
                     lights.append(LightInfo(
-                        id=name,
+                        id=name,  # Déjà une string
                         name=name,
                         room=device.get("location", None),
                         state=LightState(
                             on=device["state"] == "on",
                             brightness=100 if device["state"] == "on" else 0
                         ),
-                        supports_color=False,  # Lumières simulées sans couleur
+                        supports_color=False,
                         supports_brightness=True
                     ))
         
@@ -684,6 +693,8 @@ async def get_lights():
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des lumières: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
 
 @router.get("/lights/rooms", response_model=List[Room])
 async def get_rooms():
@@ -740,6 +751,10 @@ class LightControlRequest(BaseModel):
     action: str  # "on", "off", "brightness", "color", "scene"
     parameters: Optional[Dict[str, Any]] = None
 
+
+# Correction à apporter dans backend/api/admin.py
+# Modifier la méthode control_light()
+
 @router.post("/lights/{light_id}/control")
 async def control_light(light_id: str, request: LightControlRequest):
     """
@@ -751,7 +766,9 @@ async def control_light(light_id: str, request: LightControlRequest):
             # Rechercher la lumière par ID et nom
             light = None
             for hue_light in hue_controller.get_all_lights():
-                if hue_light["id"] == light_id or hue_light["name"].lower() == light_id.lower():
+                # Convertir l'ID de la lumière en string pour la comparaison
+                hue_light_id = str(hue_light["id"])
+                if hue_light_id == light_id or hue_light["name"].lower() == light_id.lower():
                     light = hue_light
                     break
             
@@ -797,6 +814,11 @@ async def control_light(light_id: str, request: LightControlRequest):
         logger.error(f"Erreur lors du contrôle de la lumière {light_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
+
+
+# Correction à apporter dans backend/api/admin.py
+# Modifier la méthode control_room()
+
 @router.post("/lights/rooms/{room_id}/control")
 async def control_room(room_id: str, request: LightControlRequest):
     """
@@ -807,10 +829,12 @@ async def control_room(room_id: str, request: LightControlRequest):
         if hue_controller and hue_controller.is_available:
             # Rechercher la pièce par ID
             for room in hue_controller.get_rooms():
-                if room["id"] == room_id or room["name"].lower() == room_id.lower():
+                # Convertir l'ID de la pièce en string pour la comparaison
+                room_id_str = str(room["id"])
+                if room_id_str == room_id or room["name"].lower() == room_id.lower():
                     # Contrôler le groupe directement
                     result = hue_controller._control_room(
-                        room["id"],
+                        room["id"],  # Utiliser l'ID original pour l'API
                         request.action,
                         request.parameters or {}
                     )

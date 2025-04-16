@@ -378,6 +378,9 @@ class HueLightController:
             logger.error(f"Erreur lors de la récupération des lumières: {str(e)}")
             return []
     
+
+
+
     def get_rooms(self) -> List[Dict[str, Any]]:
         """
         Récupère la liste des pièces/groupes.
@@ -398,6 +401,7 @@ class HueLightController:
                 rooms_info.append({
                     "name": name,
                     "id": room["id"],
+                    "lights": room["lights"],  # Inclure la liste complète des lumières
                     "lights_count": len(room["lights"])
                 })
             

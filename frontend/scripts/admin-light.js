@@ -5,6 +5,8 @@
 
 // Configuration des événements de la section lumières
 function setupLightsEvents() {
+    // Charger les lumières immédiatement
+    loadLights();
     document.getElementById('refresh-lights-btn').addEventListener('click', loadLights);
     
     // Événement de changement de pièce
@@ -53,6 +55,8 @@ async function loadLights() {
         }
         
         const rooms = await roomsResponse.json();
+        // Stocker les données des pièces pour une utilisation ultérieure
+        window.lastHueRooms = rooms;
         
         // Mettre à jour le filtre de pièces
         const roomFilter = document.getElementById('filter-room');
@@ -73,6 +77,7 @@ async function loadLights() {
                 const roomCard = document.createElement('div');
                 roomCard.className = 'room-card';
                 roomCard.dataset.room = room.id;
+                roomCard.dataset.name = room.name; // Stockez le nom explicitement
                 
                 roomCard.innerHTML = `
                     <div class="room-icon"><i class="fas fa-door-open"></i></div>
@@ -504,19 +509,68 @@ function filterLightsByRoom(roomId) {
         return;
     }
     
+    // Récupérer le nom de la pièce à partir de son ID
+    let roomName = roomId;
+    const roomCard = document.querySelector(`.room-card[data-room="${roomId}"]`);
+    if (roomCard) {
+        const roomNameElement = roomCard.querySelector('.room-name');
+        if (roomNameElement) {
+            roomName = roomNameElement.textContent.trim();
+        }
+    }
+    
+    //DEBUG console.log(`Filtrage des lumières pour la pièce: ${roomId} (nom: ${roomName})`);
+    
+
+    // Récupérer les IDs des lumières qui appartiennent à cette pièce
+    // Ces informations devraient être disponibles dans la réponse de l'API des pièces
+    // Mais comme elles ne sont pas correctement associées, nous devons les trouver
+    
+    // Vérifier si c'est une pièce Hue
+    const rooms = window.lastHueRooms || [];
+    const hueRoom = rooms.find(r => r.id == roomId);
+    
+    if (hueRoom && hueRoom.lights && hueRoom.lights.length > 0) {
+        //DEBUG console.log(`Pièce Hue trouvée avec ${hueRoom.lights.length} lumières`);
+        // Utiliser les IDs de lumières directement depuis la pièce Hue
+        const roomLightIds = hueRoom.lights.map(id => id.toString());
+        
+        // Afficher uniquement les lumières de cette pièce
+        lightCards.forEach(card => {
+            const lightId = card.dataset.id;
+            card.style.display = roomLightIds.includes(lightId) ? 'flex' : 'none';
+        });
+        return;
+    }
+    
+
     // Filtrer les lumières par pièce
+    let matchFound = false;
     lightCards.forEach(card => {
         const lightElement = card.querySelector('.light-room');
         const lightRoom = lightElement ? lightElement.textContent.trim() : '';
         
-        if (lightRoom.toLowerCase() === roomId.toLowerCase() || 
-            lightRoom.includes(roomId) || 
-            roomId.includes(lightRoom)) {
-            card.style.display = 'flex';
-        } else {
-            card.style.display = 'none';
-        }
+        // Journaliser chaque lumière pour débogage
+        //DEBUG: console.log(`Lumière: ${card.dataset.id}, pièce: "${lightRoom}"`);
+        
+        // Vérifier la correspondance avec plus de souplesse
+        const isMatch = 
+            lightRoom.toLowerCase() === roomName.toLowerCase() ||
+            roomId.includes(lightRoom.toLowerCase()) ||
+            lightRoom.toLowerCase().includes(roomName.toLowerCase()) ||
+            (roomId.startsWith('simulated_') && lightRoom.toLowerCase() === roomId.replace('simulated_', '').toLowerCase());
+        
+        card.style.display = isMatch ? 'flex' : 'none';
+        if (isMatch) matchFound = true;
     });
+    
+    // Si aucune correspondance n'est trouvée, afficher toutes les lumières
+    if (!matchFound) {
+        console.warn(`Aucune lumière trouvée pour la pièce ${roomName}, affichage de toutes les lumières`);
+        lightCards.forEach(card => {
+            card.style.display = 'flex';
+        });
+    }
 }
 
 /**
@@ -671,4 +725,70 @@ async function applyScene() {
         console.error("Erreur lors de l'application de la scène:", error);
         showToast(`Erreur: ${error.message}`, "error");
     }
+}
+
+
+
+
+/////////////////////////// LOGS AND DEBUG //////////////
+
+
+
+// Fonction pour récupérer et afficher les erreurs d'API
+function handleApiError(error, endpoint) {
+    console.error(`Erreur lors de l'appel à ${endpoint}:`, error);
+    
+    // Si l'erreur contient une réponse, tenter de lire le corps
+    if (error.response) {
+        error.response.text().then(text => {
+            try {
+                // Tenter de parser en JSON
+                const errorData = JSON.parse(text);
+                console.error("Détails de l'erreur:", errorData);
+                showToast(`Erreur: ${errorData.detail || errorData.message || "Erreur inconnue"}`, "error");
+            } catch (e) {
+                // Afficher le texte brut si ce n'est pas du JSON
+                console.error("Réponse d'erreur:", text);
+                showToast(`Erreur: ${text || error.message}`, "error");
+            }
+        }).catch(e => {
+            // Si impossible de lire la réponse
+            console.error("Impossible de lire les détails de l'erreur:", e);
+            showToast(`Erreur: ${error.message || "Erreur inconnue"}`, "error");
+        });
+    } else {
+        // Pas de réponse disponible
+        showToast(`Erreur: ${error.message || "Erreur de connexion"}`, "error");
+    }
+}
+
+
+
+
+
+function debugRooms() {
+    console.log("=== DÉBOGAGE DES PIÈCES ET LUMIÈRES ===");
+    
+    // Récupérer toutes les pièces
+    const rooms = document.querySelectorAll('.room-card');
+    console.log(`Nombre de pièces: ${rooms.length}`);
+    
+    rooms.forEach(room => {
+        const roomId = room.dataset.room;
+        const roomName = room.querySelector('.room-name').textContent;
+        console.log(`Pièce: "${roomName}" (ID: ${roomId})`);
+    });
+    
+    // Récupérer toutes les lumières
+    const lights = document.querySelectorAll('.light-card');
+    console.log(`Nombre de lumières: ${lights.length}`);
+    
+    lights.forEach(light => {
+        const lightId = light.dataset.id;
+        const lightName = light.querySelector('.light-name').textContent;
+        const lightRoom = light.querySelector('.light-room').textContent;
+        console.log(`Lumière: "${lightName}" (ID: ${lightId}), Pièce: "${lightRoom}"`);
+    });
+    
+    console.log("=====================================");
 }

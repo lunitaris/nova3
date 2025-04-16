@@ -486,7 +486,7 @@ async function loadLogs() {
             logsContent.appendChild(logEntry);
         });
         
-        console.log("Logs chargés avec succès", logs);
+        // DEBUG console.log("Logs chargés avec succès", logs);
     } catch (error) {
         console.error("Erreur lors du chargement des logs:", error);
         const logsContent = document.getElementById('logs-content');
