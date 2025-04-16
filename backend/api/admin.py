@@ -577,3 +577,276 @@ async def get_logs(
     except Exception as e:
         logger.error(f"Erreur lors de la récupération des logs: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+
+################# API ADMIN pour EXPOSER PHILLIPS HUE #####
+
+# Ajouter les nouvelles routes à backend/api/admin.py
+# Ces routes doivent être insérées dans le fichier admin.py existant
+
+from backend.utils.hue_controller import HueLightController
+
+# Initialiser le contrôleur Hue globalement pour réutilisation
+try:
+    hue_controller = HueLightController()
+    if hue_controller.is_available:
+        logger.info("Contrôleur Hue initialisé avec succès pour l'API admin")
+    else:
+        logger.info("Contrôleur Hue non disponible, utilisation des lumières simulées")
+except Exception as e:
+    logger.warning(f"Erreur lors de l'initialisation du contrôleur Hue: {str(e)}")
+    hue_controller = None
+
+# Modèles pour les lumières
+class LightState(BaseModel):
+    on: bool
+    brightness: Optional[int] = None
+    color: Optional[str] = None
+    xy: Optional[List[float]] = None
+
+class LightInfo(BaseModel):
+    id: str
+    name: str
+    type: str = "light"
+    room: Optional[str] = None
+    state: LightState
+    supports_color: bool = False
+    supports_brightness: bool = True
+
+class Room(BaseModel):
+    id: str
+    name: str
+    lights: List[str]
+
+# Routes pour les lumières
+@router.get("/lights", response_model=List[LightInfo])
+async def get_lights():
+    """
+    Récupère la liste de toutes les lumières.
+    """
+    try:
+        lights = []
+        
+        # Tenter d'utiliser le contrôleur Hue si disponible
+        if hue_controller and hue_controller.is_available:
+            # Récupérer les lumières Hue
+            hue_lights = hue_controller.get_all_lights()
+            
+            # Récupérer les pièces pour associer les lumières
+            rooms = hue_controller.get_rooms()
+            room_map = {}
+            
+            # Créer une map des pièces pour recherche rapide
+            for room in rooms:
+                for light_id in room.get("lights", []):
+                    room_map[light_id] = room["name"]
+            
+            for light in hue_lights:
+                room_name = room_map.get(light["id"], None)
+                lights.append(LightInfo(
+                    id=light["id"],
+                    name=light["name"],
+                    room=room_name,
+                    state=LightState(
+                        on=light["state"]["on"],
+                        brightness=light["state"].get("brightness", 0),
+                        xy=light["state"].get("xy", None)
+                    ),
+                    supports_color=True,  # La plupart des Hue supportent la couleur
+                    supports_brightness=True
+                ))
+        
+        # Si pas de lumières Hue ou si elles ne sont pas disponibles, utiliser les simulées
+        if not lights:
+            # Utiliser les lumières simulées de HomeAutomationSkill
+            from backend.models.skills.home_automation import HomeAutomationSkill
+            
+            skill = HomeAutomationSkill()
+            simulated_devices = skill.devices
+            
+            for name, device in simulated_devices.items():
+                if "lumière" in name or device["type"] == "light":
+                    lights.append(LightInfo(
+                        id=name,
+                        name=name,
+                        room=device.get("location", None),
+                        state=LightState(
+                            on=device["state"] == "on",
+                            brightness=100 if device["state"] == "on" else 0
+                        ),
+                        supports_color=False,  # Lumières simulées sans couleur
+                        supports_brightness=True
+                    ))
+        
+        return lights
+    
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des lumières: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+@router.get("/lights/rooms", response_model=List[Room])
+async def get_rooms():
+    """
+    Récupère la liste des pièces/groupes de lumières.
+    """
+    try:
+        rooms = []
+        
+        # Tenter d'utiliser le contrôleur Hue si disponible
+        if hue_controller and hue_controller.is_available:
+            # Récupérer les pièces Hue
+            hue_rooms = hue_controller.get_rooms()
+            
+            for room in hue_rooms:
+                rooms.append(Room(
+                    id=room["id"],
+                    name=room["name"],
+                    lights=room.get("lights", [])
+                ))
+        
+        # Si pas de pièces Hue, créer des groupes simulés
+        if not rooms:
+            # Utiliser les emplacements des lumières simulées
+            from backend.models.skills.home_automation import HomeAutomationSkill
+            
+            skill = HomeAutomationSkill()
+            simulated_devices = skill.devices
+            
+            # Regrouper par emplacement
+            locations = {}
+            for name, device in simulated_devices.items():
+                if "lumière" in name or device["type"] == "light":
+                    location = device.get("location", "inconnu")
+                    if location not in locations:
+                        locations[location] = []
+                    locations[location].append(name)
+            
+            # Créer des pièces à partir des emplacements
+            for location, lights in locations.items():
+                rooms.append(Room(
+                    id=f"simulated_{location}",
+                    name=location,
+                    lights=lights
+                ))
+        
+        return rooms
+    
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des pièces: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+class LightControlRequest(BaseModel):
+    action: str  # "on", "off", "brightness", "color", "scene"
+    parameters: Optional[Dict[str, Any]] = None
+
+@router.post("/lights/{light_id}/control")
+async def control_light(light_id: str, request: LightControlRequest):
+    """
+    Contrôle une lumière spécifique.
+    """
+    try:
+        # Tenter d'utiliser le contrôleur Hue si disponible
+        if hue_controller and hue_controller.is_available:
+            # Rechercher la lumière par ID et nom
+            light = None
+            for hue_light in hue_controller.get_all_lights():
+                if hue_light["id"] == light_id or hue_light["name"].lower() == light_id.lower():
+                    light = hue_light
+                    break
+            
+            if light:
+                result = hue_controller.control_light(
+                    light["name"],
+                    request.action,
+                    request.parameters or {}
+                )
+                return result
+        
+        # Si pas de contrôleur Hue ou lumière non trouvée, utiliser les simulées
+        from backend.models.skills.home_automation import HomeAutomationSkill
+        
+        skill = HomeAutomationSkill()
+        
+        # Rechercher la lumière simulée
+        if light_id in skill.devices:
+            device = skill.devices[light_id]
+            
+            # Mettre à jour l'état simulé
+            if request.action == "on":
+                device["state"] = "on"
+                return {"success": True, "message": f"Lumière {light_id} allumée"}
+            elif request.action == "off":
+                device["state"] = "off"
+                return {"success": True, "message": f"Lumière {light_id} éteinte"}
+            elif request.action == "brightness":
+                device["state"] = "on"  # Allumer si réglage de luminosité
+                value = request.parameters.get("value", 100)
+                return {"success": True, "message": f"Luminosité de {light_id} réglée à {value}%"}
+            elif request.action == "color":
+                device["state"] = "on"  # Allumer si changement de couleur
+                color = request.parameters.get("color", "white")
+                return {"success": True, "message": f"Couleur de {light_id} changée en {color}"}
+        
+        # Lumière non trouvée
+        raise HTTPException(status_code=404, detail=f"Lumière '{light_id}' non trouvée")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur lors du contrôle de la lumière {light_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+@router.post("/lights/rooms/{room_id}/control")
+async def control_room(room_id: str, request: LightControlRequest):
+    """
+    Contrôle toutes les lumières d'une pièce/groupe.
+    """
+    try:
+        # Tenter d'utiliser le contrôleur Hue si disponible
+        if hue_controller and hue_controller.is_available:
+            # Rechercher la pièce par ID
+            for room in hue_controller.get_rooms():
+                if room["id"] == room_id or room["name"].lower() == room_id.lower():
+                    # Contrôler le groupe directement
+                    result = hue_controller._control_room(
+                        room["id"],
+                        request.action,
+                        request.parameters or {}
+                    )
+                    return result
+        
+        # Si pas de contrôleur Hue ou pièce non trouvée, utiliser les simulées
+        from backend.models.skills.home_automation import HomeAutomationSkill
+        
+        skill = HomeAutomationSkill()
+        
+        # Pour les pièces simulées, identifier toutes les lumières de cette pièce
+        location = room_id.replace("simulated_", "")
+        affected_lights = []
+        
+        for name, device in skill.devices.items():
+            if ("lumière" in name or device["type"] == "light") and device.get("location") == location:
+                affected_lights.append(name)
+                
+                # Mettre à jour l'état simulé
+                if request.action == "on":
+                    device["state"] = "on"
+                elif request.action == "off":
+                    device["state"] = "off"
+        
+        if affected_lights:
+            return {
+                "success": True,
+                "message": f"{len(affected_lights)} lumières affectées dans {location}",
+                "affected": affected_lights
+            }
+        
+        # Pièce non trouvée
+        raise HTTPException(status_code=404, detail=f"Pièce '{room_id}' non trouvée")
+    
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur lors du contrôle de la pièce {room_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")

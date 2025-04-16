@@ -22,6 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
     setupModelsEvents();
     setupMemoryEvents();
     setupVoiceEvents();
+    setupLightsEvents(); 
     setupConfigEvents();
     setupLogsEvents();
     
@@ -68,6 +69,7 @@ function switchSection(sectionId) {
         'models': 'Modèles LLM',
         'memory': 'Mémoire',
         'voice': 'Système Vocal',
+        'lights': 'Lumières',
         'config': 'Configuration',
         'logs': 'Logs'
     };
@@ -84,6 +86,9 @@ function switchSection(sectionId) {
             break;
         case 'voice':
             loadVoiceStatus();
+            break;
+        case 'lights': // Ajout du chargement pour la section lumières
+            loadLights();
             break;
         case 'config':
             loadConfig();
