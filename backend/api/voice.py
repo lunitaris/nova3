@@ -8,6 +8,8 @@ import asyncio
 import io
 import tempfile
 import os
+import subprocess
+
 
 from voice.stt import stt_engine
 from voice.tts import tts_engine
@@ -55,27 +57,23 @@ async def text_to_speech(request: TTSRequest):
         logger.error(f"Erreur lors de la génération TTS: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur TTS: {str(e)}")
 
+
+
+
 @router.post("/tts/stream")
 async def stream_text_to_speech(request: TTSRequest):
-    """
-    Streaming audio de la synthèse vocale.
-    """
     try:
-        # Créer un générateur pour streamer l'audio
-        audio_generator = tts_engine.stream_text_to_speech_pcm(request.text)
+        audio_path = await tts_engine.text_to_speech_file(request.text)
         
-        # Retourner une réponse en streaming
-        return StreamingResponse(
-            audio_generator,
-            media_type="audio/pcm",
-            headers={
-                "Content-Disposition": "attachment; filename=speech.pcm"
-            }
-        )
+        # Lire le son côté serveur (pas dans la réponse HTTP)
+        subprocess.Popen(["ffplay", "-nodisp", "-autoexit", audio_path])
+        return {"status": "lecture démarrée"}
     
     except Exception as e:
-        logger.error(f"Erreur lors du streaming TTS: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Erreur streaming TTS: {str(e)}")
+        logger.error(f"Erreur TTS: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erreur TTS")
+
+
 
 @router.post("/stt", response_model=STTResult)
 async def speech_to_text(

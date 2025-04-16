@@ -20,7 +20,7 @@ class VoiceConfig(BaseModel):
     stt_model: str = "/opt/whisper.cpp/models/ggml-base.bin"
     stt_binary: str = "/opt/whisper.cpp/whisper-cli"
     stt_device: str = "cpu"  # Whisper.cpp utilise le CPU par défaut
-    tts_model: str = "fr_FR-siwis-medium"
+    tts_model: str = "opt/piper/fr_FR-siwis-medium.onnx"
     tts_sample_rate: int = 22050
 
 class MemoryConfig(BaseModel):

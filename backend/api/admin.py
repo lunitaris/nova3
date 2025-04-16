@@ -219,7 +219,9 @@ async def check_tts_status() -> Dict[str, Any]:
             error = "Piper TTS non installé"
         
         # Vérifier l'existence du modèle
-        model_path = os.path.expanduser(f"~/.local/share/piper-voices/{tts_engine.model_name}.onnx")
+        project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+        model_path = os.path.join(project_root, tts_engine.model_name)
+
         if not os.path.exists(model_path):
             status = "error" if status != "error" else status
             error = f"Modèle Piper non trouvé: {model_path}"

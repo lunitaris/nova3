@@ -42,7 +42,9 @@ class PiperTTS:
         except FileNotFoundError:
             logger.error("Piper TTS n'est pas installé ou n'est pas dans le PATH")
             logger.info("Veuillez installer Piper avec: pip install piper-tts")
-    
+
+
+
     async def text_to_speech_file(self, text: str, output_file: str = None) -> str:
         """
         Convertit le texte en fichier audio.
@@ -69,17 +71,56 @@ class PiperTTS:
                 text_file.write(text)
                 text_path = text_file.name
             
-            # Exécuter Piper dans un thread séparé pour ne pas bloquer
+            # Construire le chemin absolu du modèle
+            # Remonter deux niveaux par rapport au fichier actuel (backend/voice/tts.py) pour atteindre la racine du projet
+            project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+            model_name_with_ext = self.model_name if self.model_name.endswith('.onnx') else f"{self.model_name}.onnx"
+            model_path = os.path.join(project_root, self.model_name)
+            
+            # Vérifier si le chemin existe
+            if not os.path.exists(model_path) and not os.path.exists(model_path + ".onnx"):
+                logger.error(f"Modèle Piper introuvable: {model_path}")
+                logger.info(f"Tentative avec le chemin absolu: {model_path}")
+                
+                # Essayer différentes combinaisons de chemins
+                potential_paths = [
+                    model_path,  # tel quel
+                    model_path + ".onnx",  # avec extension
+                    os.path.join(project_root, "opt/piper", os.path.basename(self.model_name)),  # dans opt/piper/
+                    os.path.join(project_root, "opt/piper", os.path.basename(self.model_name) + ".onnx")  # dans opt/piper/ avec extension
+                ]
+                
+                for path in potential_paths:
+                    if os.path.exists(path):
+                        model_path = path
+                        logger.info(f"Modèle trouvé à: {model_path}")
+                        break
+                else:
+                    logger.error("Modèle introuvable après plusieurs tentatives")
+                    return None
+                    
+            # Pour le debug
+            logger.info(f"Utilisation du modèle: {model_path}")
+            
+            # Exécuter Piper dans un thread séparé
+            cmd = [
+                "piper",
+                "--model", model_path,
+                "--output_file", output_file
+            ]
+            
+            # Log complet de la commande
+            logger.info(f"Exécution de la commande: {' '.join(cmd)}")
+            
             with ThreadPoolExecutor() as executor:
-                await asyncio.get_event_loop().run_in_executor(
+                process = await asyncio.get_event_loop().run_in_executor(
                     executor,
-                    lambda: subprocess.run([
-                        "piper",
-                        "--model", self.model_name,
-                        "--output_file", output_file,
-                        "--text-file", text_path
-                    ], check=True, capture_output=True)
+                    lambda: subprocess.run(cmd, check=True, capture_output=True, text=True, stdin=open(text_path))
                 )
+                
+                # Log de la sortie pour le debug
+                if process.stdout:
+                    logger.info(f"Sortie Piper: {process.stdout}")
             
             # Nettoyer le fichier texte temporaire
             os.unlink(text_path)
@@ -87,15 +128,28 @@ class PiperTTS:
             logger.info(f"Audio généré avec succès: {output_file}")
             return output_file
             
-        except Exception as e:
-            logger.error(f"Erreur lors de la génération TTS: {str(e)}")
+        except subprocess.CalledProcessError as e:
+            logger.error(f"Erreur Piper (code {e.returncode}): {e.stderr if hasattr(e, 'stderr') else 'No stderr'}")
             # Nettoyer en cas d'erreur
-            if os.path.exists(text_path):
+            if 'text_path' in locals() and os.path.exists(text_path):
                 os.unlink(text_path)
             if os.path.exists(output_file):
                 os.unlink(output_file)
             return None
-    
+            
+        except Exception as e:
+            logger.error(f"Erreur lors de la génération TTS: {str(e)}")
+            # Nettoyer en cas d'erreur
+            if 'text_path' in locals() and os.path.exists(text_path):
+                os.unlink(text_path)
+            if os.path.exists(output_file):
+                os.unlink(output_file)
+            return None
+
+
+
+
+
     async def stream_text_to_speech_pcm(self, text: str) -> AsyncGenerator[bytes, None]:
         """
         Convertit le texte en flux PCM pour streaming.

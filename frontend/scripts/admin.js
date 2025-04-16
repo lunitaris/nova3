@@ -643,7 +643,7 @@ async function restartSystem() {
 }
 
 /**
- * Teste la synthèse vocale
+ * Teste la synthèse vocale (lecture sur le serveur)
  */
 async function testTTS() {
     try {
@@ -653,24 +653,31 @@ async function testTTS() {
             showToast("Veuillez entrer un texte à synthétiser", "warning");
             return;
         }
-        
-        // Créer un élément audio pour jouer la synthèse
-        const audioElement = new Audio();
-        
-        // Construire l'URL pour la synthèse (mettre à jour selon votre API)
-        const encodedText = encodeURIComponent(text);
-        audioElement.src = `${CONFIG.API_BASE_URL}/api/voice/tts/stream?text=${encodedText}`;
-        
-        // Jouer l'audio
-        audioElement.play();
-        
-        showToast("Lecture de la synthèse vocale", "info");
-        
+
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/voice/tts/stream`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ text })
+        });
+
+        if (!response.ok) {
+            throw new Error(`Erreur HTTP: ${response.status}`);
+        }
+
+        showToast("Lecture en cours sur le serveur", "success");
+
     } catch (error) {
-        console.error("Erreur lors du test de la synthèse vocale:", error);
+        console.error("Erreur lors de la synthèse vocale :", error);
         showToast("Erreur lors du test de la synthèse vocale", "error");
     }
 }
+
+
+
+
+
 
 /**
  * Teste la reconnaissance vocale
