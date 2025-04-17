@@ -33,20 +33,11 @@ ollama pull gemma:2b
 ollama pull zephyr
 ```
 
-### 3. Démarrer avec Docker Compose
-
-```bash
-docker-compose up -d
-```
-
-L'assistant sera accessible à l'adresse: [http://localhost:3000](http://localhost:3000)
-
 ## Installation manuelle (sans Docker)
 
 ### 1. Prérequis
 
-- Python 3.10+
-- Node.js 16+ (optionnel, seulement pour le développement frontend)
+- Python 3.10
 - Ollama installé et en cours d'exécution
 - FFmpeg installé
 
