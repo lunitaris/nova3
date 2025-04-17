@@ -1,6 +1,3 @@
-from typing import Dict, List, Any
-
-
 class AutomaticMemoryContextualizer:
     """
     Analyse les requêtes utilisateur, récupère les souvenirs pertinents et les formate
@@ -220,7 +217,7 @@ class AutomaticMemoryContextualizer:
             
         # Construire un prompt pour évaluer la pertinence
         memories_str = "\n".join([
-            f"- {m['content']}" if "content" in m else f"- {m.get('relation_type', '')} {m.get('entity_value', '')}"
+            (m.get('content') or (m.get('relation_type', '') + " " + m.get('entity_value', '')))
             for m in memories
         ])
         

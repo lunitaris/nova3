@@ -166,14 +166,12 @@ Format de réponse (JSON):
                 "confidence": 0.3,
                 "entities": {}
             }
-    
-    async def process_message(
-        self,
-        message: str,
-        conversation_history: List[Dict[str, Any]],
-        websocket=None,
-        mode: str = "chat"
-    ) -> str:
+####################################################
+    #
+    #
+
+
+    async def process_message( self, message: str, conversation_history: List[Dict[str, Any]], websocket=None, mode: str = "chat", additional_context: str = "") -> str:
         """
         Traite un message utilisateur et génère une réponse avec LangChain.
         
@@ -182,6 +180,7 @@ Format de réponse (JSON):
             conversation_history: Historique récent de la conversation
             websocket: WebSocket optionnel pour le streaming
             mode: Mode de conversation ('chat' ou 'voice')
+            additional_context: Contexte personnel additionnel à intégrer
             
         Returns:
             La réponse générée
@@ -193,28 +192,29 @@ Format de réponse (JSON):
             
             # 2. Récupérer le contexte depuis les mémoires
             context = await self._get_relevant_context(message, conversation_history)
-
-            # 2.1: Ajouter le contexte personnel s'il existe
+            
+            # 3. Intégrer le contexte personnel s'il existe
             if additional_context:
+                # Ajouter le contexte personnel en début de contexte pour lui donner plus d'importance
                 context = f"{additional_context}\n\n{context}"
             
-            # 3. Déterminer la complexité requise selon l'intention et la longueur
+            # 4. Déterminer la complexité requise selon l'intention et la longueur
             if mode == "voice" or intent_data["intent"] == "general":
                 complexity = "low" if len(message.split()) < 10 else "medium"
             else:
                 complexity = "medium"
             
-            # 4. Formater l'historique et le contexte
+            # 5. Formater l'historique et le contexte
             formatted_history = self._format_conversation_history(conversation_history[-5:])  # Limiter à 5 derniers messages
             
-            # 5. Construire le prompt
+            # 6. Construire le prompt
             prompt = ChatPromptTemplate.from_messages([
                 ("system", self.system_prompt.replace("{context}", context)),
                 MessagesPlaceholder(variable_name="chat_history"),
                 ("human", "{input}")
             ])
             
-            # 6. Utiliser le modèle pour obtenir une réponse
+            # 7. Utiliser le modèle pour obtenir une réponse
             chain = (
                 {"input": RunnablePassthrough(), "chat_history": lambda _: formatted_history}
                 | prompt
@@ -222,7 +222,7 @@ Format de réponse (JSON):
                     x,
                     websocket=websocket,
                     complexity=complexity
-                  ))
+                ))
             )
             
             # Exécuter la chaîne de façon asynchrone
@@ -233,46 +233,7 @@ Format de réponse (JSON):
         except Exception as e:
             logger.error(f"Erreur lors du traitement du message: {str(e)}")
             return "Je suis désolé, j'ai rencontré une erreur lors du traitement de votre demande. Pourriez-vous reformuler ou réessayer plus tard?"
-
-    async def process_skill(self, intent_data: Dict[str, Any], message: str) -> Dict[str, Any]:
-        """
-        Traite une compétence spécifique selon l'intention détectée.
-        
-        Args:
-            intent_data: Données d'intention détectée
-            message: Message original de l'utilisateur
-            
-        Returns:
-            Résultat du traitement de la compétence
-        """
-        intent = intent_data.get("intent", "general")
-        
-        # Traitement des compétences spécifiques
-        if intent == "domotique":
-            # Simuler le traitement d'une commande domotique
-            return {
-                "success": True,
-                "response": f"J'ai compris votre commande domotique concernant {intent_data.get('entities', {}).get('device', 'un appareil')}.",
-                "action_taken": True
-            }
-            
-        elif intent == "rappel":
-            # Simuler la création d'un rappel
-            return {
-                "success": True,
-                "response": "J'ai créé un rappel pour vous.",
-                "action_taken": True
-            }
-            
-        # Pas de compétence spécifique, retourner un résultat par défaut
-        return {
-            "success": False,
-            "response": None,
-            "action_taken": False
-        }
-
-
-
+##############
     async def _get_relevant_context(self, query: str, conversation_history: List[Dict[str, Any]]) -> str:
         """
         Récupère le contexte pertinent à partir des mémoires.
