@@ -1,149 +1,164 @@
-2. Types de mémoire en détail
-2.1 Mémoire vectorielle (vector_store.py)
-Objectif : Stocker des souvenirs sous forme de vecteurs d'embedding permettant des recherches sémantiques par similarité.
-Fonctionnalités clés :
+# Documentation du système de mémoire de Nova
 
-Utilise FAISS pour l'indexation et la recherche efficace de vecteurs
-Stocke les fragments de texte avec leurs métadonnées associées
-Prend en charge les recherches sémantiques par similarité
-Gère l'ajout, la suppression et la mise à jour des souvenirs
+La mémoire de Nova (l'assistant IA) est conçue selon une architecture à plusieurs niveaux, chacun servant un objectif spécifique. Cette approche multi-couche permet de gérer efficacement les informations à différentes échelles temporelles et niveaux de détail.
 
-Implémentation :
+## 1. Architecture générale de la mémoire
 
-Les souvenirs sont représentés par des vecteurs d'embedding de dimension vector_dimension (1536 par défaut)
-Chaque souvenir possède des métadonnées (timestamp, type, sujet, etc.)
-L'index vectoriel est sauvegardé sur disque pour persistance
+Nova utilise trois types principaux de mémoire qui fonctionnent en synergie :
 
-2.2 Mémoire synthétique (synthetic_memory.py)
-Objectif : Condenser et distiller les conversations en résumés concis pour réduire la taille du contexte.
-Fonctionnalités clés :
+1. **Mémoire vectorielle** (`vector_store.py`) - Stockage et recherche sémantique
+2. **Mémoire synthétique** (`synthetic_memory.py`) - Condensation et distillation des conversations
+3. **Mémoire symbolique** (`symbolic_memory.py`) - Représentation des relations entre entités
 
-Synthétise des conversations en résumés pertinents
-Organise les informations par sujets
-Compresse périodiquement les souvenirs pour optimiser l'espace
-Permet la mémorisation explicite d'informations spécifiques
+Cette architecture permet à Nova de se souvenir des informations de manière flexible, contextuelle et efficace.
 
-Implémentation :
+## 2. Types de mémoire en détail
 
-Utilise des templates de prompts pour guider la synthèse
-Les souvenirs synthétiques sont organisés par sujets dans un dictionnaire
-Stockée dans un fichier JSON pour persistance
-Inclut des mécanismes de compression pour combiner d'anciennes synthèses
+### 2.1 Mémoire vectorielle (`vector_store.py`)
 
-2.3 Mémoire symbolique (symbolic_memory.py)
-Objectif : Représenter des relations structurées entre entités dans un graphe de connaissances simplifié.
-Fonctionnalités clés :
+**Objectif** : Stocker des souvenirs sous forme de vecteurs d'embedding permettant des recherches sémantiques par similarité.
 
-Extrait des entités (personnes, lieux, objets, concepts) du texte
-Identifie et stocke les relations entre ces entités
-Permet des requêtes sur les relations entre entités
-Génère du contexte pertinent basé sur le graphe
+**Fonctionnalités clés** :
+- Utilise FAISS pour l'indexation et la recherche efficace de vecteurs
+- Stocke les fragments de texte avec leurs métadonnées associées
+- Prend en charge les recherches sémantiques par similarité
+- Gère l'ajout, la suppression et la mise à jour des souvenirs
 
-Implémentation :
+**Implémentation** :
+- Les souvenirs sont représentés par des vecteurs d'embedding de dimension `vector_dimension` (1536 par défaut)
+- Chaque souvenir possède des métadonnées (timestamp, type, sujet, etc.)
+- L'index vectoriel est sauvegardé sur disque pour persistance
 
-Structure de graphe avec des entités et des relations
-Chaque entité possède un type et des attributs
-Les relations sont des triplets (source, relation, cible)
-Stockée dans un fichier JSON
+### 2.2 Mémoire synthétique (`synthetic_memory.py`)
 
-3. Gestion des conversations et intégration
-La classe Conversation (conversation.py) et son gestionnaire ConversationManager constituent le point central d'intégration des différents systèmes de mémoire.
-Fonctionnalités clés :
+**Objectif** : Condenser et distiller les conversations en résumés concis pour réduire la taille du contexte.
 
-Gestion de l'historique des messages
-Sauvegarde et chargement des conversations
-Mise à jour automatique des systèmes de mémoire
-Génération de titres et résumés pour les conversations
+**Fonctionnalités clés** :
+- Synthétise des conversations en résumés pertinents
+- Organise les informations par sujets
+- Compresse périodiquement les souvenirs pour optimiser l'espace
+- Permet la mémorisation explicite d'informations spécifiques
 
-Intégration avec la mémoire :
+**Implémentation** :
+- Utilise des templates de prompts pour guider la synthèse
+- Les souvenirs synthétiques sont organisés par sujets dans un dictionnaire
+- Stockée dans un fichier JSON pour persistance
+- Inclut des mécanismes de compression pour combiner d'anciennes synthèses
 
-Lors de l'ajout d'un message utilisateur, la mémoire symbolique est mise à jour (_update_symbolic_memory)
-Les vieux messages sont synthétisés avant d'être supprimés (_synthesize_old_messages)
-L'historique est limité à une taille maximale configurable (max_history_length)
+### 2.3 Mémoire symbolique (`symbolic_memory.py`)
 
-4. Utilisation de LangChain
-LangChain est utilisé comme couche d'abstraction pour orchestrer les différents composants et simplifier les interactions avec les modèles LLM. Le module principal est langchain_manager.py.
-Points d'utilisation de LangChain :
+**Objectif** : Représenter des relations structurées entre entités dans un graphe de connaissances simplifié.
 
-Traitement des messages : La méthode process_message dans LangChainManager gère le pipeline complet :
+**Fonctionnalités clés** :
+- Extrait des entités (personnes, lieux, objets, concepts) du texte
+- Identifie et stocke les relations entre ces entités
+- Permet des requêtes sur les relations entre entités
+- Génère du contexte pertinent basé sur le graphe
 
-Détection d'intention
-Récupération de contexte pertinent depuis les mémoires
-Construction du prompt
-Génération de réponse
-Traitement post-génération
+**Implémentation** :
+- Structure de graphe avec des entités et des relations
+- Chaque entité possède un type et des attributs
+- Les relations sont des triplets (source, relation, cible)
+- Stockée dans un fichier JSON
 
+## 3. Gestion des conversations et intégration
 
-Récupération de contexte : La méthode _get_relevant_context interroge les trois systèmes de mémoire pour enrichir le contexte du prompt.
-Format de l'historique : La méthode _format_conversation_history convertit l'historique brut en format compatible avec LangChain.
-Détection d'intention : La méthode _detect_intent analyse les requêtes pour identifier le type d'action demandée.
-Construction de prompts : LangChain est utilisé pour construire des prompts structurés avec le système, l'historique et l'entrée utilisateur.
+La classe `Conversation` (`conversation.py`) et son gestionnaire `ConversationManager` constituent le point central d'intégration des différents systèmes de mémoire.
 
-5. Flux de données pour une interaction type
+**Fonctionnalités clés** :
+- Gestion de l'historique des messages
+- Sauvegarde et chargement des conversations
+- Mise à jour automatique des systèmes de mémoire
+- Génération de titres et résumés pour les conversations
+
+**Intégration avec la mémoire** :
+1. Lors de l'ajout d'un message utilisateur, la mémoire symbolique est mise à jour (`_update_symbolic_memory`)
+2. Les vieux messages sont synthétisés avant d'être supprimés (`_synthesize_old_messages`)
+3. L'historique est limité à une taille maximale configurable (`max_history_length`)
+
+## 4. Utilisation de LangChain
+
+LangChain est utilisé comme couche d'abstraction pour orchestrer les différents composants et simplifier les interactions avec les modèles LLM. Le module principal est `langchain_manager.py`.
+
+**Points d'utilisation de LangChain** :
+
+1. **Traitement des messages** : La méthode `process_message` dans `LangChainManager` gère le pipeline complet :
+   - Détection d'intention
+   - Récupération de contexte pertinent depuis les mémoires
+   - Construction du prompt
+   - Génération de réponse
+   - Traitement post-génération
+
+2. **Récupération de contexte** : La méthode `_get_relevant_context` interroge les trois systèmes de mémoire pour enrichir le contexte du prompt.
+
+3. **Format de l'historique** : La méthode `_format_conversation_history` convertit l'historique brut en format compatible avec LangChain.
+
+4. **Détection d'intention** : La méthode `_detect_intent` analyse les requêtes pour identifier le type d'action demandée.
+
+5. **Construction de prompts** : LangChain est utilisé pour construire des prompts structurés avec le système, l'historique et l'entrée utilisateur.
+
+## 5. Flux de données pour une interaction type
+
 Voici le flux de données pour une interaction typique avec l'assistant :
 
-L'utilisateur envoie un message via l'API chat (chat.py)
-Le message est ajouté à la conversation courante et le gestionnaire de conversation est appelé
-Le gestionnaire délègue le traitement à langchain_manager.process_message
-LangChainManager :
+1. L'utilisateur envoie un message via l'API chat (`chat.py`)
+2. Le message est ajouté à la conversation courante et le gestionnaire de conversation est appelé
+3. Le gestionnaire délègue le traitement à `langchain_manager.process_message`
+4. LangChainManager :
+   - Détecte l'intention du message
+   - Récupère le contexte pertinent depuis les trois systèmes de mémoire
+   - Construit un prompt enrichi avec ce contexte et l'historique
+   - Appelle le modèle LLM approprié pour générer une réponse
+5. La réponse est ajoutée à la conversation
+6. La mémoire est mise à jour :
+   - Si la conversation devient trop longue, les anciens messages sont synthétisés
+   - Les entités et relations sont extraites pour la mémoire symbolique
+   - Des titres et résumés sont générés pour faciliter la navigation
 
-Détecte l'intention du message
-Récupère le contexte pertinent depuis les trois systèmes de mémoire
-Construit un prompt enrichi avec ce contexte et l'historique
-Appelle le modèle LLM approprié pour générer une réponse
+## 6. Interactions entre les systèmes de mémoire
 
+### 6.1 Comment les mémoires interagissent
 
-La réponse est ajoutée à la conversation
-La mémoire est mise à jour :
+- **Vectorielle ↔ Synthétique** : Les résumés générés par la mémoire synthétique sont stockés dans la mémoire vectorielle pour recherche future
+- **Synthétique → Symbolique** : Les informations détectées par la synthèse peuvent enrichir le graphe de connaissances
+- **Symbolique → LangChain** : Le contexte du graphe est utilisé pour enrichir les prompts
 
-Si la conversation devient trop longue, les anciens messages sont synthétisés
-Les entités et relations sont extraites pour la mémoire symbolique
-Des titres et résumés sont générés pour faciliter la navigation
+### 6.2 Flux lors d'une recherche de contexte
 
-
-
-6. Interactions entre les systèmes de mémoire
-6.1 Comment les mémoires interagissent
-
-Vectorielle ↔ Synthétique : Les résumés générés par la mémoire synthétique sont stockés dans la mémoire vectorielle pour recherche future
-Synthétique → Symbolique : Les informations détectées par la synthèse peuvent enrichir le graphe de connaissances
-Symbolique → LangChain : Le contexte du graphe est utilisé pour enrichir les prompts
-
-6.2 Flux lors d'une recherche de contexte
 Quand l'assistant a besoin de contexte pour répondre à une question :
 
-Il interroge la mémoire vectorielle avec la requête actuelle
-Il récupère les souvenirs synthétiques liés au sujet ou au contenu
-Il extrait le contexte pertinent du graphe symbolique
-Ces trois sources sont combinées dans un prompt amélioré
+1. Il interroge la mémoire vectorielle avec la requête actuelle
+2. Il récupère les souvenirs synthétiques liés au sujet ou au contenu
+3. Il extrait le contexte pertinent du graphe symbolique
+4. Ces trois sources sont combinées dans un prompt amélioré
 
-7. Configuration et paramètres clés
-Les paramètres importants pour la mémoire sont définis dans config.py sous la classe MemoryConfig :
+## 7. Configuration et paramètres clés
 
-vector_dimension : Dimension des vecteurs d'embedding (1536 par défaut)
-max_history_length : Nombre maximal de messages dans l'historique (20 par défaut)
-synthetic_memory_refresh_interval : Intervalle de rafraîchissement pour la compression (10 par défaut)
+Les paramètres importants pour la mémoire sont définis dans `config.py` sous la classe `MemoryConfig` :
 
-8. Points forts et limites
-Points forts
+- `vector_dimension` : Dimension des vecteurs d'embedding (1536 par défaut)
+- `max_history_length` : Nombre maximal de messages dans l'historique (20 par défaut)
+- `synthetic_memory_refresh_interval` : Intervalle de rafraîchissement pour la compression (10 par défaut)
 
-Architecture modulaire permettant différents types de représentations mémorielles
-Compression intelligente pour gérer efficacement l'espace contextuel limité
-Capacité à extraire des relations structurées à partir de texte
-Intégration fluide avec LangChain et les modèles LLM
+## 8. Points forts et limites
 
-Limites
+### Points forts
+- Architecture modulaire permettant différents types de représentations mémorielles
+- Compression intelligente pour gérer efficacement l'espace contextuel limité
+- Capacité à extraire des relations structurées à partir de texte
+- Intégration fluide avec LangChain et les modèles LLM
 
-Pas de mécanisme d'oubli actif ou de priorisation basée sur l'importance
-Pas de vérification de cohérence entre les différents systèmes de mémoire
-Dépendance aux capacités d'extraction du LLM pour la mémoire symbolique
+### Limites
+- Pas de mécanisme d'oubli actif ou de priorisation basée sur l'importance
+- Pas de vérification de cohérence entre les différents systèmes de mémoire
+- Dépendance aux capacités d'extraction du LLM pour la mémoire symbolique
 
-9. Améliorations possibles
+## 9. Améliorations possibles
 
-Mémoire épisodique : Ajouter une couche dédiée aux expériences temporelles spécifiques
-Détection des contradictions : Mécanismes pour identifier et résoudre les informations contradictoires
-Oubli stratégique : Algorithmes pour réduire les informations les moins pertinentes
-Mémoire procédurale : Capacité à mémoriser et reproduire des séquences d'actions
-Apprentissage incrémental : Amélioration des embeddings basée sur les interactions
+1. **Mémoire épisodique** : Ajouter une couche dédiée aux expériences temporelles spécifiques
+2. **Détection des contradictions** : Mécanismes pour identifier et résoudre les informations contradictoires
+3. **Oubli stratégique** : Algorithmes pour réduire les informations les moins pertinentes
+4. **Mémoire procédurale** : Capacité à mémoriser et reproduire des séquences d'actions
+5. **Apprentissage incrémental** : Amélioration des embeddings basée sur les interactions
 
-Cette architecture multi-couche de mémoire, associée à l'utilisation stratégique de LangChain, permet à Nova de fournir des réponses informées et contextuelles en tirant parti de différentes formes de représentation de la connaissance.RéessayerClaude peut faire des erreurs. Assurez-vous de vérifier ses réponses.
+Cette architecture multi-couche de mémoire, associée à l'utilisation stratégique de LangChain, permet à Nova de fournir des réponses informées et contextuelles en tirant parti de différentes formes de représentation de la connaissance.
