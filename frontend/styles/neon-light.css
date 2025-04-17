@@ -1,0 +1,143 @@
+/* Palette light macOS + accents néon */
+
+:root {
+    --primary-color: #2f80ed;
+    --primary-dark: #1a73e8;
+    --primary-light: #6ec1ff;
+    --accent-color: #00fff0;
+  
+    --success-color: #00d084;
+    --warning-color: #f2c94c;
+    --error-color: #eb5757;
+  
+    --text-primary: #1c1c1c;
+    --text-secondary: #666;
+    --text-muted: #aaa;
+    --text-on-primary: #ffffff;
+  
+    --card-bg: #ffffff;
+    --input-bg: #f9f9fb;
+    --sidebar-bg: #ffffff;
+  
+    --primary-color-rgb: 47, 128, 237;
+    --text-muted-rgb: 160, 160, 160;
+    --border-color: #e0e0e0;
+  }
+:root {
+  --bg-main: #f8f9fa;
+  --bg-card: #ffffff;
+  --text-color: #1c1c1c;
+  --accent-blue: #2f80ed;
+  --accent-cyan: #00fff0;
+  --accent-yellow: #f2c94c;
+  --accent-orange: #f2994a;
+  --border-soft: #e0e0e0;
+  --shadow-soft: 0 2px 10px rgba(0, 0, 0, 0.05);
+}
+
+body.light-theme {
+  background-color: var(--bg-main);
+  color: var(--text-color);
+  font-family: 'Poppins', 'Helvetica Neue', sans-serif;
+}
+
+.card, .status-card, .resource-card, .voice-card, .memory-stat-card, .light-card {
+  background-color: var(--bg-card);
+  border-radius: 16px;
+  box-shadow: var(--shadow-soft);
+  border: 1px solid var(--border-soft);
+  padding: 1rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  animation: pulse 2s infinite;
+}
+
+.status-dot[data-status="ok"] {
+  background-color: #00d084;
+}
+
+.status-dot[data-status="warn"] {
+  background-color: var(--accent-yellow);
+}
+
+.status-dot[data-status="error"] {
+  background-color: #eb5757;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.6; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.button.primary {
+  background-color: var(--accent-blue);
+  color: white;
+  border-radius: 10px;
+  padding: 0.6rem 1.2rem;
+  font-weight: 600;
+  box-shadow: 0 0 12px rgba(47, 128, 237, 0.4);
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.button.primary:hover {
+  background-color: #1a73e8;
+}
+
+.toggle-switch input[type="checkbox"]:checked + .toggle-slider {
+  background-color: var(--accent-blue);
+  box-shadow: 0 0 10px var(--accent-blue);
+}
+
+/* LightCard styles */
+.light-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.light-card .slider {
+  accent-color: var(--accent-blue);
+}
+
+.light-card .color-bubble {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+}
+
+.light-card .color-bubble.selected {
+  box-shadow: 0 0 10px var(--accent-blue);
+  transform: scale(1.1);
+}
+
+/* Gauges circulaires simples (placeholder) */
+.gauge {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  border: 6px solid var(--accent-blue);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.gauge.cpu { border-color: var(--accent-blue); }
+.gauge.memory { border-color: var(--accent-cyan); }
+.gauge.disk { border-color: var(--accent-yellow); }
+
+
+/* Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap');
