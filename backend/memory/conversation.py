@@ -13,6 +13,22 @@ from backend.memory.symbolic_memory import symbolic_memory
 from backend.models.model_manager import model_manager
 from backend.models.langchain_manager import langchain_manager
 
+
+from backend.memory.vector_store import vector_store
+from backend.memory.symbolic_memory import symbolic_memory
+from backend.models.model_manager import model_manager
+
+
+from backend.memory.personal_extractor import (
+    ContextualInformationExtractor,
+    MemoryAdjustmentMonitor,
+    ConversationMemoryProcessor,
+    PersonalContextRetriever
+)
+
+
+
+
 logger = logging.getLogger(__name__)
 
 class Conversation:
@@ -39,6 +55,15 @@ class Conversation:
             "topic": "general",
             "tags": []
         }
+
+
+        # Initialiser le gestionnaire de mémoire personnelle
+        self.memory_processor = ConversationMemoryProcessor(
+            model_manager, vector_store, symbolic_memory
+        )
+        self.context_retriever = PersonalContextRetriever(
+            model_manager, vector_store, symbolic_memory
+        )
         
         # Chemin du fichier de conversation
         self.file_path = os.path.join(
@@ -342,6 +367,15 @@ class ConversationManager:
         self.conversations = {}  # Cache des conversations actives
         self.conversations_dir = os.path.join(config.data_dir, "conversations")
         os.makedirs(self.conversations_dir, exist_ok=True)
+        
+        # C'EST ICI QU'IL FAUT AJOUTER LE CODE :
+        # Initialiser le gestionnaire de mémoire personnelle
+        self.memory_processor = ConversationMemoryProcessor(
+            model_manager, vector_store, symbolic_memory
+        )
+        self.context_retriever = PersonalContextRetriever(
+            model_manager, vector_store, symbolic_memory
+        )
     
     def get_conversation(self, conversation_id: str = None, user_id: str = "anonymous") -> Conversation:
         """
@@ -479,9 +513,15 @@ class ConversationManager:
         try:
             # Récupérer ou créer la conversation
             conversation = self.get_conversation(conversation_id, user_id)
+
+            # Traiter la mémoire personnelle
+            memory_results = await self.memory_processor.process_conversation_message(user_input, user_id)
             
             # Ajouter le message utilisateur
             conversation.add_message(user_input, role="user", metadata={"mode": mode})
+
+            # Récupérer le contexte personnel pour enrichir le contexte
+            personal_context = await self.context_retriever.get_relevant_context(user_input, user_id)
             
             # Vérifier si c'est une demande de mémorisation explicite
             if user_input.lower().startswith("souviens-toi") or \
@@ -498,19 +538,29 @@ class ConversationManager:
                     asyncio.create_task(symbolic_memory.update_graph_from_text(info_to_memorize))
                     
                     # Réponse de confirmation
-                    response_text = f"J'ai mémorisé cette information : \"{info_to_memorize}\""
+                    response_text = f"🌀 J'ai mémorisé cette information : \"{info_to_memorize}\""
                 else:
-                    response_text = "Je n'ai pas compris ce que je dois mémoriser. Pourriez-vous reformuler?"
+                    response_text = "⚡️ Je n'ai pas compris ce que je dois mémoriser. Pourriez-vous reformuler?"
             
             else:
-                # Utiliser LangChain pour générer la réponse
+                # Utiliser LangChain pour générer la réponse et Ajouter le contexte personnel au contexte de conversation
                 response_text = await langchain_manager.process_message(
                     message=user_input,
                     conversation_history=conversation.get_messages(max_messages=10),
                     websocket=websocket,
-                    mode=mode
+                    mode=mode,
+                    additional_context=personal_context
                 )
+
+            # Déterminer si l'assistant doit mentionner qu'il a mémorisé quelque chose
+            should_acknowledge = await self.memory_processor.should_acknowledge_memory(memory_results)
             
+            if should_acknowledge:
+                acknowledgment = self.memory_processor.get_memory_acknowledgment(memory_results)
+                if acknowledgment:
+                    response_text = f"{response_text} {acknowledgment}"
+        
+
             # Ajouter la réponse à la conversation
             conversation.add_message(response_text, role="assistant", metadata={"mode": mode})
             
@@ -523,7 +573,9 @@ class ConversationManager:
                 "response": response_text,
                 "conversation_id": conversation.conversation_id,
                 "timestamp": datetime.now().isoformat(),
-                "mode": mode
+                "mode": mode,
+                # Ajouter les statistiques de mémorisation aux métadonnées
+                "memory_stats": memory_results
             }
             
             return response

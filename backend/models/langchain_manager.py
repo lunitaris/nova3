@@ -193,6 +193,10 @@ Format de réponse (JSON):
             
             # 2. Récupérer le contexte depuis les mémoires
             context = await self._get_relevant_context(message, conversation_history)
+
+            # 2.1: Ajouter le contexte personnel s'il existe
+            if additional_context:
+                context = f"{additional_context}\n\n{context}"
             
             # 3. Déterminer la complexité requise selon l'intention et la longueur
             if mode == "voice" or intent_data["intent"] == "general":
