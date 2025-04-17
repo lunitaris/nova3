@@ -1,6 +1,6 @@
 # Assistant IA Local
 
-Un assistant vocal intelligent qui fonctionne en local, avec interface web, mémoire vectorielle et capacités vocales.
+Nova3 est un assistant vocal intelligent qui fonctionne en local, avec interface web, mémoire vectorielle et capacités vocales.
 
 ## Fonctionnalités
 
@@ -13,17 +13,17 @@ Un assistant vocal intelligent qui fonctionne en local, avec interface web, mém
 
 ## Prérequis
 
-- [Docker](https://www.docker.com/) et Docker Compose
 - [Ollama](https://ollama.com/) pour les modèles LLM locaux
 - Environ 5 Go d'espace disque minimum pour les modèles de base
+- Python3.10
 
 ## Installation rapide
 
 ### 1. Cloner le dépôt
 
 ```bash
-git clone https://github.com/votre-username/assistant-ia-local.git
-cd assistant-ia-local
+git clone https://github.com/lunitaris/nova3
+cd nova3
 ```
 
 ### 2. Télécharger les modèles Ollama requis
@@ -50,7 +50,7 @@ L'assistant sera accessible à l'adresse: [http://localhost:3000](http://localho
 - Ollama installé et en cours d'exécution
 - FFmpeg installé
 
-### 2. Installation du backend
+### 2. Backend Install
 
 En premier, setup le venv à la racine du projet:
 ```bash
@@ -58,20 +58,42 @@ python3.10 -m venv venv
 source venv/bin/activate
 ```
 
-
+#### 2.1 Install python requirements
+From root folder:
 ```bash
 cd backend
 pip install -r requirements.txt
-# Télécharger les modèles Piper pour la synthèse vocale
-mkdir -p ~/.local/share/piper-voices/
-cd ~/.local/share/piper-voices/
+```
+
+#### 2.2 Download Piper's model files for vocal synthese
+
+```bash
+# From root folder
+mkdir -p ./opt/piper/
+cd ./opt/piper/
 wget https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR-siwis-medium/fr_FR-siwis-medium.onnx
 wget https://huggingface.co/rhasspy/piper-voices/resolve/main/fr/fr_FR-siwis-medium/fr_FR-siwis-medium.onnx.json
-wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US-amy-medium/en_US-amy-medium.onnx
-wget https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US-amy-medium/en_US-amy-medium.onnx.json
+```
+
+#### 2.3 Place Whisper.cpp binary and models
+
+```bash
+# From root folder
+mkdir -p ./opt/whisper.cpp/models
+```
+1. Compile whisper.cpp on your system
+2. Place binary 'whisper-cli' to: $ROOT_PROJECT/opt/whisper.cpp/whisper-cli
+3. Download models (ggml-base.bin / ggml-medium.bin) to $ROOT_PROJECT/opt/whisper.cpp/models/
+
+
+---
+
 # Démarrer le backend
-cd ../backend
-python main.py
+
+```bash
+# From root folder
+# Make sure you activated venv before (and installed all requirements)
+python -m backend.main
 ```
 
 ### 3. Servir le frontend
@@ -79,6 +101,7 @@ python main.py
 Le moyen le plus simple est d'utiliser un serveur HTTP simple :
 
 ```bash
+# From root folder
 cd frontend
 # Avec Python
 python -m http.server 3000
@@ -86,9 +109,9 @@ python -m http.server 3000
 npx serve -s . -p 3000
 ```
 
-Vous pouvez également simplement ouvrir le fichier `index.html` dans votre navigateur, mais certaines fonctionnalités comme les requêtes API peuvent être limitées en raison des restrictions CORS.
 
-L'assistant sera accessible à l'adresse: [http://localhost:3000](http://localhost:3000) ou directement via le fichier ouvert dans le navigateur.
+
+Nova3 sera accessible à l'adresse: [http://localhost:3000](http://localhost:3000).
 
 ## Configuration
 
@@ -182,7 +205,7 @@ Modifiez `config.py` pour ajouter de nouveaux modèles dans la section `models` 
 
 - Vérifiez que Ollama est bien en cours d'exécution
 - Vérifiez que les modèles nécessaires ont été téléchargés (`gemma:2b` et `zephyr`)
-- Vérifiez les logs pour plus de détails : `docker-compose logs backend`
+- Démerde toi ou pose ta question ;)
 
 ### Problèmes avec la reconnaissance vocale
 
@@ -203,7 +226,6 @@ Ce projet est sous licence MIT.
 ## 2do
 
 A faire:
-- Remplacer whisper version python par whisper.cpp (plus rapide).
 
 
 
