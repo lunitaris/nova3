@@ -1796,3 +1796,4 @@ async function loadConfig() {
         showToast("Erreur lors du chargement de la configuration", "error");
     }
 }
+

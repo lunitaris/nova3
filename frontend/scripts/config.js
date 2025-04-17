@@ -21,7 +21,7 @@ const CONFIG = {
         THEME: "light", // "light", "dark", "system"
         
         // Préférences des modèles
-        MODEL_PREFERENCE: "auto", // "auto", "fast", "balanced", "cloud"
+        MODEL_PREFERENCE: "balanced", // "auto", "fast", "balanced", "cloud"
         
         // Préférences vocales
         TTS_VOICE: "fr_FR-siwis-medium",

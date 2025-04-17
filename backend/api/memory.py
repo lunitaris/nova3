@@ -1,10 +1,16 @@
 from fastapi import APIRouter, HTTPException, Depends, Query
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import logging
+import csv
+import io
+from enum import Enum
+from datetime import datetime
 
 from backend.memory.synthetic_memory import synthetic_memory
-from memory.vector_store import vector_store
+from backend.memory.vector_store import vector_store
+from backend.memory.symbolic_memory import symbolic_memory
 
 logger = logging.getLogger(__name__)
 
@@ -15,6 +21,8 @@ class MemoryItem(BaseModel):
     content: str
     topic: Optional[str] = "general"
     metadata: Optional[Dict[str, Any]] = None
+    score_pertinence: Optional[float] = None
+    source_conversation_id: Optional[str] = None
 
 class MemoryResponse(BaseModel):
     memory_id: Optional[int] = None
@@ -26,21 +34,45 @@ class SearchQuery(BaseModel):
     query: str
     topic: Optional[str] = None
     max_results: Optional[int] = 5
+    min_score: Optional[float] = 0.0
+    max_age_days: Optional[int] = None
 
 class MemorySearchResult(BaseModel):
     results: List[Dict[str, Any]]
     count: int
 
-# Endpoints
+class SortField(str, Enum):
+    date = "date"
+    score = "score"
+    topic = "topic"
+    relevance = "relevance"
+
+class SortOrder(str, Enum):
+    asc = "asc"
+    desc = "desc"
+
+class MemoryAuditQuery(BaseModel):
+    include_deleted: Optional[bool] = False
+    include_expired: Optional[bool] = False
+    memory_type: Optional[str] = "all"  # "vector", "symbol", "all"
+    sort_by: Optional[SortField] = SortField.date
+    sort_order: Optional[SortOrder] = SortOrder.desc
+    topic: Optional[str] = None
+    min_confidence: Optional[float] = 0.0
+    format: Optional[str] = "json"  # "json", "csv"
+
+# Routes existantes
 @router.post("/remember", response_model=MemoryResponse)
 async def remember_information(item: MemoryItem):
     """
     Mémorise explicitement une information.
     """
     try:
-        memory_id = synthetic_memory.remember_explicit_info(
-            info=item.content,
-            topic=item.topic
+        memory_id = vector_store.add_memory(
+            content=item.content,
+            metadata={"topic": item.topic, **(item.metadata or {})},
+            score_pertinence=item.score_pertinence,
+            source_conversation_id=item.source_conversation_id
         )
         
         if memory_id >= 0:
@@ -66,11 +98,16 @@ async def search_memories(query: SearchQuery):
     Recherche des informations dans la mémoire.
     """
     try:
-        results = synthetic_memory.get_relevant_memories(
+        results = vector_store.search_memories(
             query=query.query,
-            topic=query.topic,
-            max_results=query.max_results
+            k=query.max_results,
+            min_score=query.min_score,
+            max_age_days=query.max_age_days
         )
+        
+        # Filtrer par sujet si spécifié
+        if query.topic:
+            results = [r for r in results if r.get("topic") == query.topic]
         
         return MemorySearchResult(
             results=results,
@@ -164,7 +201,8 @@ async def update_memory(memory_id: str, item: MemoryItem):
         success = vector_store.update_memory(
             memory_id=memory_id,
             content=item.content,
-            metadata={"topic": item.topic, **(item.metadata or {})}
+            metadata={"topic": item.topic, **(item.metadata or {})},
+            score_pertinence=item.score_pertinence
         )
         
         if success:
@@ -181,4 +219,177 @@ async def update_memory(memory_id: str, item: MemoryItem):
     
     except Exception as e:
         logger.error(f"Erreur lors de la mise à jour de la mémoire {memory_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+# Nouvelle route d'audit pour la mémoire
+@router.get("/audit")
+async def audit_memories(
+    include_deleted: bool = Query(False, description="Inclure les souvenirs supprimés"),
+    include_expired: bool = Query(False, description="Inclure les souvenirs expirés"),
+    memory_type: str = Query("all", description="Type de mémoire: vector, symbol, all"),
+    sort_by: SortField = Query(SortField.date, description="Champ de tri"),
+    sort_order: SortOrder = Query(SortOrder.desc, description="Ordre de tri"),
+    topic: Optional[str] = Query(None, description="Filtrer par sujet"),
+    min_confidence: float = Query(0.0, description="Score de confiance minimal"),
+    format: str = Query("json", description="Format de sortie: json, csv")
+):
+    """
+    Récupère tous les souvenirs pour audit et analyse.
+    Permet de filtrer, trier et exporter les données de mémoire.
+    """
+    try:
+        all_memories = []
+        
+        # Récupérer les mémoires vectorielles si demandé
+        if memory_type in ["vector", "all"]:
+            vector_memories = vector_store.get_all_memories(include_deleted=include_deleted)
+            for memory in vector_memories:
+                # Ajouter le type de mémoire pour différenciation
+                memory["memory_type"] = "vector"
+                
+                # Filtrer par sujet si demandé
+                if topic and memory.get("topic") != topic:
+                    continue
+                    
+                # Filtrer par score de confiance
+                if memory.get("score_pertinence", 0) < min_confidence:
+                    continue
+                    
+                all_memories.append(memory)
+        
+        # Récupérer les entités symboliques si demandé
+        if memory_type in ["symbol", "all"]:
+            # Entités
+            symbolic_entities = symbolic_memory.get_all_entities(include_expired=include_expired)
+            for entity in symbolic_entities:
+                # Convertir l'entité au format mémoire pour l'audit
+                memory_entry = {
+                    "memory_type": "symbolic_entity",
+                    "entity_id": entity.get("entity_id"),
+                    "content": f"Entité: {entity.get('name')} (Type: {entity.get('type')})",
+                    "timestamp": entity.get("last_updated"),
+                    "confidence": entity.get("confidence", 0),
+                    "valid_from": entity.get("valid_from"),
+                    "valid_to": entity.get("valid_to"),
+                    "attributes": entity.get("attributes"),
+                    "name": entity.get("name"),
+                    "type": entity.get("type")
+                }
+                
+                # Filtrer par score de confiance
+                if memory_entry.get("confidence", 0) < min_confidence:
+                    continue
+                    
+                all_memories.append(memory_entry)
+            
+            # Relations
+            symbolic_relations = symbolic_memory.get_all_relations(include_expired=include_expired)
+            for relation in symbolic_relations:
+                # Convertir la relation au format mémoire pour l'audit
+                memory_entry = {
+                    "memory_type": "symbolic_relation",
+                    "content": f"Relation: {relation.get('source_name')} - {relation.get('relation')} -> {relation.get('target_name')}",
+                    "timestamp": relation.get("timestamp"),
+                    "confidence": relation.get("confidence", 0),
+                    "valid_from": relation.get("valid_from"),
+                    "valid_to": relation.get("valid_to"),
+                    "source": relation.get("source"),
+                    "relation": relation.get("relation"),
+                    "target": relation.get("target"),
+                    "source_name": relation.get("source_name"),
+                    "target_name": relation.get("target_name")
+                }
+                
+                # Filtrer par score de confiance
+                if memory_entry.get("confidence", 0) < min_confidence:
+                    continue
+                    
+                all_memories.append(memory_entry)
+        
+        # Trier les résultats
+        sort_key = None
+        if sort_by == SortField.date:
+            sort_key = lambda x: x.get("timestamp", "")
+        elif sort_by == SortField.score:
+            sort_key = lambda x: x.get("score_pertinence", x.get("confidence", 0))
+        elif sort_by == SortField.topic:
+            sort_key = lambda x: x.get("topic", "")
+        elif sort_by == SortField.relevance:
+            sort_key = lambda x: (x.get("score_pertinence", 0), x.get("confidence", 0))
+        
+        if sort_key:
+            reverse = sort_order == SortOrder.desc
+            all_memories.sort(key=sort_key, reverse=reverse)
+        
+        # Retourner au format demandé
+        if format.lower() == "csv":
+            # Préparer le CSV
+            output = io.StringIO()
+            
+            # Déterminer les champs du CSV
+            fieldnames = set()
+            for memory in all_memories:
+                fieldnames.update(memory.keys())
+            fieldnames = sorted(list(fieldnames))
+            
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            
+            for memory in all_memories:
+                writer.writerow(memory)
+            
+            csv_content = output.getvalue()
+            output.close()
+            
+            # Retourner comme fichier CSV à télécharger
+            headers = {
+                "Content-Disposition": f"attachment; filename=memory_audit_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+            }
+            return JSONResponse(
+                content=csv_content,
+                media_type="text/csv",
+                headers=headers
+            )
+        else:
+            # Format JSON par défaut
+            return {
+                "memories": all_memories,
+                "count": len(all_memories),
+                "filters": {
+                    "include_deleted": include_deleted,
+                    "include_expired": include_expired,
+                    "memory_type": memory_type,
+                    "sort_by": sort_by,
+                    "sort_order": sort_order,
+                    "topic": topic,
+                    "min_confidence": min_confidence
+                }
+            }
+    
+    except Exception as e:
+        logger.error(f"Erreur lors de l'audit des mémoires: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+# Route pour l'historique d'une entité (pour la roadmap étape 3)
+@router.get("/timeline/{entity_id}")
+async def get_entity_timeline(entity_id: str):
+    """
+    Récupère l'historique complet d'une entité symbolique.
+    """
+    try:
+        history = symbolic_memory.get_entity_history(entity_id)
+        
+        if not history:
+            raise HTTPException(status_code=404, detail=f"Entité {entity_id} non trouvée ou sans historique")
+            
+        return {
+            "entity_id": entity_id,
+            "history": history,
+            "count": len(history)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération de l'historique: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")

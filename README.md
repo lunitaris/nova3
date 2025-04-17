@@ -145,7 +145,7 @@ Pour que l'assistant mémorise une information spécifique :
 2. L'assistant stockera cette information dans sa mémoire vectorielle
 3. Il pourra la rappeler plus tard lorsqu'elle sera pertinente pour répondre à vos questions
 
-## Architecture
+## Architecture Système
 
 L'application est divisée en plusieurs composants principaux :
 
@@ -161,6 +161,22 @@ L'application est divisée en plusieurs composants principaux :
 - **HTML/CSS/JS** : interface utilisateur simple et réactive
 - **WebSockets** : communication en temps réel avec le backend
 - **Web Audio API** : enregistrement et lecture audio
+
+
+## Architecture Mémoire
+
+La mémoire de Nova (l'assistant IA) est conçue selon une architecture à plusieurs niveaux, chacun servant un objectif spécifique.
+Cette approche multi-couche permet de gérer efficacement les informations à différentes échelles temporelles et niveaux de détail.
+
+### Architecture générale de la mémoire
+
+Nova utilise trois types principaux de mémoire qui fonctionnent en synergie :
+- Mémoire vectorielle (vector_store.py) - Stockage et recherche sémantique
+- Mémoire synthétique (synthetic_memory.py) - Condensation et distillation des conversations
+- Mémoire symbolique (symbolic_memory.py) - Représentation des relations entre entités
+
+Cette architecture permet à Nova de se souvenir des informations de manière flexible, contextuelle et efficace.
+
 
 ## Extension et personnalisation
 

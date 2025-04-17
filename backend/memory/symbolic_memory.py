@@ -35,7 +35,13 @@ class SymbolicMemory:
         #       "name": "Entity Name",
         #       "type": "person|place|device|concept",
         #       "attributes": {"key": "value"},
-        #       "last_updated": "timestamp"
+        #       "last_updated": "timestamp",
+        #       "valid_from": "timestamp",  # Nouveau
+        #       "valid_to": "timestamp",    # Nouveau
+        #       "confidence": 0.95,         # Nouveau
+        #       "history": [                # Nouveau
+        #         {"timestamp": "...", "old_value": {...}}
+        #       ]
         #     }
         #   },
         #   "relations": [
@@ -44,7 +50,9 @@ class SymbolicMemory:
         #       "relation": "relation_type",
         #       "target": "entity_id2",
         #       "confidence": 0.95,
-        #       "timestamp": "timestamp"
+        #       "timestamp": "timestamp",
+        #       "valid_from": "timestamp",  # Nouveau
+        #       "valid_to": "timestamp"     # Nouveau
         #     }
         #   ]
         # }
@@ -86,7 +94,8 @@ class SymbolicMemory:
         timestamp = int(time.time() * 1000) % 10000  # Ajouter un timestamp pour éviter les collisions
         return f"{simple_name}_{timestamp}"
     
-    def add_entity(self, name: str, entity_type: str, attributes: Dict[str, Any] = None) -> str:
+    def add_entity(self, name: str, entity_type: str, attributes: Dict[str, Any] = None, 
+                  confidence: float = 0.9, valid_from: str = None, valid_to: str = None) -> str:
         """
         Ajoute une entité au graphe.
         
@@ -94,19 +103,52 @@ class SymbolicMemory:
             name: Nom de l'entité
             entity_type: Type d'entité (person, place, device, concept)
             attributes: Attributs supplémentaires
+            confidence: Niveau de confiance (0-1)
+            valid_from: Date ISO de début de validité (si None, date courante)
+            valid_to: Date ISO de fin de validité (si None, pas de limite)
             
         Returns:
             ID de l'entité ajoutée
         """
         try:
+            # Si valid_from n'est pas spécifié, utiliser la date courante
+            if valid_from is None:
+                valid_from = datetime.now().isoformat()
+                
             # Vérifier si l'entité existe déjà par son nom
             existing_id = self.find_entity_by_name(name)
             if existing_id:
+                # Créer un historique si l'entité existe déjà
+                old_data = self.memory_graph["entities"][existing_id].copy()
+                
+                # Vérifier si l'historique existe déjà
+                if "history" not in self.memory_graph["entities"][existing_id]:
+                    self.memory_graph["entities"][existing_id]["history"] = []
+                
+                # Ajouter l'ancien état à l'historique
+                self.memory_graph["entities"][existing_id]["history"].append({
+                    "timestamp": datetime.now().isoformat(),
+                    "old_value": {
+                        "type": old_data.get("type"),
+                        "attributes": old_data.get("attributes", {}),
+                        "confidence": old_data.get("confidence"),
+                        "valid_from": old_data.get("valid_from"),
+                        "valid_to": old_data.get("valid_to")
+                    }
+                })
+                
                 # Mettre à jour l'entité existante
                 self.memory_graph["entities"][existing_id]["type"] = entity_type
                 if attributes:
                     self.memory_graph["entities"][existing_id]["attributes"].update(attributes)
                 self.memory_graph["entities"][existing_id]["last_updated"] = datetime.now().isoformat()
+                
+                # Mettre à jour les nouveaux champs
+                self.memory_graph["entities"][existing_id]["confidence"] = confidence
+                self.memory_graph["entities"][existing_id]["valid_from"] = valid_from
+                if valid_to:
+                    self.memory_graph["entities"][existing_id]["valid_to"] = valid_to
+                
                 self._save_graph()
                 return existing_id
             
@@ -116,11 +158,18 @@ class SymbolicMemory:
                 "name": name,
                 "type": entity_type,
                 "attributes": attributes or {},
-                "last_updated": datetime.now().isoformat()
+                "last_updated": datetime.now().isoformat(),
+                "confidence": confidence,
+                "valid_from": valid_from,
+                "history": []  # Historique vide pour les nouvelles entités
             }
             
+            # Ajouter valid_to si spécifié
+            if valid_to:
+                self.memory_graph["entities"][entity_id]["valid_to"] = valid_to
+            
             self._save_graph()
-            logger.info(f"Entité ajoutée: {name} ({entity_id})")
+            logger.info(f"Entité ajoutée: {name} ({entity_id}) avec confiance {confidence:.2f}")
             return entity_id
             
         except Exception as e:
@@ -143,7 +192,8 @@ class SymbolicMemory:
                 return entity_id
         return None
     
-    def add_relation(self, source_id: str, relation: str, target_id: str, confidence: float = 0.9) -> bool:
+    def add_relation(self, source_id: str, relation: str, target_id: str, 
+                    confidence: float = 0.9, valid_from: str = None, valid_to: str = None) -> bool:
         """
         Ajoute une relation entre deux entités.
         
@@ -152,6 +202,8 @@ class SymbolicMemory:
             relation: Type de relation
             target_id: ID de l'entité cible
             confidence: Niveau de confiance (0-1)
+            valid_from: Date ISO de début de validité (si None, date courante)
+            valid_to: Date ISO de fin de validité (si None, pas de limite)
             
         Returns:
             True si la relation a été ajoutée avec succès
@@ -162,39 +214,55 @@ class SymbolicMemory:
                 logger.warning(f"Tentative d'ajout de relation avec des entités inexistantes: {source_id}, {target_id}")
                 return False
             
+            # Si valid_from n'est pas spécifié, utiliser la date courante
+            if valid_from is None:
+                valid_from = datetime.now().isoformat()
+                
             # Vérifier si la relation existe déjà
             for rel in self.memory_graph["relations"]:
                 if rel["source"] == source_id and rel["relation"] == relation and rel["target"] == target_id:
                     # Mettre à jour la relation existante
                     rel["confidence"] = confidence
                     rel["timestamp"] = datetime.now().isoformat()
+                    rel["valid_from"] = valid_from
+                    if valid_to:
+                        rel["valid_to"] = valid_to
                     self._save_graph()
                     return True
             
             # Ajouter la nouvelle relation
-            self.memory_graph["relations"].append({
+            new_relation = {
                 "source": source_id,
                 "relation": relation,
                 "target": target_id,
                 "confidence": confidence,
-                "timestamp": datetime.now().isoformat()
-            })
+                "timestamp": datetime.now().isoformat(),
+                "valid_from": valid_from
+            }
+            
+            # Ajouter valid_to si spécifié
+            if valid_to:
+                new_relation["valid_to"] = valid_to
+                
+            self.memory_graph["relations"].append(new_relation)
             
             self._save_graph()
-            logger.info(f"Relation ajoutée: {source_id} -{relation}-> {target_id}")
+            logger.info(f"Relation ajoutée: {source_id} -{relation}-> {target_id} avec confiance {confidence:.2f}")
             return True
             
         except Exception as e:
             logger.error(f"Erreur lors de l'ajout de relation: {str(e)}")
             return False
     
-    def query_relations(self, entity_id: str, relation_type: Optional[str] = None) -> List[Dict[str, Any]]:
+    def query_relations(self, entity_id: str, relation_type: Optional[str] = None,
+                       include_expired: bool = False) -> List[Dict[str, Any]]:
         """
         Interroge les relations pour une entité donnée.
         
         Args:
             entity_id: ID de l'entité
             relation_type: Type de relation spécifique (optionnel)
+            include_expired: Inclure les relations expirées
             
         Returns:
             Liste des relations correspondantes
@@ -202,7 +270,13 @@ class SymbolicMemory:
         results = []
         
         try:
+            current_date = datetime.now().isoformat()
+            
             for rel in self.memory_graph["relations"]:
+                # Vérifier la date de validité si on n'inclut pas les relations expirées
+                if not include_expired and "valid_to" in rel and rel["valid_to"] < current_date:
+                    continue
+                    
                 if rel["source"] == entity_id:
                     if relation_type is None or rel["relation"] == relation_type:
                         # Obtenir des détails supplémentaires
@@ -213,7 +287,9 @@ class SymbolicMemory:
                             "target_name": target_entity.get("name", "Inconnu"),
                             "target_type": target_entity.get("type", "inconnu"),
                             "confidence": rel["confidence"],
-                            "timestamp": rel["timestamp"]
+                            "timestamp": rel["timestamp"],
+                            "valid_from": rel.get("valid_from"),
+                            "valid_to": rel.get("valid_to")
                         })
                 
                 # Également inclure les relations où l'entité est la cible
@@ -227,7 +303,9 @@ class SymbolicMemory:
                             "source_name": source_entity.get("name", "Inconnu"),
                             "source_type": source_entity.get("type", "inconnu"),
                             "confidence": rel["confidence"],
-                            "timestamp": rel["timestamp"]
+                            "timestamp": rel["timestamp"],
+                            "valid_from": rel.get("valid_from"),
+                            "valid_to": rel.get("valid_to")
                         })
             
             return results
@@ -236,18 +314,128 @@ class SymbolicMemory:
             logger.error(f"Erreur lors de la requête de relations: {str(e)}")
             return []
     
-    async def extract_entities_from_text(self, text: str) -> List[Dict[str, Any]]:
+    def get_all_entities(self, include_expired: bool = False) -> List[Dict[str, Any]]:
+        """
+        Récupère toutes les entités du graphe avec leurs attributs.
+        
+        Args:
+            include_expired: Inclure les entités expirées
+            
+        Returns:
+            Liste de toutes les entités
+        """
+        entities = []
+        current_date = datetime.now().isoformat()
+        
+        try:
+            for entity_id, entity_data in self.memory_graph["entities"].items():
+                # Vérifier la date de validité si on n'inclut pas les entités expirées
+                if not include_expired and "valid_to" in entity_data and entity_data["valid_to"] < current_date:
+                    continue
+                    
+                # Copier l'entité et ajouter son ID
+                entity_copy = entity_data.copy()
+                entity_copy["entity_id"] = entity_id
+                
+                entities.append(entity_copy)
+                
+            return entities
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération de toutes les entités: {str(e)}")
+            return []
+    
+    def get_all_relations(self, include_expired: bool = False) -> List[Dict[str, Any]]:
+        """
+        Récupère toutes les relations du graphe.
+        
+        Args:
+            include_expired: Inclure les relations expirées
+            
+        Returns:
+            Liste de toutes les relations avec des informations sur les entités connectées
+        """
+        relations = []
+        current_date = datetime.now().isoformat()
+        
+        try:
+            for relation in self.memory_graph["relations"]:
+                # Vérifier la date de validité si on n'inclut pas les relations expirées
+                if not include_expired and "valid_to" in relation and relation["valid_to"] < current_date:
+                    continue
+                    
+                # Enrichir la relation avec des informations sur les entités
+                source_entity = self.memory_graph["entities"].get(relation["source"], {})
+                target_entity = self.memory_graph["entities"].get(relation["target"], {})
+                
+                enriched_relation = relation.copy()
+                enriched_relation["source_name"] = source_entity.get("name", "Inconnu")
+                enriched_relation["target_name"] = target_entity.get("name", "Inconnu")
+                
+                relations.append(enriched_relation)
+                
+            return relations
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération de toutes les relations: {str(e)}")
+            return []
+            
+    def get_entity_history(self, entity_id: str) -> List[Dict[str, Any]]:
+        """
+        Récupère l'historique complet d'une entité.
+        
+        Args:
+            entity_id: ID de l'entité
+            
+        Returns:
+            Liste des changements historiques de l'entité
+        """
+        try:
+            if entity_id not in self.memory_graph["entities"]:
+                return []
+                
+            entity = self.memory_graph["entities"][entity_id]
+            
+            # Commencer par l'état actuel
+            history = [{
+                "timestamp": entity.get("last_updated"),
+                "state": {
+                    "name": entity.get("name"),
+                    "type": entity.get("type"),
+                    "attributes": entity.get("attributes", {}),
+                    "confidence": entity.get("confidence"),
+                    "valid_from": entity.get("valid_from"),
+                    "valid_to": entity.get("valid_to")
+                }
+            }]
+            
+            # Ajouter l'historique sauvegardé
+            if "history" in entity:
+                for entry in entity["history"]:
+                    history.append({
+                        "timestamp": entry.get("timestamp"),
+                        "state": entry.get("old_value", {})
+                    })
+            
+            # Trier par timestamp, plus récent d'abord
+            history.sort(key=lambda x: x.get("timestamp", ""), reverse=True)
+            
+            return history
+        except Exception as e:
+            logger.error(f"Erreur lors de la récupération de l'historique de l'entité {entity_id}: {str(e)}")
+            return []
+    
+    async def extract_entities_from_text(self, text: str, confidence: float = 0.7) -> List[Dict[str, Any]]:
         """
         Extrait des entités d'un texte pour enrichir le graphe.
         
         Args:
             text: Texte à analyser
+            confidence: Niveau de confiance par défaut pour les entités extraites
             
         Returns:
             Liste des entités extraites
         """
         try:
-            # Utiliser un modèle pour extraire les entités
+            # Utiliser le LLM pour extraire les entités
             prompt = f"""Extrait les entités suivantes du texte:
 - Personnes
 - Lieux
@@ -284,7 +472,8 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
                         if isinstance(entity, str) and entity.strip():
                             extracted_entities.append({
                                 "name": entity.strip(),
-                                "type": mapped_type
+                                "type": mapped_type,
+                                "confidence": confidence
                             })
                 
                 return extracted_entities
@@ -297,12 +486,13 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
             logger.error(f"Erreur lors de l'extraction d'entités: {str(e)}")
             return []
     
-    async def extract_relations_from_text(self, text: str) -> List[Dict[str, Any]]:
+    async def extract_relations_from_text(self, text: str, confidence: float = 0.7) -> List[Dict[str, Any]]:
         """
         Extrait des relations d'un texte pour enrichir le graphe.
         
         Args:
             text: Texte à analyser
+            confidence: Niveau de confiance par défaut pour les relations extraites
             
         Returns:
             Liste des relations extraites
@@ -360,19 +550,23 @@ Ne crée des relations que si elles sont clairement exprimées dans le texte.
             logger.error(f"Erreur lors de l'extraction de relations: {str(e)}")
             return []
     
-    async def update_graph_from_text(self, text: str) -> Dict[str, int]:
+    async def update_graph_from_text(self, text: str, confidence: float = 0.7,
+                             valid_from: str = None, valid_to: str = None) -> Dict[str, int]:
         """
         Met à jour le graphe de connaissances à partir d'un texte.
         
         Args:
             text: Texte à analyser
+            confidence: Niveau de confiance par défaut
+            valid_from: Date ISO de début de validité (si None, date courante)
+            valid_to: Date ISO de fin de validité (si None, pas de limite)
             
         Returns:
             Statistiques sur les mises à jour (entités et relations ajoutées)
         """
         try:
             # 1. Extraire les entités et les ajouter au graphe
-            extracted_entities = await self.extract_entities_from_text(text)
+            extracted_entities = await self.extract_entities_from_text(text, confidence=confidence)
             
             entity_ids = {}
             entities_added = 0
@@ -380,14 +574,17 @@ Ne crée des relations que si elles sont clairement exprimées dans le texte.
             for entity in extracted_entities:
                 entity_id = self.add_entity(
                     name=entity["name"],
-                    entity_type=entity["type"]
+                    entity_type=entity["type"],
+                    confidence=entity.get("confidence", confidence),
+                    valid_from=valid_from,
+                    valid_to=valid_to
                 )
                 if entity_id:
                     entity_ids[entity["name"]] = entity_id
                     entities_added += 1
             
             # 2. Extraire les relations et les ajouter au graphe
-            extracted_relations = await self.extract_relations_from_text(text)
+            extracted_relations = await self.extract_relations_from_text(text, confidence=confidence)
             
             relations_added = 0
             
@@ -395,14 +592,17 @@ Ne crée des relations que si elles sont clairement exprimées dans le texte.
                 source_name = relation.get("source")
                 target_name = relation.get("target")
                 relation_type = relation.get("relation")
-                confidence = relation.get("confidence", 0.7)
                 
                 # Vérifier que les entités existent
                 if source_name in entity_ids and target_name in entity_ids:
                     source_id = entity_ids[source_name]
                     target_id = entity_ids[target_name]
                     
-                    if self.add_relation(source_id, relation_type, target_id, confidence):
+                    relation_confidence = relation.get("confidence", confidence)
+                    if self.add_relation(source_id, relation_type, target_id, 
+                                        confidence=relation_confidence,
+                                        valid_from=valid_from, 
+                                        valid_to=valid_to):
                         relations_added += 1
             
             return {

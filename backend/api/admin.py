@@ -874,3 +874,6 @@ async def control_room(room_id: str, request: LightControlRequest):
     except Exception as e:
         logger.error(f"Erreur lors du contrôle de la pièce {room_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+

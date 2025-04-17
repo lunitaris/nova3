@@ -90,13 +90,15 @@ class VectorMemoryStore:
         except Exception as e:
             logger.error(f"Erreur lors de la sauvegarde de l'index: {str(e)}")
     
-    def add_memory(self, content: str, metadata: Dict[str, Any] = None) -> int:
+    def add_memory(self, content: str, metadata: Dict[str, Any] = None, score_pertinence: float = None, source_conversation_id: str = None) -> int:
         """
         Ajoute un nouveau souvenir à l'index.
         
         Args:
             content: Contenu textuel du souvenir
             metadata: Métadonnées associées au souvenir
+            score_pertinence: Score de pertinence (0-1), calculé automatiquement si non spécifié
+            source_conversation_id: ID de la conversation source
             
         Returns:
             ID du souvenir ajouté
@@ -109,15 +111,27 @@ class VectorMemoryStore:
             # Ajouter à l'index
             self.index.add(vector_np)
             
+            # Calculer le score de pertinence si non spécifié
+            if score_pertinence is None:
+                # Algorithme simple: longueur relative du contenu (jusqu'à un maximum raisonnable)
+                content_length = len(content.split())
+                score_pertinence = min(content_length / 100, 1.0) * 0.7 + 0.3
+                # Le score est entre 0.3 et 1.0, avec 0.3 comme score minimal
+            
             # Préparer les métadonnées
             memory_id = str(self.current_id)
             memory_metadata = {
                 "content": content,
                 "timestamp": datetime.now().isoformat(),
+                "score_pertinence": score_pertinence,
                 "type": "explicit",
                 **(metadata or {})
             }
             
+            # Ajouter le source_conversation_id si spécifié
+            if source_conversation_id:
+                memory_metadata["source_conversation_id"] = source_conversation_id
+                
             # Stocker les métadonnées
             self.metadata[memory_id] = memory_metadata
             
@@ -128,20 +142,22 @@ class VectorMemoryStore:
             self._save_metadata()
             self._save_index()
             
-            logger.info(f"Souvenir ajouté avec l'ID {memory_id}")
+            logger.info(f"Souvenir ajouté avec l'ID {memory_id}, score: {score_pertinence:.2f}")
             return int(memory_id)
             
         except Exception as e:
             logger.error(f"Erreur lors de l'ajout d'un souvenir: {str(e)}")
             return -1
     
-    def search_memories(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
+    def search_memories(self, query: str, k: int = 5, min_score: float = 0.0, max_age_days: int = None) -> List[Dict[str, Any]]:
         """
         Recherche des souvenirs pertinents.
         
         Args:
             query: Requête textuelle
             k: Nombre de résultats à retourner
+            min_score: Score minimal de pertinence pour filtrer les résultats
+            max_age_days: Âge maximal des souvenirs en jours
             
         Returns:
             Liste des souvenirs pertinents avec leurs métadonnées
@@ -175,6 +191,22 @@ class VectorMemoryStore:
                     metadata = self.metadata[memory_id].copy()
                     metadata["score"] = float(1.0 / (1.0 + dist))  # Convertir la distance en score
                     metadata["memory_id"] = memory_id
+                    
+                    # Filtrer par score de pertinence
+                    if metadata.get("score_pertinence", 0) < min_score:
+                        continue
+                    
+                    # Filtrer par âge si spécifié
+                    if max_age_days is not None and "timestamp" in metadata:
+                        try:
+                            mem_date = datetime.fromisoformat(metadata["timestamp"])
+                            age_days = (datetime.now() - mem_date).days
+                            if age_days > max_age_days:
+                                continue
+                        except:
+                            # Ignorer les erreurs de parsing de date
+                            pass
+                    
                     results.append(metadata)
             
             # Trier par score décroissant
@@ -211,53 +243,67 @@ class VectorMemoryStore:
             logger.error(f"Erreur lors de la suppression du souvenir {memory_id}: {str(e)}")
             return False
 
-
-def update_memory(self, memory_id: str, content: str = None, metadata: Dict[str, Any] = None) -> bool:
-    """
-    Met à jour un souvenir existant.
-    Si le contenu est modifié, cela nécessite de réindexer.
-    
-    Args:
-        memory_id: ID du souvenir à mettre à jour
-        content: Nouveau contenu (facultatif)
-        metadata: Métadonnées à mettre à jour (facultatif)
+    def update_memory(self, memory_id: str, content: str = None, metadata: Dict[str, Any] = None, score_pertinence: float = None) -> bool:
+        """
+        Met à jour un souvenir existant.
+        Si le contenu est modifié, cela nécessite de réindexer.
         
-    Returns:
-        True si mis à jour avec succès, False sinon
-    """
-    try:
-        if memory_id not in self.metadata:
-            logger.warning(f"Souvenir {memory_id} non trouvé pour mise à jour")
+        Args:
+            memory_id: ID du souvenir à mettre à jour
+            content: Nouveau contenu (facultatif)
+            metadata: Métadonnées à mettre à jour (facultatif)
+            score_pertinence: Nouveau score de pertinence (facultatif)
+            
+        Returns:
+            True si mis à jour avec succès, False sinon
+        """
+        try:
+            if memory_id not in self.metadata:
+                logger.warning(f"Souvenir {memory_id} non trouvé pour mise à jour")
+                return False
+            
+            if content:
+                # Marquer l'ancien comme supprimé
+                self.delete_memory(memory_id)
+                
+                # Préparer les métadonnées combinées
+                combined_metadata = self.metadata[memory_id].copy()
+                if metadata:
+                    combined_metadata.update(metadata)
+                
+                # Mettre à jour le score de pertinence si spécifié
+                if score_pertinence is not None:
+                    combined_metadata["score_pertinence"] = score_pertinence
+                
+                # Conserver l'ID de la conversation source si présent
+                source_conversation_id = combined_metadata.get("source_conversation_id")
+                
+                # Ajouter le nouveau contenu avec les métadonnées combinées
+                new_id = self.add_memory(content, combined_metadata, 
+                                         score_pertinence=combined_metadata.get("score_pertinence"),
+                                         source_conversation_id=source_conversation_id)
+                logger.info(f"Souvenir {memory_id} réindexé avec nouvel ID {new_id}")
+                return True
+            
+            elif metadata or score_pertinence is not None:
+                # Mise à jour des métadonnées uniquement
+                if metadata:
+                    self.metadata[memory_id].update(metadata)
+                
+                # Mettre à jour le score de pertinence si spécifié
+                if score_pertinence is not None:
+                    self.metadata[memory_id]["score_pertinence"] = score_pertinence
+                
+                self.metadata[memory_id]["updated_at"] = datetime.now().isoformat()
+                self._save_metadata()
+                logger.info(f"Métadonnées du souvenir {memory_id} mises à jour")
+                return True
+                
             return False
-        
-        if content:
-            # Marquer l'ancien comme supprimé
-            self.delete_memory(memory_id)
             
-            # Préparer les métadonnées combinées
-            combined_metadata = self.metadata[memory_id].copy()
-            if metadata:
-                combined_metadata.update(metadata)
-            
-            # Ajouter le nouveau contenu avec les métadonnées combinées
-            new_id = self.add_memory(content, combined_metadata)
-            logger.info(f"Souvenir {memory_id} réindexé avec nouvel ID {new_id}")
-            return True
-        
-        elif metadata:
-            # Mise à jour des métadonnées uniquement
-            self.metadata[memory_id].update(metadata)
-            self.metadata[memory_id]["updated_at"] = datetime.now().isoformat()
-            self._save_metadata()
-            logger.info(f"Métadonnées du souvenir {memory_id} mises à jour")
-            return True
-            
-        return False
-        
-    except Exception as e:
-        logger.error(f"Erreur lors de la mise à jour du souvenir {memory_id}: {str(e)}")
-        return False
-
+        except Exception as e:
+            logger.error(f"Erreur lors de la mise à jour du souvenir {memory_id}: {str(e)}")
+            return False
 
     def rebuild_index(self):
         """
@@ -307,6 +353,35 @@ def update_memory(self, memory_id: str, content: str = None, metadata: Dict[str,
         except Exception as e:
             logger.error(f"Erreur lors de la reconstruction de l'index: {str(e)}")
             return False
+            
+    def get_all_memories(self, include_deleted: bool = False) -> List[Dict[str, Any]]:
+        """
+        Récupère tous les souvenirs stockés avec leurs métadonnées.
+        
+        Args:
+            include_deleted: Si True, inclut également les souvenirs supprimés
+            
+        Returns:
+            Liste de tous les souvenirs avec leurs métadonnées
+        """
+        memories = []
+        
+        for memory_id, metadata in self.metadata.items():
+            # Ignorer les souvenirs supprimés si demandé
+            if not include_deleted and metadata.get("deleted", False):
+                continue
+                
+            # Copier les métadonnées et ajouter l'ID
+            memory_data = metadata.copy()
+            memory_data["memory_id"] = memory_id
+            
+            # Si l'ID FAISS n'est pas nécessaire, le supprimer pour clarté
+            if "faiss_idx" in memory_data:
+                del memory_data["faiss_idx"]
+                
+            memories.append(memory_data)
+            
+        return memories
 
 # Instance globale du gestionnaire de mémoire vectorielle
 vector_store = VectorMemoryStore()
