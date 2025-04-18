@@ -486,6 +486,8 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
             logger.error(f"Erreur lors de l'extraction d'entités: {str(e)}")
             return []
     
+
+
     async def extract_relations_from_text(self, text: str, confidence: float = 0.7) -> List[Dict[str, Any]]:
         """
         Extrait des relations d'un texte pour enrichir le graphe.
@@ -508,50 +510,88 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
             entities_list = "\n".join([f"- {entity['name']} ({entity['type']})" for entity in entities])
             
             prompt = f"""Identifie les relations entre ces entités extraites du texte:
-{entities_list}
+    {entities_list}
 
-Texte original: {text}
+    Texte original: {text}
 
-Retourne une liste de relations au format JSON sous forme de tableau où chaque élément contient:
-- "source": nom de l'entité source
-- "relation": type de relation (possède, est situé à, aime, connaît, etc.)
-- "target": nom de l'entité cible
-- "confidence": niveau de confiance (0.0 à 1.0)
+    Retourne une liste de relations au format JSON sous forme de tableau où chaque élément contient:
+    - "source": nom de l'entité source
+    - "relation": type de relation (possède, est situé à, aime, connaît, etc.)
+    - "target": nom de l'entité cible
+    - "confidence": niveau de confiance (0.0 à 1.0)
 
-Exemple:
-[
-  {{"source": "Jean", "relation": "possède", "target": "voiture", "confidence": 0.9}},
-  {{"source": "Marie", "relation": "habite", "target": "Paris", "confidence": 0.8}}
-]
+    Retourne UNIQUEMENT le tableau JSON, sans aucun texte d'explication avant ou après.
+    Exemple: [{"source": "Jean", "relation": "possède", "target": "voiture", "confidence": 0.9}]
 
-Ne crée des relations que si elles sont clairement exprimées dans le texte.
-"""
+    Ne crée des relations que si elles sont clairement exprimées dans le texte.
+    """
             
-            response = await model_manager.generate_response(prompt, complexity="medium")
+            response = await self.model_manager.generate_response(prompt, complexity="medium")
             
             try:
-                # Nettoyer la réponse
-                clean_response = response.replace("```json", "").replace("```", "").strip()
+                # Nettoyer la réponse de façon plus agressive
+                # Supprimer tout ce qui n'est pas entre [ et ] inclus
+                import re
+                json_match = re.search(r'(\[.*?\])', response, re.DOTALL)
                 
-                # Si la réponse est vide ou ne contient pas de relations
-                if "[]" in clean_response or not clean_response:
+                if not json_match:
+                    logger.warning(f"Aucun JSON trouvé dans la réponse: {response}")
                     return []
                 
-                # Charger le JSON
-                relations_data = json.loads(clean_response)
+                clean_response = json_match.group(1)
                 
-                return relations_data
+                # Nettoyage supplémentaire pour s'assurer que le JSON est valide
+                clean_response = clean_response.replace("'", '"')  # Remplacer les apostrophes par des guillemets
+                clean_response = re.sub(r',\s*]', ']', clean_response)  # Supprimer les virgules finales
                 
-            except json.JSONDecodeError:
-                logger.warning(f"Réponse de relations non parsable: {response}")
+                # Log pour le debug
+                logger.debug(f"JSON nettoyé avant parsing: {clean_response}")
+                
+                # Essai de parsing
+                try:
+                    relations_data = json.loads(clean_response)
+                    
+                    # Vérification/nettoyage supplémentaire des données
+                    valid_relations = []
+                    for relation in relations_data:
+                        if all(k in relation for k in ['source', 'relation', 'target']):
+                            # S'assurer que confidence est un float
+                            if 'confidence' not in relation:
+                                relation['confidence'] = confidence
+                            else:
+                                try:
+                                    relation['confidence'] = float(relation['confidence'])
+                                except:
+                                    relation['confidence'] = confidence
+                            
+                            valid_relations.append(relation)
+                    
+                    return valid_relations
+                    
+                except json.JSONDecodeError as e:
+                    logger.warning(f"Erreur JSON: {e}, Réponse: {clean_response}")
+                    
+                    # Tentative de récupération en utilisant ast.literal_eval qui est plus permissif
+                    import ast
+                    try:
+                        relations_data = ast.literal_eval(clean_response)
+                        logger.info(f"Récupération réussie avec ast.literal_eval - {len(relations_data)} relations trouvées")
+                        return relations_data
+                    except:
+                        logger.warning(f"Échec de la récupération avec ast.literal_eval")
+                        return []
+                    
+            except Exception as e:
+                logger.warning(f"Réponse de relations non parsable: {response}\nErreur: {str(e)}")
                 return []
                 
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction de relations: {str(e)}")
             return []
-    
-    async def update_graph_from_text(self, text: str, confidence: float = 0.7,
-                             valid_from: str = None, valid_to: str = None) -> Dict[str, int]:
+
+
+
+    async def update_graph_from_text(self, text: str, confidence: float = 0.7, valid_from: str = None, valid_to: str = None) -> Dict[str, int]:
         """
         Met à jour le graphe de connaissances à partir d'un texte.
         
@@ -586,12 +626,19 @@ Ne crée des relations que si elles sont clairement exprimées dans le texte.
             # 2. Extraire les relations et les ajouter au graphe
             extracted_relations = await self.extract_relations_from_text(text, confidence=confidence)
             
+            # Log détaillé des relations extraites
+            logger.info(f"Relations extraites ({len(extracted_relations)}): {json.dumps(extracted_relations, ensure_ascii=False)}")
+            logger.info(f"Entités disponibles: {entity_ids}")
+            
             relations_added = 0
+            failed_relations = []
             
             for relation in extracted_relations:
                 source_name = relation.get("source")
                 target_name = relation.get("target")
                 relation_type = relation.get("relation")
+                
+                logger.debug(f"Traitement relation: {source_name} -{relation_type}-> {target_name}")
                 
                 # Vérifier que les entités existent
                 if source_name in entity_ids and target_name in entity_ids:
@@ -599,12 +646,67 @@ Ne crée des relations que si elles sont clairement exprimées dans le texte.
                     target_id = entity_ids[target_name]
                     
                     relation_confidence = relation.get("confidence", confidence)
-                    if self.add_relation(source_id, relation_type, target_id, 
-                                        confidence=relation_confidence,
-                                        valid_from=valid_from, 
-                                        valid_to=valid_to):
+                    success = self.add_relation(
+                        source_id=source_id, 
+                        relation=relation_type, 
+                        target_id=target_id, 
+                        confidence=relation_confidence,
+                        valid_from=valid_from, 
+                        valid_to=valid_to
+                    )
+                    
+                    if success:
                         relations_added += 1
+                        logger.debug(f"Relation ajoutée: {source_name} ({source_id}) -{relation_type}-> {target_name} ({target_id})")
+                    else:
+                        failed_relations.append(f"{source_name} -> {target_name}")
+                else:
+                    # Entités non trouvées, on les crée au besoin
+                    if source_name not in entity_ids:
+                        logger.debug(f"Entité source '{source_name}' non trouvée, création automatique")
+                        source_id = self.add_entity(
+                            name=source_name,
+                            entity_type="concept",  # Type par défaut
+                            confidence=confidence * 0.8,  # Confiance réduite car entité implicite
+                            valid_from=valid_from,
+                            valid_to=valid_to
+                        )
+                        if source_id:
+                            entity_ids[source_name] = source_id
+                    else:
+                        source_id = entity_ids[source_name]
+                        
+                    if target_name not in entity_ids:
+                        logger.debug(f"Entité cible '{target_name}' non trouvée, création automatique")
+                        target_id = self.add_entity(
+                            name=target_name,
+                            entity_type="concept",  # Type par défaut
+                            confidence=confidence * 0.8,  # Confiance réduite car entité implicite
+                            valid_from=valid_from,
+                            valid_to=valid_to
+                        )
+                        if target_id:
+                            entity_ids[target_name] = target_id
+                    else:
+                        target_id = entity_ids[target_name]
+                    
+                    # Ajouter la relation si les deux entités ont été créées
+                    if source_id and target_id:
+                        relation_confidence = relation.get("confidence", confidence) * 0.8  # Confiance réduite
+                        if self.add_relation(
+                            source_id=source_id, 
+                            relation=relation_type, 
+                            target_id=target_id, 
+                            confidence=relation_confidence,
+                            valid_from=valid_from, 
+                            valid_to=valid_to
+                        ):
+                            relations_added += 1
+                            logger.debug(f"Relation ajoutée après création d'entités: {source_name} ({source_id}) -{relation_type}-> {target_name} ({target_id})")
             
+            if failed_relations:
+                logger.warning(f"Échec d'ajout pour {len(failed_relations)} relations: {', '.join(failed_relations)}")
+                
             return {
                 "entities_added": entities_added,
                 "relations_added": relations_added
@@ -612,12 +714,16 @@ Ne crée des relations que si elles sont clairement exprimées dans le texte.
             
         except Exception as e:
             logger.error(f"Erreur lors de la mise à jour du graphe: {str(e)}")
+            import traceback
+            logger.error(traceback.format_exc())
             return {
                 "entities_added": 0,
                 "relations_added": 0,
                 "error": str(e)
             }
-    
+
+
+
     def get_context_for_query(self, query: str, max_results: int = 3) -> str:
         """
         Récupère le contexte pertinent du graphe pour une requête.
