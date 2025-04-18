@@ -1,3 +1,9 @@
+import logging
+from typing import Dict, List, Any, Optional
+from datetime import datetime
+
+logger = logging.getLogger(__name__)
+
 class AutomaticMemoryContextualizer:
     """
     Analyse les requêtes utilisateur, récupère les souvenirs pertinents et les formate
@@ -143,9 +149,10 @@ class AutomaticMemoryContextualizer:
                     "source": "symbolic",
                     "relation_type": relation_type,
                     "entity_type": target_type,
-                    "entity_value": relation.get("target_name", ""),
+                    "entity_value": relation.get("target_name") or relation.get("target", ""),
                     "confidence": relation.get("confidence", 0.5)
                 })
+        logger.debug(f"Relation brute: {relation}")
         
         return memories
 
@@ -217,7 +224,7 @@ class AutomaticMemoryContextualizer:
             
         # Construire un prompt pour évaluer la pertinence
         memories_str = "\n".join([
-            (m.get('content') or (m.get('relation_type', '') + " " + m.get('entity_value', '')))
+            (m.get('content') or f"{m.get('relation_type', '')} {m.get('entity_value', '')}")
             for m in memories
         ])
         

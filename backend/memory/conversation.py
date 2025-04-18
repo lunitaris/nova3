@@ -20,13 +20,8 @@ from backend.models.model_manager import model_manager
 
 from backend.memory.automatic_contextualizer import AutomaticMemoryContextualizer
 
+from backend.memory.personal_extractor import ConversationMemoryProcessor
 
-from backend.memory.personal_extractor import (
-    ContextualInformationExtractor,
-    MemoryAdjustmentMonitor,
-    ConversationMemoryProcessor,
-    PersonalContextRetriever
-)
 
 
 
@@ -64,7 +59,8 @@ class Conversation:
         self.memory_processor = ConversationMemoryProcessor(
             model_manager, vector_store, symbolic_memory
         )
-        self.context_retriever = PersonalContextRetriever(
+
+        self.memory_contextualizer = AutomaticMemoryContextualizer(
             model_manager, vector_store, symbolic_memory
         )
         
@@ -376,9 +372,12 @@ class ConversationManager:
         self.memory_processor = ConversationMemoryProcessor(
             model_manager, vector_store, symbolic_memory
         )
-        self.context_retriever = PersonalContextRetriever(
+
+
+        self.memory_contextualizer = AutomaticMemoryContextualizer(
             model_manager, vector_store, symbolic_memory
         )
+
     
         # Initialiser le contextualiseur automatique
         self.memory_contextualizer = AutomaticMemoryContextualizer(
@@ -552,7 +551,7 @@ class ConversationManager:
                     conversation_history=conversation.get_messages(max_messages=10),
                     websocket=websocket,
                     mode=mode,
-                    additional_context=personal_context
+                    additional_context=enriched_context  # ← clé ici
                 )
 
             # Déterminer si l'assistant doit mentionner qu'il a mémorisé quelque chose
