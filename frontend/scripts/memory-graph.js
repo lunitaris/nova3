@@ -155,6 +155,8 @@ async function loadConversationGraph() {
 
 // Crée le graphe avec D3.js
 function createForceDirectedGraph(data, container) {
+    // Vider d'abord le conteneur pour éviter les duplications
+    container.innerHTML = '';
     // Importer D3.js depuis CDN si nécessaire
     if (!window.d3) {
         const script = document.createElement('script');

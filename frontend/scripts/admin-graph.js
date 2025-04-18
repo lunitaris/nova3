@@ -12,6 +12,7 @@ async function loadSymbolicGraph() {
                 <i class="fas fa-spinner fa-spin"></i> Chargement du graphe...
             </div>
         `;
+        console.log("loadSymbolicGraph from admin-graph.js appelé");
         
         // Charger les données du graphe
         const response = await fetch(`${CONFIG.API_BASE_URL}/api/memory/graph?format=d3`);
@@ -51,6 +52,8 @@ async function loadSymbolicGraph() {
 }
 
 function createForceDirectedGraph(data, container) {
+    // Vider d'abord le conteneur pour éviter les duplications
+    container.innerHTML = '';
     // Importer D3.js depuis CDN si nécessaire
     if (!window.d3) {
         const script = document.createElement('script');

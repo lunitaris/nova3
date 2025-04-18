@@ -1343,7 +1343,7 @@ async function loadSymbolicGraph() {
                 <i class="fas fa-spinner fa-spin"></i> Chargement du graphe...
             </div>
         `;
-        
+        console.log("loadSymbolicGraph from admin.js appelé");
         // Note: Cette implémentation est un placeholder
         // Une API réelle serait nécessaire pour exposer les données du graphe
         

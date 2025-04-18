@@ -8,6 +8,12 @@ import asyncio
 from datetime import datetime
 
 
+import os
+import networkx as nx
+from backend.config import config
+from backend.memory.symbolic_memory import symbolic_memory
+
+
 # Importations absolues au lieu d'importations relatives
 from memory.conversation import conversation_manager
 from models.model_manager import model_manager
