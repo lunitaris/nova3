@@ -488,6 +488,7 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
     
 
 
+
     async def extract_relations_from_text(self, text: str, confidence: float = 0.7) -> List[Dict[str, Any]]:
         """
         Extrait des relations d'un texte pour enrichir le graphe.
@@ -526,7 +527,8 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
     Ne crée des relations que si elles sont clairement exprimées dans le texte.
     """
             
-            response = await self.model_manager.generate_response(prompt, complexity="medium")
+            # Utiliser model_manager global au lieu de self.model_manager
+            response = await model_manager.generate_response(prompt, complexity="medium")
             
             try:
                 # Nettoyer la réponse de façon plus agressive
