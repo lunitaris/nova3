@@ -877,6 +877,8 @@ async def control_room(room_id: str, request: LightControlRequest):
 
 
 
+# Modifiez la fonction get_memory_graph dans backend/api/admin.py
+
 @router.get("/memory/graph")
 async def get_memory_graph(
     include_deleted: bool = Query(False, description="Inclure les entités supprimées"),
@@ -886,9 +888,95 @@ async def get_memory_graph(
     Récupère le graphe de mémoire symbolique pour la visualisation dans l'interface d'administration.
     """
     try:
-        graph = symbolic_memory.export_graph_d3(include_deleted=include_deleted)
-        return graph
+        # Si la fonction export_graph_d3 existe, l'utiliser (c'est une méthode plus propre)
+        if hasattr(symbolic_memory, 'export_graph_d3'):
+            graph = symbolic_memory.export_graph_d3(include_expired=include_deleted)
+            return graph
+            
+        # Sinon, construire manuellement le graphe (comme dans l'API memory.py)
+        import networkx as nx
+        
+        # Créer un graphe NetworkX
+        G = nx.DiGraph()
+        
+        # Récupérer toutes les entités et relations
+        # CORRECTION: Remplacer include_deleted par include_expired
+        entities = symbolic_memory.get_all_entities(include_expired=include_deleted)
+        relations = symbolic_memory.get_all_relations(include_expired=include_deleted)
+        
+        # Ajouter les entités comme noeuds
+        for entity in entities:
+            entity_id = entity.get("entity_id")
+            
+            # Propriétés du noeud
+            node_props = {
+                "id": entity_id,
+                "name": entity.get("name", "Entité sans nom"),
+                "type": entity.get("type", "unknown"),
+                "confidence": entity.get("confidence", 0.0),
+                "group": _get_node_group(entity.get("type", "unknown"))
+            }
+            
+            G.add_node(entity_id, **node_props)
+        
+        # Ajouter les relations comme liens
+        for relation in relations:
+            source = relation.get("source")
+            target = relation.get("target")
+            
+            # Vérifier que les noeuds existent
+            if source in G.nodes and target in G.nodes:
+                # Propriétés du lien
+                edge_props = {
+                    "label": relation.get("relation", "lien"),
+                    "confidence": relation.get("confidence", 0.0),
+                    "value": relation.get("confidence", 0.5) * 2  # Épaisseur
+                }
+                
+                G.add_edge(source, target, **edge_props)
+        
+        # Formater pour D3.js (format force-directed graph)
+        nodes = []
+        links = []
+        
+        for node_id, node_data in G.nodes(data=True):
+            nodes.append({
+                "id": node_id,
+                "name": node_data.get("name", node_id),
+                "group": node_data.get("group", 1),
+                "type": node_data.get("type", "unknown"),
+                "confidence": node_data.get("confidence", 0.0)
+            })
+        
+        for source, target, edge_data in G.edges(data=True):
+            links.append({
+                "source": source,
+                "target": target,
+                "label": edge_data.get("label", "lien"),
+                "value": edge_data.get("value", 1),
+                "confidence": edge_data.get("confidence", 0.5)
+            })
+        
+        return {"nodes": nodes, "links": links}
         
     except Exception as e:
         logger.error(f"Erreur lors de la récupération du graphe de mémoire: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+def _get_node_group(entity_type: str) -> int:
+    """
+    Attribue un groupe (utilisé pour la couleur) selon le type d'entité.
+    """
+    type_groups = {
+        "person": 1,
+        "place": 2,
+        "date": 3,
+        "concept": 4,
+        "preference": 5,
+        "profession": 6,
+        "contact": 7,
+        "device": 8,
+        "user": 0  # Utilisateurs en groupe spécial
+    }
+    
+    return type_groups.get(entity_type.lower(), 9)  # 9 = autre type

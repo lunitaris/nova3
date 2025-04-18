@@ -412,8 +412,9 @@ async def get_memory_graph(format: str = Query("d3", description="Format de sort
         G = nx.DiGraph()
         
         # Récupérer toutes les entités et relations
-        entities = symbolic_memory.get_all_entities(include_deleted=include_deleted)
-        relations = symbolic_memory.get_all_relations(include_deleted=include_deleted)
+
+        entities = symbolic_memory.get_all_entities(include_expired=include_deleted)
+        relations = symbolic_memory.get_all_relations(include_expired=include_deleted)
         
         # Ajouter les entités comme noeuds
         for entity in entities:
