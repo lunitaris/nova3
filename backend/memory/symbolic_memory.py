@@ -489,6 +489,7 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
 
 
 
+
     async def extract_relations_from_text(self, text: str, confidence: float = 0.7) -> List[Dict[str, Any]]:
         """
         Extrait des relations d'un texte pour enrichir le graphe.
@@ -510,6 +511,7 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
             # Construire un prompt pour extraire les relations
             entities_list = "\n".join([f"- {entity['name']} ({entity['type']})" for entity in entities])
             
+            # CORRECTION : Échapper les accolades dans l'exemple JSON
             prompt = f"""Identifie les relations entre ces entités extraites du texte:
     {entities_list}
 
@@ -522,17 +524,15 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
     - "confidence": niveau de confiance (0.0 à 1.0)
 
     Retourne UNIQUEMENT le tableau JSON, sans aucun texte d'explication avant ou après.
-    Exemple: [{"source": "Jean", "relation": "possède", "target": "voiture", "confidence": 0.9}]
+    Exemple: [{{"source": "Jean", "relation": "possède", "target": "voiture", "confidence": 0.9}}]
 
     Ne crée des relations que si elles sont clairement exprimées dans le texte.
     """
             
-            # Utiliser model_manager global au lieu de self.model_manager
             response = await model_manager.generate_response(prompt, complexity="medium")
             
             try:
-                # Nettoyer la réponse de façon plus agressive
-                # Supprimer tout ce qui n'est pas entre [ et ] inclus
+                # Nettoyer la réponse
                 import re
                 json_match = re.search(r'(\[.*?\])', response, re.DOTALL)
                 
@@ -542,7 +542,7 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
                 
                 clean_response = json_match.group(1)
                 
-                # Nettoyage supplémentaire pour s'assurer que le JSON est valide
+                # Nettoyage supplémentaire
                 clean_response = clean_response.replace("'", '"')  # Remplacer les apostrophes par des guillemets
                 clean_response = re.sub(r',\s*]', ']', clean_response)  # Supprimer les virgules finales
                 
@@ -553,7 +553,7 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
                 try:
                     relations_data = json.loads(clean_response)
                     
-                    # Vérification/nettoyage supplémentaire des données
+                    # Vérification des données
                     valid_relations = []
                     for relation in relations_data:
                         if all(k in relation for k in ['source', 'relation', 'target']):
@@ -573,7 +573,7 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
                 except json.JSONDecodeError as e:
                     logger.warning(f"Erreur JSON: {e}, Réponse: {clean_response}")
                     
-                    # Tentative de récupération en utilisant ast.literal_eval qui est plus permissif
+                    # Tentative de récupération avec ast.literal_eval
                     import ast
                     try:
                         relations_data = ast.literal_eval(clean_response)
@@ -590,6 +590,7 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
         except Exception as e:
             logger.error(f"Erreur lors de l'extraction de relations: {str(e)}")
             return []
+
 
 
 
