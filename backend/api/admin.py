@@ -877,3 +877,18 @@ async def control_room(room_id: str, request: LightControlRequest):
 
 
 
+@router.get("/memory/graph")
+async def get_memory_graph(
+    include_deleted: bool = Query(False, description="Inclure les entités supprimées"),
+    format: str = Query("d3", enum=["d3", "cytoscape"], description="Format de sortie")
+):
+    """
+    Récupère le graphe de mémoire symbolique pour la visualisation dans l'interface d'administration.
+    """
+    try:
+        graph = symbolic_memory.export_graph_d3(include_deleted=include_deleted)
+        return graph
+        
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération du graphe de mémoire: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")

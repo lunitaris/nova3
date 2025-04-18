@@ -11,6 +11,7 @@ from datetime import datetime
 from backend.memory.synthetic_memory import synthetic_memory
 from backend.memory.vector_store import vector_store
 from backend.memory.symbolic_memory import symbolic_memory
+import networkx as nx
 
 logger = logging.getLogger(__name__)
 
@@ -62,6 +63,7 @@ class MemoryAuditQuery(BaseModel):
     format: Optional[str] = "json"  # "json", "csv"
 
 # Routes existantes
+
 @router.post("/remember", response_model=MemoryResponse)
 async def remember_information(item: MemoryItem):
     """
@@ -393,3 +395,147 @@ async def get_entity_timeline(entity_id: str):
     except Exception as e:
         logger.error(f"Erreur lors de la récupération de l'historique: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+
+
+############################## API FOR SYMBLIC GRAPH #########################################
+
+@router.get("/graph")
+async def get_memory_graph(format: str = Query("d3", description="Format de sortie: d3, cytoscape"),
+                          include_deleted: bool = Query(False, description="Inclure les entités supprimées")):
+    """
+    Récupère le graphe de connaissances symbolique dans un format adapté à la visualisation.
+    """
+    try:
+        # Créer un graphe NetworkX
+        G = nx.DiGraph()
+        
+        # Récupérer toutes les entités et relations
+        entities = symbolic_memory.get_all_entities(include_deleted=include_deleted)
+        relations = symbolic_memory.get_all_relations(include_deleted=include_deleted)
+        
+        # Ajouter les entités comme noeuds
+        for entity in entities:
+            entity_id = entity.get("entity_id")
+            
+            # Propriétés du noeud
+            node_props = {
+                "id": entity_id,
+                "label": entity.get("name", "Entité sans nom"),
+                "type": entity.get("type", "unknown"),
+                "attributes": entity.get("attributes", {}),
+                "confidence": entity.get("confidence", 0.0),
+                "group": _get_node_group(entity.get("type", "unknown"))
+            }
+            
+            G.add_node(entity_id, **node_props)
+        
+        # Ajouter les relations comme liens
+        for relation in relations:
+            source = relation.get("source")
+            target = relation.get("target")
+            
+            # Vérifier que les noeuds existent
+            if source in G.nodes and target in G.nodes:
+                # Propriétés du lien
+                edge_props = {
+                    "id": f"{source}_{relation.get('relation')}_{target}",
+                    "label": relation.get("relation", "lien"),
+                    "confidence": relation.get("confidence", 0.0)
+                }
+                
+                G.add_edge(source, target, **edge_props)
+        
+        # Formater selon le format demandé
+        if format == "d3":
+            result = _format_graph_d3(G)
+        elif format == "cytoscape":
+            result = _format_graph_cytoscape(G)
+        else:
+            result = _format_graph_d3(G)  # D3 par défaut
+        
+        return result
+    
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération du graphe: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+def _get_node_group(entity_type: str) -> int:
+    """
+    Attribue un groupe (utilisé pour la couleur) selon le type d'entité.
+    """
+    type_groups = {
+        "person": 1,
+        "place": 2,
+        "date": 3,
+        "concept": 4,
+        "preference": 5,
+        "profession": 6,
+        "contact": 7,
+        "device": 8,
+        "user": 0  # Utilisateurs en groupe spécial
+    }
+    
+    return type_groups.get(entity_type.lower(), 9)  # 9 = autre type
+
+def _format_graph_d3(G: nx.DiGraph) -> Dict[str, Any]:
+    """
+    Formate le graphe pour D3.js (format force-directed graph).
+    """
+    # Convertir le graphe en format attendu par D3.js
+    nodes = []
+    links = []
+    
+    for node_id, node_data in G.nodes(data=True):
+        nodes.append({
+            "id": node_id,
+            "name": node_data.get("label", node_id),
+            "group": node_data.get("group", 1),
+            "type": node_data.get("type", "unknown"),
+            "confidence": node_data.get("confidence", 0.0)
+        })
+    
+    for source, target, edge_data in G.edges(data=True):
+        links.append({
+            "source": source,
+            "target": target,
+            "label": edge_data.get("label", "lien"),
+            "value": edge_data.get("confidence", 0.5) * 2,  # Épaisseur proportionnelle à la confiance
+            "confidence": edge_data.get("confidence", 0.5)
+        })
+    
+    return {"nodes": nodes, "links": links}
+
+def _format_graph_cytoscape(G: nx.DiGraph) -> Dict[str, Any]:
+    """
+    Formate le graphe pour Cytoscape.js.
+    """
+    elements = []
+    
+    # Nodes
+    for node_id, node_data in G.nodes(data=True):
+        elements.append({
+            "data": {
+                "id": node_id,
+                "label": node_data.get("label", node_id),
+                "group": node_data.get("group", 1),
+                "type": node_data.get("type", "unknown"),
+                "confidence": node_data.get("confidence", 0.0)
+            }
+        })
+    
+    # Edges
+    for source, target, edge_data in G.edges(data=True):
+        elements.append({
+            "data": {
+                "id": edge_data.get("id", f"{source}-{target}"),
+                "source": source,
+                "target": target,
+                "label": edge_data.get("label", "lien"),
+                "weight": edge_data.get("confidence", 0.5),
+                "confidence": edge_data.get("confidence", 0.5)
+            }
+        })
+    
+    return {"elements": elements}

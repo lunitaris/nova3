@@ -240,3 +240,32 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () 
         userPreferences.applyTheme();
     }
 });
+
+
+/**
+ * Mise à jour à ajouter au fichier frontend/scripts/main.js
+ */
+
+// Ajouter à la fin de la fonction d'initialisation ou au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Autres initialisations...
+    
+    // Initialiser le bouton de visualisation du graphe de mémoire
+    if (typeof addMemoryGraphButton === 'function') {
+        setTimeout(addMemoryGraphButton, 1000);
+    }
+    
+    // Ajouter un observateur de modifications pour s'assurer que le bouton est ajouté
+    // même après un changement de conversation
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions) {
+        const observer = new MutationObserver(function(mutations) {
+            if (typeof addMemoryGraphButton === 'function') {
+                addMemoryGraphButton();
+            }
+        });
+        
+        observer.observe(headerActions, { childList: true, subtree: true });
+    }
+});
+
