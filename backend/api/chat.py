@@ -274,7 +274,6 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
 
 
 
-# Ajoutez ce code au fichier backend/api/chat.py
 
 @router.get("/conversation/{conversation_id}/graph")
 async def get_conversation_graph(
@@ -283,83 +282,30 @@ async def get_conversation_graph(
 ):
     """
     Récupère le graphe symbolique pour une conversation spécifique.
+    Redirection vers l'endpoint unifié de l'API memory.
     """
     try:
         # Vérifier si la conversation existe
-        if not os.path.exists(os.path.join(config.data_dir, "conversations", f"{conversation_id}.json")):
+        conversation_file_path = os.path.join(config.data_dir, "conversations", f"{conversation_id}.json")
+        if not os.path.exists(conversation_file_path):
             raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} non trouvée")
-            
-        # Construire un graphe networkx
-        G = nx.DiGraph()
         
-        # Option 1: Récupérer toutes les entités du graphe symbolique
-        entities = symbolic_memory.get_all_entities(include_expired=include_deleted)
-        relations = symbolic_memory.get_all_relations(include_expired=include_deleted)
+        # Rediriger vers l'API unifiée de graphe avec le paramètre conversation_id
+        from backend.api.memory import get_memory_graph
         
-        # Option 2 (meilleure): Filtrer les entités et relations liées à cette conversation
-        # Cette partie peut être ajustée selon la façon dont vous associez les entités aux conversations
-        conversation_entities = []
-        conversation_relations = []
-        
-        # Ajouter les entités comme nœuds
-        for entity in entities:
-            entity_id = entity.get("entity_id")
-            
-            # Propriétés du noeud
-            node_props = {
-                "id": entity_id,
-                "name": entity.get("name", "Entité sans nom"),
-                "type": entity.get("type", "unknown"),
-                "confidence": entity.get("confidence", 0.0),
-                "group": _get_node_group(entity.get("type", "unknown"))
-            }
-            
-            G.add_node(entity_id, **node_props)
-        
-        # Ajouter les relations comme liens
-        for relation in relations:
-            source = relation.get("source")
-            target = relation.get("target")
-            
-            # Vérifier que les noeuds existent
-            if source in G.nodes and target in G.nodes:
-                # Propriétés du lien
-                edge_props = {
-                    "id": f"{source}_{relation.get('relation')}_{target}",
-                    "label": relation.get("relation", "lien"),
-                    "confidence": relation.get("confidence", 0.0),
-                    "value": relation.get("confidence", 0.5) * 2  # Épaisseur proportionnelle à la confiance
-                }
-                
-                G.add_edge(source, target, **edge_props)
-        
-        # Formater pour D3.js (format force-directed graph)
-        nodes = []
-        links = []
-        
-        for node_id, node_data in G.nodes(data=True):
-            nodes.append({
-                "id": node_id,
-                "name": node_data.get("name", node_id),
-                "group": node_data.get("group", 1),
-                "type": node_data.get("type", "unknown"),
-                "confidence": node_data.get("confidence", 0.0)
-            })
-        
-        for source, target, edge_data in G.edges(data=True):
-            links.append({
-                "source": source,
-                "target": target,
-                "label": edge_data.get("label", "lien"),
-                "value": edge_data.get("value", 1),
-                "confidence": edge_data.get("confidence", 0.5)
-            })
-        
-        return {"nodes": nodes, "links": links}
+        # Appeler l'API unifiée
+        return await get_memory_graph(
+            format="d3",
+            include_expired=include_deleted,  # Note: renamed from include_deleted for consistency
+            conversation_id=conversation_id
+        )
         
     except Exception as e:
         logger.error(f"Erreur lors de la récupération du graphe pour la conversation {conversation_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+
 
 def _get_node_group(entity_type: str) -> int:
     """

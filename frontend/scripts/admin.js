@@ -969,7 +969,11 @@ function setupMemoryEvents() {
         }
     });
     
-    document.getElementById('load-graph-btn').addEventListener('click', loadSymbolicGraph);
+    window.SymbolicGraphUI.injectIntoAdmin({ 
+        sectionId: 'memory', 
+        buttonId: 'load-graph-btn',
+        autoLoad: true // 👈 active le chargement dès ouverture
+    });
 }
 
 /**

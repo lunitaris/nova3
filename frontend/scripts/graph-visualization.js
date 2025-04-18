@@ -1,59 +1,96 @@
 /**
- * Module de visualisation du graphe de mémoire symbolique
- * À ajouter au fichier frontend/scripts/admin.js
+ * Module commun pour la visualisation de graphes de mémoire symbolique
+ * Ce fichier centralise toutes les fonctions de visualisation utilisées dans l'application
  */
 
-// Ajoutez cette fonction après les autres fonctions dans admin.js
-async function loadSymbolicGraph() {
+// Variables globales
+let graphData = null;
+let graphSimulation = null;
+
+/**
+ * Charge et affiche un graphe symbolique
+ * @param {string} endpoint - Endpoint API à appeler
+ * @param {HTMLElement} container - Conteneur où afficher le graphe
+ * @param {Object} params - Paramètres additionnels pour l'API
+ * @param {Function} onSuccess - Fonction à appeler en cas de succès (optionnel)
+ */
+function loadSymbolicGraph(endpoint, container, params = {}, onSuccess = null) {
     try {
-        const container = document.getElementById('graph-container');
+        console.log(`Chargement du graphe depuis ${endpoint}`, params);
+        
+        // Vider le conteneur et afficher l'indicateur de chargement
         container.innerHTML = `
             <div class="loading-indicator">
                 <i class="fas fa-spinner fa-spin"></i> Chargement du graphe...
             </div>
         `;
-        console.log("loadSymbolicGraph from admin-graph.js appelé");
+        
+        // Construire l'URL avec les paramètres
+        const url = new URL(endpoint, CONFIG.API_BASE_URL);
+        Object.keys(params).forEach(key => {
+            url.searchParams.append(key, params[key]);
+        });
         
         // Charger les données du graphe
-        const response = await fetch(`${CONFIG.API_BASE_URL}/api/memory/graph?format=d3`);
-        
-        if (!response.ok) {
-            throw new Error(`Erreur HTTP: ${response.status}`);
-        }
-        
-        const graphData = await response.json();
-        
-        // Vérifier si le graphe est vide
-        if (!graphData.nodes || graphData.nodes.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <p>Le graphe de mémoire symbolique est vide</p>
-                    <p>Ajoutez des informations en mémoire pour voir apparaître le graphe</p>
-                </div>
-            `;
-            return;
-        }
-        
-        // Vider le container pour la visualisation
-        container.innerHTML = '';
-        
-        // Créer la visualisation avec D3.js
-        createForceDirectedGraph(graphData, container);
+        fetch(url)
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`Erreur HTTP: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                graphData = data;
+                
+                // Vérifier si le graphe est vide
+                if (!graphData.nodes || graphData.nodes.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <p>Le graphe de mémoire symbolique est vide</p>
+                            <p>Ajoutez des informations en mémoire pour voir apparaître le graphe</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Créer la visualisation
+                createForceDirectedGraph(graphData, container);
+                
+                // Appeler le callback de succès si fourni
+                if (onSuccess && typeof onSuccess === 'function') {
+                    onSuccess(graphData);
+                }
+            })
+            .catch(error => {
+                console.error("Erreur lors du chargement du graphe:", error);
+                container.innerHTML = `
+                    <div class="error-state">
+                        <p>Erreur lors du chargement du graphe</p>
+                        <p class="error-details">${error.message}</p>
+                    </div>
+                `;
+            });
+            
     } catch (error) {
-        console.error("Erreur lors du chargement du graphe:", error);
-        document.getElementById('graph-container').innerHTML = `
+        console.error("Erreur:", error);
+        container.innerHTML = `
             <div class="error-state">
-                <p>Erreur lors du chargement du graphe</p>
+                <p>Erreur inattendue</p>
                 <p class="error-details">${error.message}</p>
             </div>
         `;
-        showToast("Erreur lors du chargement du graphe", "error");
     }
 }
 
+/**
+ * Crée un graphe orienté force avec D3.js
+ * @param {Object} data - Données du graphe (nodes et links)
+ * @param {HTMLElement} container - Conteneur où afficher le graphe
+ */
 function createForceDirectedGraph(data, container) {
     // Vider d'abord le conteneur pour éviter les duplications
     container.innerHTML = '';
+    
     // Importer D3.js depuis CDN si nécessaire
     if (!window.d3) {
         const script = document.createElement('script');
@@ -70,6 +107,11 @@ function createForceDirectedGraph(data, container) {
     }
 }
 
+/**
+ * Initialise la visualisation du graphe avec D3.js
+ * @param {Object} data - Données du graphe
+ * @param {HTMLElement} container - Conteneur
+ */
 function initGraph(data, container) {
     const width = container.clientWidth;
     const height = 500;
@@ -112,7 +154,7 @@ function initGraph(data, container) {
         .attr("d", "M0,-5L10,0L0,5");
     
     // Créer la simulation de force
-    const simulation = d3.forceSimulation(data.nodes)
+    graphSimulation = d3.forceSimulation(data.nodes)
         .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
         .force("charge", d3.forceManyBody().strength(-300))
         .force("center", d3.forceCenter(width / 2, height / 2))
@@ -152,7 +194,7 @@ function initGraph(data, container) {
         .enter().append("circle")
         .attr("r", 8)
         .attr("fill", d => color(d.group))
-        .call(drag(simulation))
+        .call(drag(graphSimulation))
         .on("mouseover", function(event, d) {
             // Afficher les détails du nœud au survol
             tooltip.transition()
@@ -212,23 +254,6 @@ function initGraph(data, container) {
         .attr("class", "graph-tooltip")
         .style("opacity", 0);
     
-    // Mise à jour de la simulation à chaque tick
-    simulation.on("tick", () => {
-        link
-            .attr("x1", d => d.source.x)
-            .attr("y1", d => d.source.y)
-            .attr("x2", d => d.target.x)
-            .attr("y2", d => d.target.y);
-            
-        node
-            .attr("cx", d => d.x = Math.max(10, Math.min(width - 10, d.x)))
-            .attr("cy", d => d.y = Math.max(10, Math.min(height - 10, d.y)));
-            
-        label
-            .attr("x", d => d.x)
-            .attr("y", d => d.y);
-    });
-    
     // Ajouter une légende
     const legend = svg.append("g")
         .attr("class", "legend")
@@ -258,31 +283,21 @@ function initGraph(data, container) {
         .attr("y", 5)
         .text(d => d.label);
     
-    // Ajouter des contrôles pour la visualisation
-    const controls = svg.append("g")
-        .attr("class", "controls")
-        .attr("transform", `translate(${width - 100}, 20)`);
-        
-    // Bouton de réinitialisation du zoom
-    controls.append("rect")
-        .attr("width", 80)
-        .attr("height", 25)
-        .attr("rx", 5)
-        .attr("class", "control-button");
-        
-    controls.append("text")
-        .attr("x", 40)
-        .attr("y", 16)
-        .attr("text-anchor", "middle")
-        .text("Recentrer")
-        .attr("class", "control-text");
-        
-    controls.on("click", function() {
-        // Réinitialiser le zoom
-        svg.transition().duration(750).call(
-            d3.zoom().transform,
-            d3.zoomIdentity
-        );
+    // Mise à jour de la simulation à chaque tick
+    graphSimulation.on("tick", () => {
+        link
+            .attr("x1", d => d.source.x)
+            .attr("y1", d => d.source.y)
+            .attr("x2", d => d.target.x)
+            .attr("y2", d => d.target.y);
+            
+        node
+            .attr("cx", d => d.x = Math.max(10, Math.min(width - 10, d.x)))
+            .attr("cy", d => d.y = Math.max(10, Math.min(height - 10, d.y)));
+            
+        label
+            .attr("x", d => d.x)
+            .attr("y", d => d.y);
     });
     
     // Fonction pour le glisser-déposer des nœuds
@@ -311,17 +326,27 @@ function initGraph(data, container) {
     }
 }
 
-// Ajouter du CSS pour le graphe (dans un élément style)
+/**
+ * Ajoute les styles CSS nécessaires pour le graphe
+ */
 function addGraphStyles() {
-    if (document.getElementById('graph-styles')) return;
+    if (document.getElementById('graph-visualization-styles')) return;
     
     const style = document.createElement('style');
-    style.id = 'graph-styles';
+    style.id = 'graph-visualization-styles';
     style.textContent = `
+        .graph-container {
+            width: 100%;
+            height: 500px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+        }
+        
         .memory-graph {
             background-color: #f9f9f9;
             border-radius: 8px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.12);
         }
         
         .graph-tooltip {
@@ -370,31 +395,84 @@ function addGraphStyles() {
             stroke-opacity: 0.1;
         }
         
-        .control-button {
-            fill: rgba(255, 255, 255, 0.8);
-            stroke: #ccc;
-            cursor: pointer;
+        .legend {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 10px;
+            border-radius: 4px;
         }
         
-        .control-button:hover {
-            fill: rgba(255, 255, 255, 1);
-            stroke: #999;
-        }
-        
-        .control-text {
+        .legend-entry text {
             font-size: 12px;
-            pointer-events: none;
-            user-select: none;
+        }
+        
+        .modal-content.large {
+            width: 90%;
+            max-width: 1000px;
+        }
+        
+        .controls {
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: #666;
+            padding: 20px;
+        }
+        
+        .error-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+            color: #f44336;
+            padding: 20px;
+        }
+        
+        .loading-indicator {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            text-align: center;
+        }
+        
+        [data-theme="dark"] .memory-graph {
+            background-color: #2c2c2c;
+        }
+        
+        [data-theme="dark"] .empty-state,
+        [data-theme="dark"] .error-state {
+            color: #aaa;
+        }
+        
+        [data-theme="dark"] .legend {
+            background-color: rgba(50, 50, 50, 0.8);
+        }
+        
+        [data-theme="dark"] .legend-entry text {
+            fill: #eee;
         }
     `;
     
     document.head.appendChild(style);
 }
 
-// Modifier la fonction existante pour utiliser notre nouvelle implémentation
-document.getElementById('load-graph-btn').addEventListener('click', function() {
-    // Ajouter les styles
-    addGraphStyles();
-    // Charger le graphe
-    loadSymbolicGraph();
-});
+// Exporter les fonctions pour les rendre accessibles
+window.GraphVisualization = {
+    loadSymbolicGraph,
+    createForceDirectedGraph,
+    initGraph,
+    addGraphStyles
+};

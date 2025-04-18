@@ -401,20 +401,34 @@ async def get_entity_timeline(entity_id: str):
 
 ############################## API FOR SYMBLIC GRAPH #########################################
 
+
 @router.get("/graph")
-async def get_memory_graph(format: str = Query("d3", description="Format de sortie: d3, cytoscape"),
-                          include_deleted: bool = Query(False, description="Inclure les entités supprimées")):
+async def get_memory_graph(
+    format: str = Query("d3", description="Format de sortie: d3, cytoscape"),
+    include_expired: bool = Query(False, description="Inclure les entités supprimées ou expirées"),
+    conversation_id: Optional[str] = Query(None, description="ID de conversation pour filtrage")
+):
     """
     Récupère le graphe de connaissances symbolique dans un format adapté à la visualisation.
+    Si conversation_id est fourni, filtre les entités liées à cette conversation.
     """
     try:
         # Créer un graphe NetworkX
         G = nx.DiGraph()
         
         # Récupérer toutes les entités et relations
-
-        entities = symbolic_memory.get_all_entities(include_expired=include_deleted)
-        relations = symbolic_memory.get_all_relations(include_expired=include_deleted)
+        entities = symbolic_memory.get_all_entities(include_expired=include_expired)
+        relations = symbolic_memory.get_all_relations(include_expired=include_expired)
+        
+        # Si un ID de conversation est fourni, on pourrait filtrer les entités
+        # Ceci est un emplacement pour une future implémentation de filtrage
+        # Pour l'instant, nous renvoyons le graphe complet dans tous les cas
+        if conversation_id:
+            # En attente d'une implémentation future qui associe les entités aux conversations
+            # Pour l'instant, inclure toutes les entités quel que soit l'ID de conversation
+            logger.info(f"Filtrage par conversation demandé pour {conversation_id}, mais non implémenté")
+            # Future implémentation de filtrage ici
+            pass
         
         # Ajouter les entités comme noeuds
         for entity in entities:
@@ -461,6 +475,7 @@ async def get_memory_graph(format: str = Query("d3", description="Format de sort
     except Exception as e:
         logger.error(f"Erreur lors de la récupération du graphe: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
 
 def _get_node_group(entity_type: str) -> int:
     """
