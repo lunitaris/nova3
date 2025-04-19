@@ -966,9 +966,19 @@
 
 /* Style amélioré pour l'indicateur de statut système */
 #system-status-indicator {
-  margin-right: 8px;
-  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  font-size: 16px;
+  cursor: help;
+  transition: transform 0.2s ease;
 }
+
+#system-status-indicator:hover {
+  transform: scale(1.2);
+}
+
 
 
 #system-status-indicator:hover {

@@ -5,7 +5,7 @@ from backend.api.diagnostic import get_status_details
 
 # Cache mémoire de statut
 current_status = {
-    "last_check": None,
+    "last_check": time.strftime("%Y-%m-%d %H:%M:%S"),
     "status": "unknown",
     "components": {},
     "latency_total_ms": None
