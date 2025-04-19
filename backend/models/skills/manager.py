@@ -40,7 +40,7 @@ class SkillsManager:
         self._register_skill(TimerReminderSkill)
         self._register_skill(GeneralQASkill)
         
-        logger.info(f"Compétences chargées: {', '.join(self.skills.keys())}")
+        logger.info(f"✅ Compétences chargées: {', '.join(self.skills.keys())}")
     
     def _register_skill(self, skill_class: Type[Skill]):
         """

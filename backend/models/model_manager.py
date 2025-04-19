@@ -7,14 +7,15 @@ import os
 from typing import Dict, Any, Optional
 import asyncio
 
-# Remplacer les importations dépréciées
-from langchain_community.llms import Ollama
-from langchain_community.chat_models import ChatOpenAI
-from langchain_core.callbacks import CallbackManager, StreamingStdOutCallbackHandler
-from langchain_core.callbacks.base import BaseCallbackHandler
+from langchain_ollama import OllamaLLM
+from langchain_openai import ChatOpenAI
 
 from backend.config import config
 from backend.config import OPENAI_API_KEY
+from langchain_core.callbacks.base import BaseCallbackHandler
+from backend.utils.profiler import profile
+
+
 
 
 logger = logging.getLogger(__name__)
@@ -101,6 +102,13 @@ class ModelManager:
     """
     Gère les différents modèles LLM et sélectionne le plus approprié selon le contexte.
     """
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(ModelManager, cls).__new__(cls)
+        return cls._instance
+
     
     def __init__(self):
         """Initialise le gestionnaire de modèles."""
@@ -130,6 +138,9 @@ class ModelManager:
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation des modèles: {str(e)}")
     
+
+
+    # @profile("ollama_init")       ## DEBUG A DECOMMENTER SI BESOIN
     def _init_ollama_model(self, model_config):
         """
         Initialise un modèle Ollama.
@@ -140,7 +151,7 @@ class ModelManager:
         Returns:
             Instance Ollama configurée
         """
-        return Ollama(
+        return OllamaLLM(
             model=model_config.name,
             temperature=model_config.parameters.get("temperature", 0.7),
             top_p=model_config.parameters.get("top_p", 0.9),
@@ -148,10 +159,10 @@ class ModelManager:
             num_ctx=model_config.context_window,
             base_url=model_config.api_base,
             callbacks=[]  # FIX: Retirez les callbacks de démarrage qui pourraient causer des problèmes
-
-            #callbacks=[StreamingStdOutCallbackHandler()]  # Utiliser callbacks au lieu de callback_manager
         )
-        
+
+
+    @profile("llm_get_model")
     def _get_appropriate_model(self, prompt: str, complexity: str = "auto", websocket=None):
         """
         Sélectionne le modèle le plus approprié selon le contexte.

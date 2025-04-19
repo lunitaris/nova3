@@ -6,6 +6,8 @@ import json
 import logging
 from typing import Dict, List, Any, Optional, Tuple
 from phue import Bridge, Light
+from backend.utils.profiler import profile
+
 
 logger = logging.getLogger(__name__)
 
@@ -13,6 +15,12 @@ class HueLightController:
     """
     Gère la communication avec le Philips Hue Bridge et les lumières.
     """
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super().__new__(cls)
+        return cls._instance
     
     def __init__(self, config_path: Optional[str] = None):
         """
@@ -65,7 +73,7 @@ class HueLightController:
             # Essayer de récupérer les lumières pour vérifier la connexion
             self._refresh_lights()
             
-            logger.info(f"Connecté au Hue Bridge à {self.config['bridge_ip']} avec succès")
+            logger.info(f"✅ Connecté au Hue Bridge à {self.config['bridge_ip']} avec succès")
             self.is_available = True
             return True
             
@@ -343,7 +351,9 @@ class HueLightController:
                 "success": False,
                 "message": f"Erreur: {str(e)}"
             }
-    
+
+
+    @profile("hue_lights")
     def get_all_lights(self) -> List[Dict[str, Any]]:
         """
         Récupère la liste de toutes les lumières avec leur statut.

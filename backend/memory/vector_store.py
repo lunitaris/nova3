@@ -13,6 +13,9 @@ from langchain_community.embeddings import FakeEmbeddings
 
 from backend.config import config
 
+# Désactiver explicitement les tentatives de chargement GPU
+os.environ['FAISS_NO_GPU'] = '1'
+
 logger = logging.getLogger(__name__)
 
 class VectorMemoryStore:
@@ -53,13 +56,23 @@ class VectorMemoryStore:
                 self.index = faiss.read_index(f"{self.index_path}.faiss")
                 logger.info(f"Index chargé avec {self.index.ntotal} vecteurs")
             else:
+                # Utiliser IndexIDMap avec un index IVF pour de meilleures performances CPU
                 logger.info(f"Création d'un nouvel index FAISS de dimension {self.embedding_dimension}")
-                self.index = faiss.IndexFlatL2(self.embedding_dimension)
+                quantizer = faiss.IndexFlatL2(self.embedding_dimension)
+                self.index = faiss.IndexIVFFlat(quantizer, self.embedding_dimension, config.memory.nlist)
                 logger.info("Nouvel index créé")
+
+            # Check si index déjà entraîné sinon entraîner
+            if not self.index.is_trained:
+                fake_data = np.random.random((1000, self.embedding_dimension)).astype('float32')
+                self.index.train(fake_data)
+
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation de l'index: {str(e)}")
             logger.info("Création d'un nouvel index par défaut")
             self.index = faiss.IndexFlatL2(self.embedding_dimension)
+
+
     
     def _load_metadata(self) -> Dict[str, Dict[str, Any]]:
         """Charge les métadonnées associées aux vecteurs."""
@@ -110,6 +123,19 @@ class VectorMemoryStore:
             
             # Ajouter à l'index
             self.index.add(vector_np)
+
+
+            # 🚨 Limiter le nombre de vecteurs FAISS pour éviter saturation mémoire
+            MAX_VECTORS = 10000
+            if self.index.ntotal >= MAX_VECTORS:
+                logger.warning("💡 Trop de vecteurs en mémoire. Suppression des plus anciens.")
+                oldest_ids = sorted(self.metadata.keys(), key=lambda k: self.metadata[k].get("timestamp", ""))[:100]
+                for old_id in oldest_ids:
+                    self.delete_memory(old_id)
+                self.rebuild_index()
+
+            # Récupérer l'index FAISS utilisé (dernier ajouté)
+            faiss_idx = self.index.ntotal - 1
             
             # Calculer le score de pertinence si non spécifié
             if score_pertinence is None:
@@ -125,6 +151,7 @@ class VectorMemoryStore:
                 "timestamp": datetime.now().isoformat(),
                 "score_pertinence": score_pertinence,
                 "type": "explicit",
+                "faiss_idx": faiss_idx,
                 **(metadata or {})
             }
             

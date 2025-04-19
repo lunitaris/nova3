@@ -21,7 +21,7 @@ from backend.models.model_manager import model_manager
 from backend.memory.automatic_contextualizer import AutomaticMemoryContextualizer
 
 from backend.memory.personal_extractor import ConversationMemoryProcessor
-
+from backend.utils.profiler import profile
 
 
 
@@ -498,6 +498,7 @@ class ConversationManager:
             logger.error(f"Erreur lors de la suppression de la conversation {conversation_id}: {str(e)}")
             return False
     
+    @profile("process_input")   # profiler pour debug
     async def process_user_input(self, conversation_id: str, user_input: str, user_id: str = "anonymous", mode: str = "chat", websocket = None ) -> Dict[str, Any]:
         """
         Traite l'entrée utilisateur et génère une réponse.

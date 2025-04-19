@@ -1,12 +1,25 @@
 import os
 import sys
+
+
+# Supprimer toutes les variantes ambiguës d'import du module model_manager
+for key in list(sys.modules.keys()):
+    if key == "models" or key.startswith("models.") or key == "model_manager" or key.startswith("model_manager."):
+        del sys.modules[key]
+
+print(">>> [DEBUG] Suppression des imports ambigus de model_manager effectuée.")
+
+# Ajouter le répertoire parent au chemin Python pour permettre les importations absolues
+current_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, current_dir)
+
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
 import asyncio
 import uvicorn
-
+from backend.api.health_monitor import monitor_health
 import logging
 from logging.handlers import RotatingFileHandler
 
@@ -18,13 +31,10 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-# Ajouter le répertoire parent au chemin Python pour permettre les importations absolues
-current_dir = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, current_dir)
-
 # Configuration du logger (console + file)
 logger = logging.getLogger(__name__)
-
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("profiler").setLevel(logging.INFO)
 
 # Initialisation de l'application FastAPI
 app = FastAPI(
@@ -135,7 +145,6 @@ try:
     app.include_router(voice_router)
     app.include_router(memory_router)
     
-    logger.info("Tous les routers API ont été chargés avec succès")
 except Exception as e:
     logger.error(f"Erreur lors du chargement des routers: {str(e)}")
     raise
@@ -156,17 +165,32 @@ try:
     from api.voice import router as voice_router
     from api.memory import router as memory_router
     from api.admin import router as admin_router
+    from api.diagnostic import router as diagnostic_router
+    from api.health_monitor import router as health_router
+
+
 
     # Inclure les routers
     app.include_router(chat_router)
     app.include_router(voice_router)
     app.include_router(memory_router)
     app.include_router(admin_router)
+    app.include_router(diagnostic_router)
+    app.include_router(health_router)
+
+
     
-    logger.info("Tous les routers API ont été chargés avec succès")
 except Exception as e:
     logger.error(f"Erreur lors du chargement des routers: {str(e)}")
     raise
+
+
+
+
+#### MONITORING DES SERVICES ########
+@app.on_event("startup")
+async def start_health_monitor():
+    asyncio.create_task(monitor_health())
 
 
 # Point d'entrée pour l'exécution directe

@@ -29,7 +29,8 @@ class MemoryConfig(BaseModel):
     vector_dimension: int = 1536  # Dimension des vecteurs FAISS
     max_history_length: int = 20  # Nombre maximal de messages dans l'historique
     synthetic_memory_refresh_interval: int = 10  # Intervalle de rafraîchissement de la mémoire synthétique
-    use_chatgpt_for_symbolic_memory: bool = False  # Utiliser ChatGPT pour l'extraction symbolique
+    use_chatgpt_for_symbolic_memory: bool = True  # Utiliser ChatGPT pour l'extraction symbolique
+    nlist: int = 25  # Nombre de clusters FAISS pour IndexIVFFlat
     
 
 class SecurityConfig(BaseModel):

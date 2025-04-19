@@ -424,12 +424,11 @@
   
   .chat-input {
     flex: 1;
-    padding: var(--spacing-md);
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-md);
-    resize: none;
-    background-color: var(--input-bg);
-    transition: border-color var(--transition-fast);
+    min-height: 36px;
+    padding: 6px 10px;
+    border-radius: 6px;
+    border: 1px solid #ccc;
+    font-size: 14px;
   }
   
   .chat-input:focus {
@@ -523,9 +522,16 @@
     font-weight: 500;
   }
   
+
+  .mic-btn,
+  .btn.secondary,
   .btn.primary {
-    background-color: var(--primary-color);
-    color: var(--text-on-primary);
+    padding: 8px 10px;
+    font-size: 14px;
+    border-radius: 6px;
+  }
+  #send-button i {
+    margin: 0;
   }
   
   .btn.primary:hover {
@@ -857,3 +863,70 @@
     visibility: hidden !important;
     display: none !important;
 }
+
+
+/* -------------------_FIX UI --------------------*/
+
+/* Container de la carte centrale */
+.main-card {
+  padding: 2rem;
+  margin-top: 2rem;
+  margin-bottom: 2rem;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+/* Alignement des boutons top-right */
+.top-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 1rem;
+  margin-right: 1rem;
+}
+
+/* Footer en bas avec les boutons */
+.footer-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #ddd;
+  background-color: white;
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 99;
+}
+
+
+/* Input message */
+.input-message {
+  flex-grow: 1;
+  margin-left: 1rem;
+  margin-right: 1rem;
+}
+
+#system-status-indicator {
+  background: white;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  padding: 4px 8px;
+  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+}
+
+.bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 250px; /* largeur de ta sidebar */
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background-color: #f9f9f9;
+  border-top: 1px solid #ddd;
+  z-index: 10;
+}
+

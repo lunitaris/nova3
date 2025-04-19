@@ -15,6 +15,7 @@ from backend.memory.symbolic_memory import symbolic_memory
 import networkx as nx
 from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory
 from fastapi import Body
+from backend.utils.profiler import profile
 
 
 logger = logging.getLogger(__name__)
@@ -110,7 +111,10 @@ async def remember_information(item: MemoryItem):
         logger.error(f"Erreur lors de la mémorisation: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
 
+
+
 @router.post("/search", response_model=MemorySearchResult)
+@profile("memory_vector_search")
 async def search_memories(query: SearchQuery):
     """
     Recherche des informations dans la mémoire.

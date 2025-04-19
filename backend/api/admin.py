@@ -17,6 +17,11 @@ from backend.memory.vector_store import vector_store
 from backend.voice.stt import stt_engine
 from backend.voice.tts import tts_engine
 
+from backend.models.skills.home_automation import HomeAutomationSkill
+
+shared_skill = HomeAutomationSkill()
+hue_controller = shared_skill.hue_controller
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/admin", tags=["admin"])
@@ -587,19 +592,6 @@ async def get_logs(
 # Ajouter les nouvelles routes à backend/api/admin.py
 # Ces routes doivent être insérées dans le fichier admin.py existant
 
-from backend.utils.hue_controller import HueLightController
-
-# Initialiser le contrôleur Hue globalement pour réutilisation
-try:
-    hue_controller = HueLightController()
-    if hue_controller.is_available:
-        logger.info("Contrôleur Hue initialisé avec succès pour l'API admin")
-    else:
-        logger.info("Contrôleur Hue non disponible, utilisation des lumières simulées")
-except Exception as e:
-    logger.warning(f"Erreur lors de l'initialisation du contrôleur Hue: {str(e)}")
-    hue_controller = None
-
 # Modèles pour les lumières
 class LightState(BaseModel):
     on: bool
@@ -671,9 +663,7 @@ async def get_lights():
         # Si pas de lumières Hue ou si elles ne sont pas disponibles, utiliser les simulées
         if not lights:
             # Utiliser les lumières simulées de HomeAutomationSkill
-            from backend.models.skills.home_automation import HomeAutomationSkill
-            
-            skill = HomeAutomationSkill()
+            skill = shared_skill            
             simulated_devices = skill.devices
             
             for name, device in simulated_devices.items():
@@ -720,10 +710,8 @@ async def get_rooms():
         
         # Si pas de pièces Hue, créer des groupes simulés
         if not rooms:
-            # Utiliser les emplacements des lumières simulées
-            from backend.models.skills.home_automation import HomeAutomationSkill
-            
-            skill = HomeAutomationSkill()
+            # Utiliser les emplacements des lumières simulées    
+            skill = shared_skill
             simulated_devices = skill.devices
             
             # Regrouper par emplacement
@@ -782,10 +770,8 @@ async def control_light(light_id: str, request: LightControlRequest):
                 )
                 return result
         
-        # Si pas de contrôleur Hue ou lumière non trouvée, utiliser les simulées
-        from backend.models.skills.home_automation import HomeAutomationSkill
-        
-        skill = HomeAutomationSkill()
+        skill = shared_skill
+
         
         # Rechercher la lumière simulée
         if light_id in skill.devices:
@@ -842,10 +828,7 @@ async def control_room(room_id: str, request: LightControlRequest):
                     )
                     return result
         
-        # Si pas de contrôleur Hue ou pièce non trouvée, utiliser les simulées
-        from backend.models.skills.home_automation import HomeAutomationSkill
-        
-        skill = HomeAutomationSkill()
+        skill = shared_skill
         
         # Pour les pièces simulées, identifier toutes les lumières de cette pièce
         location = room_id.replace("simulated_", "")

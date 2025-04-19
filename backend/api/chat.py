@@ -15,8 +15,8 @@ from backend.memory.symbolic_memory import symbolic_memory
 
 
 # Importations absolues au lieu d'importations relatives
-from memory.conversation import conversation_manager
-from models.model_manager import model_manager
+from backend.memory.conversation import conversation_manager
+from backend.models.model_manager import model_manager
 
 logger = logging.getLogger(__name__)
 
@@ -214,7 +214,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                     model = model_manager._get_appropriate_model(prompt, "auto", None)
                     
                     # Générer la réponse complète sans streaming
-                    response_text = await model.ainvoke(prompt)
+                    @profile("llm_ainvoke")
+                    async def _call_llm(m, p):
+                        return await m.ainvoke(p)
+                    response_text = await _call_llm(model, prompt)
                     
                     # Simuler le streaming en envoyant des tokens manuellement
                     last_sent = 0

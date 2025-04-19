@@ -38,7 +38,7 @@ class PiperTTS:
         """Vérifie si Piper est installé et disponible."""
         try:
             subprocess.run(["piper", "--help"], capture_output=True, check=False)
-            logger.info("Piper TTS correctement installé")
+            logger.info("✅ Piper TTS correctement installé")
         except FileNotFoundError:
             logger.error("Piper TTS n'est pas installé ou n'est pas dans le PATH")
             logger.info("Veuillez installer Piper avec: pip install piper-tts")
