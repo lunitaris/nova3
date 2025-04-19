@@ -3,8 +3,10 @@ from pydantic import BaseModel
 from typing import Dict, List, Optional, Union
 from dotenv import load_dotenv
 
-# Chargement des variables d'environnement
-load_dotenv()
+# Chargement des variables d'environnement (tous les .env)
+load_dotenv(dotenv_path="config_API.env")
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+
 
 class ModelConfig(BaseModel):
     name: str
@@ -27,6 +29,7 @@ class MemoryConfig(BaseModel):
     vector_dimension: int = 1536  # Dimension des vecteurs FAISS
     max_history_length: int = 20  # Nombre maximal de messages dans l'historique
     synthetic_memory_refresh_interval: int = 10  # Intervalle de rafraîchissement de la mémoire synthétique
+    
 
 class SecurityConfig(BaseModel):
     enable_auth: bool = False

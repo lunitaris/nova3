@@ -27,6 +27,9 @@ var/
 .venv
 .python-venv/
 
+# Fichier de conf de clé API
+config_API.env
+
 # Données et modèles
 data/
 *.onnx

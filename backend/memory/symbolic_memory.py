@@ -787,3 +787,9 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
 
 # Instance globale du gestionnaire de mémoire symbolique
 symbolic_memory = SymbolicMemory()
+
+
+
+
+##########################################################################################
+

@@ -1,648 +1,644 @@
 <!DOCTYPE html>
+
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Administration - Assistant IA Local</title>
-    <link rel="stylesheet" href="styles/main.css">
-    <link rel="stylesheet" href="styles/admin.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="icon" type="image/png" href="assets/icons/assistant-icon.png">
-    <link rel="stylesheet" href="styles/neon-light.css">
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Administration - Assistant IA Local</title>
+<link href="styles/main.css" rel="stylesheet"/>
+<link href="styles/admin.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet"/>
+<link href="assets/icons/assistant-icon.png" rel="icon" type="image/png"/>
+<link href="styles/neon-light.css" rel="stylesheet"/>
 </head>
 <body class="light-theme">
-    <div class="app-container admin-layout">
-        <!-- Sidebar pour la navigation -->
-        <aside class="sidebar">
-            <div class="sidebar-header">
-                <h1>Admin</h1>
-                <a href="index.html" class="btn secondary">
-                    <i class="fas fa-arrow-left"></i> Retour à l'Assistant
+<div class="app-container admin-layout">
+<!-- Sidebar pour la navigation -->
+<aside class="sidebar">
+<div class="sidebar-header">
+<h1>Admin</h1>
+<a class="btn secondary" href="index.html">
+<i class="fas fa-arrow-left"></i> Retour à l'Assistant
                 </a>
-            </div>
-            <nav class="admin-nav">
-                <ul>
-                    <li data-section="dashboard" class="active">
-                        <i class="fas fa-tachometer-alt"></i> Tableau de bord
+</div>
+<nav class="admin-nav">
+<ul>
+<li class="active" data-section="dashboard">
+<i class="fas fa-tachometer-alt"></i> Tableau de bord
                     </li>
-                    <li data-section="models">
-                        <i class="fas fa-brain"></i> Modèles LLM
+<li data-section="models">
+<i class="fas fa-brain"></i> Modèles LLM
                     </li>
-                    <li data-section="memory">
-                        <i class="fas fa-database"></i> Mémoire
+<li data-section="memory">
+<i class="fas fa-database"></i> Mémoire
                     </li>
-                    <li data-section="voice">
-                        <i class="fas fa-microphone"></i> Système Vocal
+<li data-section="voice">
+<i class="fas fa-microphone"></i> Système Vocal
                     </li>
-                    <li data-section="config">
-                        <i class="fas fa-cogs"></i> Configuration
+<li data-section="config">
+<i class="fas fa-cogs"></i> Configuration
                     </li>
-                    <li data-section="logs">
-                        <i class="fas fa-list"></i> Logs
+<li data-section="logs">
+<i class="fas fa-list"></i> Logs
                     </li>
-                    <li data-section="lights">
-                        <i class="fas fa-lightbulb"></i> Lumières
-                    </li>                    
-                </ul>
-            </nav>
-        </aside>
-
-        <!-- Contenu principal -->
-        <main class="main-content">
-            <header class="main-header">
-                <div class="page-title">
-                    <h2 id="section-title">Tableau de bord</h2>
-                </div>
-                <div class="header-actions">
-                    <button id="refresh-btn" class="btn secondary">
-                        <i class="fas fa-sync-alt"></i> Actualiser
+<li data-section="lights">
+<i class="fas fa-lightbulb"></i> Lumières
+                    </li>
+</ul>
+</nav>
+</aside>
+<!-- Contenu principal -->
+<main class="main-content">
+<header class="main-header">
+<div class="page-title">
+<h2 id="section-title">Tableau de bord</h2>
+</div>
+<div class="header-actions">
+<button class="btn secondary" id="refresh-btn">
+<i class="fas fa-sync-alt"></i> Actualiser
                     </button>
-                </div>
-            </header>
-
-            <div class="admin-content">
-                <!-- Section Tableau de bord -->
-                <section id="dashboard-section" class="admin-section active">
-                    <div class="status-cards">
-                        <div class="status-card" id="system-status-card">
-                            <div class="status-icon">
-                                <i class="fas fa-server"></i>
-                            </div>
-                            <div class="status-info">
-                                <h3>Statut Système</h3>
-                                <div class="status-indicator">
-                                    <span class="status-dot"></span>
-                                    <span class="status-text">Chargement...</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-card" id="llm-status-card">
-                            <div class="status-icon">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <div class="status-info">
-                                <h3>Modèles LLM</h3>
-                                <div class="status-indicator">
-                                    <span class="status-dot"></span>
-                                    <span class="status-text">Chargement...</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-card" id="stt-status-card">
-                            <div class="status-icon">
-                                <i class="fas fa-headphones"></i>
-                            </div>
-                            <div class="status-info">
-                                <h3>Reconnaissance Vocale</h3>
-                                <div class="status-indicator">
-                                    <span class="status-dot"></span>
-                                    <span class="status-text">Chargement...</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="status-card" id="tts-status-card">
-                            <div class="status-icon">
-                                <i class="fas fa-volume-up"></i>
-                            </div>
-                            <div class="status-info">
-                                <h3>Synthèse Vocale</h3>
-                                <div class="status-indicator">
-                                    <span class="status-dot"></span>
-                                    <span class="status-text">Chargement...</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="resource-usage">
-                        <div class="resource-card">
-                            <h3>Utilisation CPU</h3>
-                            <div class="gauge-container">
-                                <div class="gauge" id="cpu-gauge">
-                                    <div class="gauge-value"></div>
-                                </div>
-                                <div class="gauge-label">0%</div>
-                            </div>
-                        </div>
-                        <div class="resource-card">
-                            <h3>Utilisation Mémoire</h3>
-                            <div class="gauge-container">
-                                <div class="gauge" id="memory-gauge">
-                                    <div class="gauge-value"></div>
-                                </div>
-                                <div class="gauge-label">0%</div>
-                            </div>
-                        </div>
-                        <div class="resource-card">
-                            <h3>Utilisation Disque</h3>
-                            <div class="gauge-container">
-                                <div class="gauge" id="disk-gauge">
-                                    <div class="gauge-value"></div>
-                                </div>
-                                <div class="gauge-label">0%</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="quick-actions">
-                        <h3>Actions rapides</h3>
-                        <div class="action-buttons">
-                            <button id="restart-btn" class="btn primary">
-                                <i class="fas fa-power-off"></i> Redémarrer les services
+</div>
+</header>
+<div class="admin-content">
+<!-- Section Tableau de bord -->
+<section class="admin-section active" id="dashboard-section">
+<div class="status-cards">
+<div class="status-card" id="system-status-card">
+<div class="status-icon">
+<i class="fas fa-server"></i>
+</div>
+<div class="status-info">
+<h3>Statut Système</h3>
+<div class="status-indicator">
+<span class="status-dot"></span>
+<span class="status-text">Chargement...</span>
+</div>
+</div>
+</div>
+<div class="status-card" id="llm-status-card">
+<div class="status-icon">
+<i class="fas fa-brain"></i>
+</div>
+<div class="status-info">
+<h3>Modèles LLM</h3>
+<div class="status-indicator">
+<span class="status-dot"></span>
+<span class="status-text">Chargement...</span>
+</div>
+</div>
+</div>
+<div class="status-card" id="stt-status-card">
+<div class="status-icon">
+<i class="fas fa-headphones"></i>
+</div>
+<div class="status-info">
+<h3>Reconnaissance Vocale</h3>
+<div class="status-indicator">
+<span class="status-dot"></span>
+<span class="status-text">Chargement...</span>
+</div>
+</div>
+</div>
+<div class="status-card" id="tts-status-card">
+<div class="status-icon">
+<i class="fas fa-volume-up"></i>
+</div>
+<div class="status-info">
+<h3>Synthèse Vocale</h3>
+<div class="status-indicator">
+<span class="status-dot"></span>
+<span class="status-text">Chargement...</span>
+</div>
+</div>
+</div>
+</div>
+<div class="resource-usage">
+<div class="resource-card">
+<h3>Utilisation CPU</h3>
+<div class="gauge-container">
+<div class="gauge" id="cpu-gauge">
+<div class="gauge-value"></div>
+</div>
+<div class="gauge-label">0%</div>
+</div>
+</div>
+<div class="resource-card">
+<h3>Utilisation Mémoire</h3>
+<div class="gauge-container">
+<div class="gauge" id="memory-gauge">
+<div class="gauge-value"></div>
+</div>
+<div class="gauge-label">0%</div>
+</div>
+</div>
+<div class="resource-card">
+<h3>Utilisation Disque</h3>
+<div class="gauge-container">
+<div class="gauge" id="disk-gauge">
+<div class="gauge-value"></div>
+</div>
+<div class="gauge-label">0%</div>
+</div>
+</div>
+</div>
+<div class="quick-actions">
+<h3>Actions rapides</h3>
+<div class="action-buttons">
+<button class="btn primary" id="restart-btn">
+<i class="fas fa-power-off"></i> Redémarrer les services
                             </button>
-                            <button id="compact-memory-btn" class="btn secondary">
-                                <i class="fas fa-compress-arrows-alt"></i> Compacter la mémoire
+<button class="btn secondary" id="compact-memory-btn">
+<i class="fas fa-compress-arrows-alt"></i> Compacter la mémoire
                             </button>
-                            <button id="test-voice-btn" class="btn secondary">
-                                <i class="fas fa-microphone"></i> Tester le système vocal
+<button class="btn secondary" id="test-voice-btn">
+<i class="fas fa-microphone"></i> Tester le système vocal
                             </button>
+</div>
+</div>
+</section>
+<!-- Section Modèles LLM -->
+<section class="admin-section" id="models-section">
+<div class="section-header">
+<h3>Modèles configurés</h3>
+</div>
+<div class="models-list" id="models-list">
+<div class="loading-indicator">
+<i class="fas fa-spinner fa-spin"></i> Chargement des modèles...
                         </div>
-                    </div>
-                </section>
-
-                <!-- Section Modèles LLM -->
-                <section id="models-section" class="admin-section">
-                    <div class="section-header">
-                        <h3>Modèles configurés</h3>
-                    </div>
-                    <div class="models-list" id="models-list">
-                        <div class="loading-indicator">
-                            <i class="fas fa-spinner fa-spin"></i> Chargement des modèles...
-                        </div>
-                    </div>
-
-                    <div class="section-header">
-                        <h3>Tester un modèle</h3>
-                    </div>
-                    <div class="model-test-container">
-                        <div class="form-group">
-                            <label for="test-model-select">Modèle :</label>
-                            <select id="test-model-select">
-                                <option value="fast">Rapide (gemma:2b)</option>
-                                <option value="balanced">Équilibré (zephyr)</option>
-                                <option value="cloud_fallback">Cloud (GPT)</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="test-prompt">Prompt de test :</label>
-                            <textarea id="test-prompt" rows="3" placeholder="Écrivez un prompt pour tester le modèle...">Écris une phrase courte à propos des assistants IA.</textarea>
-                        </div>
-                        <button id="run-test-btn" class="btn primary">
-                            <i class="fas fa-play"></i> Exécuter le test
+</div>
+<div class="section-header">
+<h3>Tester un modèle</h3>
+</div>
+<div class="model-test-container">
+<div class="form-group">
+<label for="test-model-select">Modèle :</label>
+<select id="test-model-select">
+<option value="fast">Rapide (gemma:2b)</option>
+<option value="balanced">Équilibré (zephyr)</option>
+<option value="cloud_fallback">Cloud (GPT)</option>
+</select>
+</div>
+<div class="form-group">
+<label for="test-prompt">Prompt de test :</label>
+<textarea id="test-prompt" placeholder="Écrivez un prompt pour tester le modèle..." rows="3">Écris une phrase courte à propos des assistants IA.</textarea>
+</div>
+<button class="btn primary" id="run-test-btn">
+<i class="fas fa-play"></i> Exécuter le test
                         </button>
-                        <div class="test-results" id="test-results">
-                            <h4>Résultats</h4>
-                            <div class="result-metrics">
-                                <div class="metric">
-                                    <span class="label">Temps de réponse :</span>
-                                    <span class="value" id="response-time">-</span>
-                                </div>
-                                <div class="metric">
-                                    <span class="label">Tokens générés :</span>
-                                    <span class="value" id="tokens-generated">-</span>
-                                </div>
-                            </div>
-                            <div class="result-content" id="test-result-content">
-                                <p class="no-results">Lancez un test pour voir les résultats</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section Mémoire -->
-                <section id="memory-section" class="admin-section">
-                    <div class="memory-stats">
-                        <div class="memory-stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-vector-square"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3>Mémoire Vectorielle</h3>
-                                <div class="stat-value" id="vector-memory-count">0</div>
-                                <div class="stat-label">vecteurs</div>
-                            </div>
-                        </div>
-                        <div class="memory-stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-project-diagram"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3>Mémoire Symbolique</h3>
-                                <div class="stat-value" id="entity-count">0</div>
-                                <div class="stat-label">entités</div>
-                            </div>
-                        </div>
-                        <div class="memory-stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-brain"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3>Relations</h3>
-                                <div class="stat-value" id="relation-count">0</div>
-                                <div class="stat-label">connexions</div>
-                            </div>
-                        </div>
-                        <div class="memory-stat-card">
-                            <div class="stat-icon">
-                                <i class="fas fa-database"></i>
-                            </div>
-                            <div class="stat-info">
-                                <h3>Taille Totale</h3>
-                                <div class="stat-value" id="memory-size">0</div>
-                                <div class="stat-label">KB</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section-header with-actions">
-                        <h3>Sujets de mémoire</h3>
-                        <button id="refresh-topics-btn" class="btn secondary">
-                            <i class="fas fa-sync-alt"></i> Actualiser
+<div class="test-results" id="test-results">
+<h4>Résultats</h4>
+<div class="result-metrics">
+<div class="metric">
+<span class="label">Temps de réponse :</span>
+<span class="value" id="response-time">-</span>
+</div>
+<div class="metric">
+<span class="label">Tokens générés :</span>
+<span class="value" id="tokens-generated">-</span>
+</div>
+</div>
+<div class="result-content" id="test-result-content">
+<p class="no-results">Lancez un test pour voir les résultats</p>
+</div>
+</div>
+</div>
+</section>
+<!-- Section Mémoire -->
+<section class="admin-section" id="memory-section">
+<div class="memory-stats">
+<div class="memory-stat-card">
+<div class="stat-icon">
+<i class="fas fa-vector-square"></i>
+</div>
+<div class="stat-info">
+<h3>Mémoire Vectorielle</h3>
+<div class="stat-value" id="vector-memory-count">0</div>
+<div class="stat-label">vecteurs</div>
+</div>
+</div>
+<div class="memory-stat-card">
+<div class="stat-icon">
+<i class="fas fa-project-diagram"></i>
+</div>
+<div class="stat-info">
+<h3>Mémoire Symbolique</h3>
+<div class="stat-value" id="entity-count">0</div>
+<div class="stat-label">entités</div>
+</div>
+</div>
+<div class="memory-stat-card">
+<div class="stat-icon">
+<i class="fas fa-brain"></i>
+</div>
+<div class="stat-info">
+<h3>Relations</h3>
+<div class="stat-value" id="relation-count">0</div>
+<div class="stat-label">connexions</div>
+</div>
+</div>
+<div class="memory-stat-card">
+<div class="stat-icon">
+<i class="fas fa-database"></i>
+</div>
+<div class="stat-info">
+<h3>Taille Totale</h3>
+<div class="stat-value" id="memory-size">0</div>
+<div class="stat-label">KB</div>
+</div>
+</div>
+</div>
+<div class="section-header with-actions">
+<h3>Sujets de mémoire</h3>
+<button class="btn secondary" id="refresh-topics-btn">
+<i class="fas fa-sync-alt"></i> Actualiser
                         </button>
-                    </div>
-                    <div class="memory-topics" id="memory-topics">
-                        <div class="loading-indicator">
-                            <i class="fas fa-spinner fa-spin"></i> Chargement des sujets...
+</div>
+<div class="memory-topics" id="memory-topics">
+<div class="loading-indicator">
+<i class="fas fa-spinner fa-spin"></i> Chargement des sujets...
                         </div>
-                    </div>
-
-                    <div class="memory-actions">
-                        <h3>Actions</h3>
-                        <div class="action-buttons">
-                            <button id="view-memory-btn" class="btn secondary">
-                                <i class="fas fa-eye"></i> Visualiser les données
+</div>
+<div class="memory-actions">
+<h3>Actions</h3>
+<div class="action-buttons">
+<button class="btn secondary" id="view-memory-btn">
+<i class="fas fa-eye"></i> Visualiser les données
                             </button>
-                            <button id="compact-memory-action-btn" class="btn primary">
-                                <i class="fas fa-compress-arrows-alt"></i> Compacter la mémoire
+<button class="btn primary" id="compact-memory-action-btn">
+<i class="fas fa-compress-arrows-alt"></i> Compacter la mémoire
                             </button>
-                            <button id="backup-memory-btn" class="btn secondary">
-                                <i class="fas fa-download"></i> Sauvegarder
+<button class="btn secondary" id="backup-memory-btn">
+<i class="fas fa-download"></i> Sauvegarder
                             </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section Système Vocal -->
-                <section id="voice-section" class="admin-section">
-                    <div class="voice-cards">
-                        <div class="voice-card">
-                            <div class="card-header">
-                                <h3>Reconnaissance Vocale (STT)</h3>
-                                <span class="status-indicator" id="stt-indicator">
-                                    <span class="status-dot"></span>
-                                    <span class="status-text">Chargement...</span>
-                                </span>
-                            </div>
-                            <div class="card-content">
-                                <div class="info-item">
-                                    <span class="label">Moteur :</span>
-                                    <span class="value" id="stt-engine">Whisper.cpp</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">Modèle :</span>
-                                    <span class="value" id="stt-model">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">Chemin :</span>
-                                    <span class="value path" id="stt-path">-</span>
-                                </div>
-                            </div>
-                            <div class="card-actions">
-                                <button id="test-stt-btn" class="btn secondary">
-                                    <i class="fas fa-microphone"></i> Tester la reconnaissance
+</div>
+</div>
+</section>
+<!-- Section Système Vocal -->
+<section class="admin-section" id="voice-section">
+<div class="voice-cards">
+<div class="voice-card">
+<div class="card-header">
+<h3>Reconnaissance Vocale (STT)</h3>
+<span class="status-indicator" id="stt-indicator">
+<span class="status-dot"></span>
+<span class="status-text">Chargement...</span>
+</span>
+</div>
+<div class="card-content">
+<div class="info-item">
+<span class="label">Moteur :</span>
+<span class="value" id="stt-engine">Whisper.cpp</span>
+</div>
+<div class="info-item">
+<span class="label">Modèle :</span>
+<span class="value" id="stt-model">-</span>
+</div>
+<div class="info-item">
+<span class="label">Chemin :</span>
+<span class="value path" id="stt-path">-</span>
+</div>
+</div>
+<div class="card-actions">
+<button class="btn secondary" id="test-stt-btn">
+<i class="fas fa-microphone"></i> Tester la reconnaissance
                                 </button>
-                            </div>
-                        </div>
-                        <div class="voice-card">
-                            <div class="card-header">
-                                <h3>Synthèse Vocale (TTS)</h3>
-                                <span class="status-indicator" id="tts-indicator">
-                                    <span class="status-dot"></span>
-                                    <span class="status-text">Chargement...</span>
-                                </span>
-                            </div>
-                            <div class="card-content">
-                                <div class="info-item">
-                                    <span class="label">Moteur :</span>
-                                    <span class="value" id="tts-engine">Piper</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">Voix :</span>
-                                    <span class="value" id="tts-voice">-</span>
-                                </div>
-                                <div class="info-item">
-                                    <span class="label">Échantillonnage :</span>
-                                    <span class="value" id="tts-sample-rate">-</span>
-                                </div>
-                            </div>
-                            <div class="card-actions">
-                                <div class="form-inline">
-                                    <input type="text" id="tts-test-text" placeholder="Texte à synthétiser..." value="Ceci est un test de synthèse vocale.">
-                                    <button id="test-tts-btn" class="btn secondary">
-                                        <i class="fas fa-play"></i> Tester
+</div>
+</div>
+<div class="voice-card">
+<div class="card-header">
+<h3>Synthèse Vocale (TTS)</h3>
+<span class="status-indicator" id="tts-indicator">
+<span class="status-dot"></span>
+<span class="status-text">Chargement...</span>
+</span>
+</div>
+<div class="card-content">
+<div class="info-item">
+<span class="label">Moteur :</span>
+<span class="value" id="tts-engine">Piper</span>
+</div>
+<div class="info-item">
+<span class="label">Voix :</span>
+<span class="value" id="tts-voice">-</span>
+</div>
+<div class="info-item">
+<span class="label">Échantillonnage :</span>
+<span class="value" id="tts-sample-rate">-</span>
+</div>
+</div>
+<div class="card-actions">
+<div class="form-inline">
+<input id="tts-test-text" placeholder="Texte à synthétiser..." type="text" value="Ceci est un test de synthèse vocale."/>
+<button class="btn secondary" id="test-tts-btn">
+<i class="fas fa-play"></i> Tester
                                     </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="section-header">
-                        <h3>Voix disponibles</h3>
-                    </div>
-                    <div class="voices-list" id="voices-list">
-                        <!-- Liste des voix générée dynamiquement -->
-                        <div class="voice-item">
-                            <div class="voice-name">fr_FR-siwis-medium</div>
-                            <div class="voice-info">Français (Siwis)</div>
-                            <div class="voice-actions">
-                                <button class="btn mini test-voice-btn">
-                                    <i class="fas fa-play"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="voice-item">
-                            <div class="voice-name">en_US-amy-medium</div>
-                            <div class="voice-info">Anglais (Amy)</div>
-                            <div class="voice-actions">
-                                <button class="btn mini test-voice-btn">
-                                    <i class="fas fa-play"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Section Configuration -->
-                <section id="config-section" class="admin-section">
-                    <div class="config-tabs">
-                        <div class="tab-header">
-                            <div class="tab active" data-tab="general">Général</div>
-                            <div class="tab" data-tab="models">Modèles</div>
-                            <div class="tab" data-tab="voice">Vocal</div>
-                            <div class="tab" data-tab="memory">Mémoire</div>
-                        </div>
-                        <div class="tab-content">
-                            <div class="tab-pane active" id="general-config">
-                                <div class="config-item">
-                                    <label for="data-dir">Répertoire de données :</label>
-                                    <input type="text" id="data-dir" readonly>
-                                </div>
-                                <div class="config-item">
-                                    <label for="debug-mode">Mode debug :</label>
-                                    <div class="toggle-switch">
-                                        <input type="checkbox" id="debug-mode">
-                                        <span class="toggle-slider"></span>
+</div>
+</div>
+</div>
+</div>
+<div class="section-header">
+<h3>Voix disponibles</h3>
+</div>
+<div class="voices-list" id="voices-list">
+<!-- Liste des voix générée dynamiquement -->
+<div class="voice-item">
+<div class="voice-name">fr_FR-siwis-medium</div>
+<div class="voice-info">Français (Siwis)</div>
+<div class="voice-actions">
+<button class="btn mini test-voice-btn">
+<i class="fas fa-play"></i>
+</button>
+</div>
+</div>
+<div class="voice-item">
+<div class="voice-name">en_US-amy-medium</div>
+<div class="voice-info">Anglais (Amy)</div>
+<div class="voice-actions">
+<button class="btn mini test-voice-btn">
+<i class="fas fa-play"></i>
+</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Section Configuration -->
+<section class="admin-section" id="config-section">
+<div class="config-tabs">
+<div class="tab-header">
+<div class="tab active" data-tab="general">Général</div>
+<div class="tab" data-tab="models">Modèles</div>
+<div class="tab" data-tab="voice">Vocal</div>
+<div class="tab" data-tab="memory">Mémoire</div>
+</div>
+<div class="tab-content">
+<div class="tab-pane active" id="general-config">
+<div class="config-item">
+<label for="data-dir">Répertoire de données :</label>
+<input id="data-dir" readonly="" type="text"/>
+</div>
+<div class="config-item">
+<label for="debug-mode">Mode debug :</label>
+<div class="toggle-switch">
+<input id="debug-mode" type="checkbox"/>
+<span class="toggle-slider"></span>
+</div>
+</div>
+</div>
+<div class="tab-pane" id="models-config">
+<div class="config-form" id="models-config-form">
+<div class="loading-indicator">
+<i class="fas fa-spinner fa-spin"></i> Chargement de la configuration...
                                     </div>
-                                </div>
-                            </div>
-                            <div class="tab-pane" id="models-config">
-                                <div class="config-form" id="models-config-form">
-                                    <div class="loading-indicator">
-                                        <i class="fas fa-spinner fa-spin"></i> Chargement de la configuration...
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="tab-pane" id="voice-config">
-                                <div class="config-item">
-                                    <label for="stt-model-path">Modèle STT :</label>
-                                    <input type="text" id="stt-model-path">
-                                </div>
-                                <div class="config-item">
-                                    <label for="tts-model-name">Modèle TTS :</label>
-                                    <select id="tts-model-name">
-                                        <option value="fr_FR-siwis-medium">Français (Siwis)</option>
-                                        <option value="en_US-amy-medium">Anglais (Amy)</option>
-                                    </select>
-                                </div>
-                                <div class="config-item">
-                                    <label for="tts-sample-rate-input">Taux d'échantillonnage :</label>
-                                    <input type="number" id="tts-sample-rate-input" min="8000" max="48000" step="1000">
-                                </div>
-                            </div>
-                            <div class="tab-pane" id="memory-config">
-                                <div class="config-item">
-                                    <label for="vector-dimension">Dimension des vecteurs :</label>
-                                    <input type="number" id="vector-dimension" min="768" max="4096" step="128">
-                                </div>
-                                <div class="config-item">
-                                    <label for="max-history">Taille max. de l'historique :</label>
-                                    <input type="number" id="max-history" min="5" max="100">
-                                </div>
-                                <div class="config-item">
-                                    <label for="memory-refresh">Intervalle de compression (conversations) :</label>
-                                    <input type="number" id="memory-refresh" min="1" max="50">
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="config-actions">
-                        <button id="save-config-btn" class="btn primary">
-                            <i class="fas fa-save"></i> Enregistrer
+</div>
+</div>
+<div class="tab-pane" id="voice-config">
+<div class="config-item">
+<label for="stt-model-path">Modèle STT :</label>
+<input id="stt-model-path" type="text"/>
+</div>
+<div class="config-item">
+<label for="tts-model-name">Modèle TTS :</label>
+<select id="tts-model-name">
+<option value="fr_FR-siwis-medium">Français (Siwis)</option>
+<option value="en_US-amy-medium">Anglais (Amy)</option>
+</select>
+</div>
+<div class="config-item">
+<label for="tts-sample-rate-input">Taux d'échantillonnage :</label>
+<input id="tts-sample-rate-input" max="48000" min="8000" step="1000" type="number"/>
+</div>
+</div>
+<div class="tab-pane" id="memory-config">
+<div class="config-item">
+<label for="vector-dimension">Dimension des vecteurs :</label>
+<input id="vector-dimension" max="4096" min="768" step="128" type="number"/>
+</div>
+<div class="config-item">
+<label for="max-history">Taille max. de l'historique :</label>
+<input id="max-history" max="100" min="5" type="number"/>
+</div>
+<div class="config-item">
+<label for="memory-refresh">Intervalle de compression (conversations) :</label>
+<input id="memory-refresh" max="50" min="1" type="number"/>
+</div>
+
+<div class="config-section">
+<h4>Mémoire Symbolique</h4>
+<div class="config-item">
+<label for="use-chatgpt-symbolic">Utiliser ChatGPT pour l'extraction d'entités et relations :</label>
+<div class="toggle-switch">
+<input id="use-chatgpt-symbolic" type="checkbox"/>
+<span class="toggle-slider"></span>
+</div>
+</div>
+<div class="config-note" id="chatgpt-api-note" style="display:none;">
+<p><i class="fas fa-info-circle"></i> Clé API OpenAI non configurée. Définissez la variable d'environnement OPENAI_API_KEY pour activer cette fonctionnalité.</p>
+</div>
+<div class="config-item">
+<p class="help-text">Lorsque cette option est activée, le système utilise l'API ChatGPT pour extraire des entités et relations plus précises pour le graphe symbolique. Lorsqu'elle est désactivée, le système utilise l'extracteur local.</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="config-actions">
+<button class="btn primary" id="save-config-btn">
+<i class="fas fa-save"></i> Enregistrer
                         </button>
-                        <button id="reset-config-btn" class="btn secondary">
-                            <i class="fas fa-undo"></i> Réinitialiser
+<button class="btn secondary" id="reset-config-btn">
+<i class="fas fa-undo"></i> Réinitialiser
                         </button>
-                    </div>
-                </section>
-
-                <!-- Section Logs -->
-                <section id="logs-section" class="admin-section">
-                    <div class="logs-filters">
-                        <div class="form-group">
-                            <label for="log-level">Niveau :</label>
-                            <select id="log-level">
-                                <option value="DEBUG">DEBUG</option>
-                                <option value="INFO" selected>INFO</option>
-                                <option value="WARNING">WARNING</option>
-                                <option value="ERROR">ERROR</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="log-component">Composant :</label>
-                            <select id="log-component">
-                                <option value="">Tous</option>
-                                <option value="models">Modèles</option>
-                                <option value="memory">Mémoire</option>
-                                <option value="voice">Vocal</option>
-                                <option value="api">API</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="log-limit">Limite :</label>
-                            <select id="log-limit">
-                                <option value="50">50 entrées</option>
-                                <option value="100" selected>100 entrées</option>
-                                <option value="250">250 entrées</option>
-                                <option value="500">500 entrées</option>
-                            </select>
-                        </div>
-                        <button id="refresh-logs-btn" class="btn secondary">
-                            <i class="fas fa-sync-alt"></i> Actualiser
+</div>
+</section>
+<!-- Section Logs -->
+<section class="admin-section" id="logs-section">
+<div class="logs-filters">
+<div class="form-group">
+<label for="log-level">Niveau :</label>
+<select id="log-level">
+<option value="DEBUG">DEBUG</option>
+<option selected="" value="INFO">INFO</option>
+<option value="WARNING">WARNING</option>
+<option value="ERROR">ERROR</option>
+</select>
+</div>
+<div class="form-group">
+<label for="log-component">Composant :</label>
+<select id="log-component">
+<option value="">Tous</option>
+<option value="models">Modèles</option>
+<option value="memory">Mémoire</option>
+<option value="voice">Vocal</option>
+<option value="api">API</option>
+</select>
+</div>
+<div class="form-group">
+<label for="log-limit">Limite :</label>
+<select id="log-limit">
+<option value="50">50 entrées</option>
+<option selected="" value="100">100 entrées</option>
+<option value="250">250 entrées</option>
+<option value="500">500 entrées</option>
+</select>
+</div>
+<button class="btn secondary" id="refresh-logs-btn">
+<i class="fas fa-sync-alt"></i> Actualiser
                         </button>
-                    </div>
-                    <div class="logs-container">
-                        <div class="logs-header">
-                            <div class="log-time">Horodatage</div>
-                            <div class="log-level">Niveau</div>
-                            <div class="log-component">Composant</div>
-                            <div class="log-message">Message</div>
-                        </div>
-                        <div class="logs-content" id="logs-content">
-                            <div class="loading-indicator">
-                                <i class="fas fa-spinner fa-spin"></i> Chargement des logs...
+</div>
+<div class="logs-container">
+<div class="logs-header">
+<div class="log-time">Horodatage</div>
+<div class="log-level">Niveau</div>
+<div class="log-component">Composant</div>
+<div class="log-message">Message</div>
+</div>
+<div class="logs-content" id="logs-content">
+<div class="loading-indicator">
+<i class="fas fa-spinner fa-spin"></i> Chargement des logs...
                             </div>
-                        </div>
-                    </div>
-                </section>
-
-            <!-- Section Lumières -->
-            <section id="lights-section" class="admin-section">
-                <div class="section-header with-actions">
-                    <h3>Lumières et contrôles domotiques</h3>
-                    <div class="header-actions">
-                        <button id="refresh-lights-btn" class="btn secondary">
-                            <i class="fas fa-sync-alt"></i> Actualiser
+</div>
+</div>
+</section>
+<!-- Section Lumières -->
+<section class="admin-section" id="lights-section">
+<div class="section-header with-actions">
+<h3>Lumières et contrôles domotiques</h3>
+<div class="header-actions">
+<button class="btn secondary" id="refresh-lights-btn">
+<i class="fas fa-sync-alt"></i> Actualiser
                         </button>
-                        <select id="filter-room" class="form-control">
-                            <option value="all">Toutes les pièces</option>
-                            <!-- Les options seront ajoutées dynamiquement -->
-                        </select>
+<select class="form-control" id="filter-room">
+<option value="all">Toutes les pièces</option>
+<!-- Les options seront ajoutées dynamiquement -->
+</select>
+</div>
+</div>
+<div class="rooms-container" id="rooms-container">
+<!-- Les groupes/pièces seront chargés ici dynamiquement -->
+</div>
+<div class="lights-container" id="lights-container">
+<!-- Les lumières seront chargées ici dynamiquement -->
+<div class="loading-indicator">
+<i class="fas fa-spinner fa-spin"></i> Chargement des lumières...
                     </div>
-                </div>
-
-                <div class="rooms-container" id="rooms-container">
-                    <!-- Les groupes/pièces seront chargés ici dynamiquement -->
-                </div>
-
-                <div class="lights-container" id="lights-container">
-                    <!-- Les lumières seront chargées ici dynamiquement -->
-                    <div class="loading-indicator">
-                        <i class="fas fa-spinner fa-spin"></i> Chargement des lumières...
-                    </div>
-                </div>
-
-                <div id="no-lights-message" style="display: none;" class="empty-state">
-                    <p>Aucune lumière détectée.</p>
-                    <p>Si vous avez des lumières Philips Hue, assurez-vous que le Bridge est correctement configuré.</p>
-                    <p>Vous pouvez également utiliser des lumières simulées pour tester.</p>
-                </div>
-            </section>
-            </div>
-        </main>
-    </div>
-
-    <!-- Modals -->
-    <div id="confirm-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Confirmation</h3>
-                <button class="close-modal-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <p id="confirm-message">Êtes-vous sûr de vouloir effectuer cette action ?</p>
-            </div>
-            <div class="modal-footer">
-                <button id="confirm-yes-btn" class="btn primary">Confirmer</button>
-                <button id="confirm-no-btn" class="btn secondary">Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="memory-viewer-modal" class="modal">
-        <div class="modal-content large">
-            <div class="modal-header">
-                <h3>Visualisation de la mémoire</h3>
-                <button class="close-modal-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="memory-viewer-tabs">
-                    <div class="tab-header">
-                        <div class="tab active" data-tab="vector">Vectorielle</div>
-                        <div class="tab" data-tab="synthetic">Synthétique</div>
-                        <div class="tab" data-tab="symbolic">Symbolique</div>
-                    </div>
-                    <div class="tab-content">
-                        <div class="tab-pane active" id="vector-memory-view">
-                            <div class="memory-search">
-                                <input type="text" id="vector-search" placeholder="Rechercher dans la mémoire vectorielle...">
-                                <button id="vector-search-btn" class="btn secondary">
-                                    <i class="fas fa-search"></i> Rechercher
+</div>
+<div class="empty-state" id="no-lights-message" style="display: none;">
+<p>Aucune lumière détectée.</p>
+<p>Si vous avez des lumières Philips Hue, assurez-vous que le Bridge est correctement configuré.</p>
+<p>Vous pouvez également utiliser des lumières simulées pour tester.</p>
+</div>
+</section>
+</div>
+</main>
+</div>
+<!-- Modals -->
+<div class="modal" id="confirm-modal">
+<div class="modal-content">
+<div class="modal-header">
+<h3>Confirmation</h3>
+<button class="close-modal-btn">×</button>
+</div>
+<div class="modal-body">
+<p id="confirm-message">Êtes-vous sûr de vouloir effectuer cette action ?</p>
+</div>
+<div class="modal-footer">
+<button class="btn primary" id="confirm-yes-btn">Confirmer</button>
+<button class="btn secondary" id="confirm-no-btn">Annuler</button>
+</div>
+</div>
+</div>
+<div class="modal" id="memory-viewer-modal">
+<div class="modal-content large">
+<div class="modal-header">
+<h3>Visualisation de la mémoire</h3>
+<button class="close-modal-btn">×</button>
+</div>
+<div class="modal-body">
+<div class="memory-viewer-tabs">
+<div class="tab-header">
+<div class="tab active" data-tab="vector">Vectorielle</div>
+<div class="tab" data-tab="synthetic">Synthétique</div>
+<div class="tab" data-tab="symbolic">Symbolique</div>
+</div>
+<div class="tab-content">
+<div class="tab-pane active" id="vector-memory-view">
+<div class="memory-search">
+<input id="vector-search" placeholder="Rechercher dans la mémoire vectorielle..." type="text"/>
+<button class="btn secondary" id="vector-search-btn">
+<i class="fas fa-search"></i> Rechercher
                                 </button>
-                            </div>
-                            <div class="memory-results" id="vector-memory-results">
-                                <p class="empty-state">Utilisez la recherche pour explorer la mémoire vectorielle</p>
-                            </div>
-                        </div>
-                        <div class="tab-pane" id="synthetic-memory-view">
-                            <div class="topic-selector">
-                                <label for="topic-select">Sujet :</label>
-                                <select id="topic-select">
-                                    <option value="">Chargement...</option>
-                                </select>
-                            </div>
-                            <div class="memory-results" id="synthetic-memory-results">
-                                <p class="empty-state">Sélectionnez un sujet pour voir les mémoires</p>
-                            </div>
-                        </div>
-                        <div class="tab-pane" id="symbolic-memory-view">
-                            <div class="graph-container" id="graph-container">
-                                <!-- Le graphe sera rendu ici -->
-                                <div class="empty-state">
-                                    <p>Visualisation du graphe de connaissance</p>
-                                    <button id="load-graph-btn" class="btn secondary">
-                                        <i class="fas fa-project-diagram"></i> Charger le graphe
+</div>
+<div class="memory-results" id="vector-memory-results">
+<p class="empty-state">Utilisez la recherche pour explorer la mémoire vectorielle</p>
+</div>
+</div>
+<div class="tab-pane" id="synthetic-memory-view">
+<div class="topic-selector">
+<label for="topic-select">Sujet :</label>
+<select id="topic-select">
+<option value="">Chargement...</option>
+</select>
+</div>
+<div class="memory-results" id="synthetic-memory-results">
+<p class="empty-state">Sélectionnez un sujet pour voir les mémoires</p>
+</div>
+</div>
+<div class="tab-pane" id="symbolic-memory-view">
+<div class="graph-container" id="graph-container">
+<!-- Le graphe sera rendu ici -->
+<div class="empty-state">
+<p>Visualisation du graphe de connaissance</p>
+<button class="btn secondary" id="load-graph-btn">
+<i class="fas fa-project-diagram"></i> Charger le graphe
                                     </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-
-    <div id="scenes-modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Appliquer une scène</h3>
-                <button class="close-modal-btn">&times;</button>
-            </div>
-            <div class="modal-body">
-                <div class="scene-selection">
-                    <div class="scene-option" data-scene="relax">
-                        <div class="scene-preview" style="background-color: rgb(255, 200, 120);"></div>
-                        <div class="scene-name">Détente</div>
-                    </div>
-                    <div class="scene-option" data-scene="concentrate">
-                        <div class="scene-preview" style="background-color: rgb(230, 230, 255);"></div>
-                        <div class="scene-name">Concentration</div>
-                    </div>
-                    <div class="scene-option" data-scene="energize">
-                        <div class="scene-preview" style="background-color: rgb(255, 255, 255);"></div>
-                        <div class="scene-name">Dynamique</div>
-                    </div>
-                    <div class="scene-option" data-scene="reading">
-                        <div class="scene-preview" style="background-color: rgb(255, 230, 200);"></div>
-                        <div class="scene-name">Lecture</div>
-                    </div>
-                </div>
-                <input type="hidden" id="scene-target-id">
-                <input type="hidden" id="scene-target-type">
-            </div>
-            <div class="modal-footer">
-                <button id="apply-scene-btn" class="btn primary">Appliquer</button>
-                <button class="btn secondary close-modal-btn">Annuler</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Scripts JavaScript -->
-    <script src="scripts/config.js"></script>
-    <script src="scripts/admin.js"></script>
-    <script src="scripts/admin-light.js"></script>
-    <script src="scripts/graph-visualization.js"></script>
-    <script src="scripts/symbolic-graph-ui.js"></script>
-    <script src="scripts/graph-entrypoint.js"></script>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="modal" id="scenes-modal">
+<div class="modal-content">
+<div class="modal-header">
+<h3>Appliquer une scène</h3>
+<button class="close-modal-btn">×</button>
+</div>
+<div class="modal-body">
+<div class="scene-selection">
+<div class="scene-option" data-scene="relax">
+<div class="scene-preview" style="background-color: rgb(255, 200, 120);"></div>
+<div class="scene-name">Détente</div>
+</div>
+<div class="scene-option" data-scene="concentrate">
+<div class="scene-preview" style="background-color: rgb(230, 230, 255);"></div>
+<div class="scene-name">Concentration</div>
+</div>
+<div class="scene-option" data-scene="energize">
+<div class="scene-preview" style="background-color: rgb(255, 255, 255);"></div>
+<div class="scene-name">Dynamique</div>
+</div>
+<div class="scene-option" data-scene="reading">
+<div class="scene-preview" style="background-color: rgb(255, 230, 200);"></div>
+<div class="scene-name">Lecture</div>
+</div>
+</div>
+<input id="scene-target-id" type="hidden"/>
+<input id="scene-target-type" type="hidden"/>
+</div>
+<div class="modal-footer">
+<button class="btn primary" id="apply-scene-btn">Appliquer</button>
+<button class="btn secondary close-modal-btn">Annuler</button>
+</div>
+</div>
+</div>
+<!-- Scripts JavaScript -->
+<script src="scripts/config.js"></script>
+<script src="scripts/admin.js"></script>
+<script src="scripts/admin-light.js"></script>
+<script src="scripts/graph-visualization.js"></script>
+<script src="scripts/symbolic-graph-ui.js"></script>
+<script src="scripts/graph-entrypoint.js"></script>
 </body>
 </html>

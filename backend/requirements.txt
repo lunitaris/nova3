@@ -23,6 +23,8 @@ async-timeout==4.0.3
     #   langchain
 attrs==25.3.0
     # via aiohttp
+backoff==2.2.1
+    # via -r requirements.in
 certifi==2025.1.31
     # via
     #   httpcore
@@ -147,7 +149,7 @@ numpy==1.26.4
     #   transformers
 ollama==0.4.8
     # via langchain-ollama
-onnxruntime==1.21.0
+onnxruntime==1.21.1
     # via piper-tts
 openai==1.75.0
     # via -r requirements.in
@@ -192,7 +194,7 @@ pydantic==2.11.3
     #   pydantic-settings
 pydantic-core==2.33.1
     # via pydantic
-pydantic-settings==2.8.1
+pydantic-settings==2.9.0
     # via langchain-community
 python-dotenv==1.1.0
     # via
@@ -281,7 +283,9 @@ typing-extensions==4.13.2
 typing-inspect==0.9.0
     # via dataclasses-json
 typing-inspection==0.4.0
-    # via pydantic
+    # via
+    #   pydantic
+    #   pydantic-settings
 urllib3==2.4.0
     # via requests
 uvicorn==0.34.1

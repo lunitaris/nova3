@@ -168,12 +168,8 @@ except Exception as e:
     logger.error(f"Erreur lors du chargement des routers: {str(e)}")
     raise
 
-# Assurez-vous que le frontend est servi statiquement
-# app.mount("/", StaticFiles(directory="frontend", html=True), name="static")
-
-
-
 
 # Point d'entrée pour l'exécution directe
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # Code exécuté une seule fois
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=False)

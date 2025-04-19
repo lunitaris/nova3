@@ -14,6 +14,8 @@ from langchain_core.callbacks import CallbackManager, StreamingStdOutCallbackHan
 from langchain_core.callbacks.base import BaseCallbackHandler
 
 from backend.config import config
+from backend.config import OPENAI_API_KEY
+
 
 logger = logging.getLogger(__name__)
 
@@ -119,12 +121,9 @@ class ModelManager:
                 
                 elif model_config.type == "cloud" and model_config.name.startswith("gpt"):
                     try:
-                        # On utilisera ChatOpenAI à la demande, pas d'initialisation préalable
-                        # Vérifier juste la présence de la clé API
-                        if not os.environ.get("OPENAI_API_KEY"):
+
+                        if not OPENAI_API_KEY:
                             logger.warning(f"Clé API OpenAI manquante pour le modèle {model_id}")
-                        else:
-                            logger.info(f"Configuration pour modèle cloud {model_id} validée")
                     except Exception as e:
                         logger.error(f"Erreur de validation du modèle cloud {model_id}: {str(e)}")
         

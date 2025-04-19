@@ -421,6 +421,7 @@ async function loadConfig() {
             }
         }
         
+        await loadSymbolicExtractionConfig();
         console.log("Configuration chargée avec succès", config);
     } catch (error) {
         console.error("Erreur lors du chargement de la configuration:", error);
@@ -1794,6 +1795,7 @@ async function loadConfig() {
             }
         }
         
+        await loadSymbolicExtractionConfig();
         console.log("Configuration chargée avec succès", config);
     } catch (error) {
         console.error("Erreur lors du chargement de la configuration:", error);
@@ -1801,3 +1803,85 @@ async function loadConfig() {
     }
 }
 
+
+
+/**
+ * Charge la configuration de l'extraction symbolique
+ */
+async function loadSymbolicExtractionConfig() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/memory/symbolic_extraction_config`);
+        
+        // Réponse de secours en cas d'erreur
+        if (!response.ok) {
+            console.warn(`Erreur HTTP: ${response.status}. Utilisation des valeurs par défaut.`);
+            // Utiliser des valeurs par défaut
+            const toggle = document.getElementById('use-chatgpt-symbolic');
+            if (toggle) {
+                toggle.checked = false;
+            }
+            
+            // Afficher une note indiquant un problème avec la configuration
+            const apiNote = document.getElementById('chatgpt-api-note');
+            if (apiNote) {
+                apiNote.style.display = 'block';
+                apiNote.innerHTML = '<p><i class="fas fa-exclamation-triangle"></i> Impossible de charger la configuration. Vérifiez les logs du serveur.</p>';
+            }
+            return;
+        }
+        
+        const config = await response.json();
+        
+        // Mettre à jour l'interface
+        const toggle = document.getElementById('use-chatgpt-symbolic');
+        if (toggle) {
+            toggle.checked = config.use_chatgpt;
+        }
+        
+        // Afficher une note si la clé API n'est pas configurée
+        const apiNote = document.getElementById('chatgpt-api-note');
+        if (apiNote) {
+            apiNote.style.display = config.has_api_key ? 'none' : 'block';
+        }
+        
+    } catch (error) {
+        console.error("Erreur lors du chargement de la configuration d'extraction symbolique:", error);
+        showToast("Erreur lors du chargement de la configuration. Valeurs par défaut utilisées.", "warning");
+        
+        // Utiliser des valeurs par défaut
+        const toggle = document.getElementById('use-chatgpt-symbolic');
+        if (toggle) {
+            toggle.checked = false;
+        }
+    }
+}
+
+
+/**
+ * Active ou désactive l'extraction symbolique via ChatGPT
+ */
+async function toggleChatGPTExtraction(enabled) {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/memory/toggle_chatgpt_extraction`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ enable: enabled })
+        });
+        if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+        const result = await response.json();
+
+        const toggle = document.getElementById('use-chatgpt-symbolic');
+        if (result.status === 'success') {
+            showToast(result.message, "success");
+            if (toggle) toggle.checked = result.current_state;
+        } else {
+            showToast(result.message, "warning");
+            if (toggle) toggle.checked = !enabled;
+        }
+    } catch (error) {
+        console.error("Erreur lors de la modification de la configuration:", error);
+        showToast("Erreur lors de la modification de la configuration", "error");
+        const toggle = document.getElementById('use-chatgpt-symbolic');
+        if (toggle) toggle.checked = !enabled;
+    }
+}

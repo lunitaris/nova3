@@ -12,6 +12,9 @@ from backend.memory.synthetic_memory import synthetic_memory
 from backend.memory.vector_store import vector_store
 from backend.memory.symbolic_memory import symbolic_memory
 import networkx as nx
+from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory
+from fastapi import Body
+
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +64,18 @@ class MemoryAuditQuery(BaseModel):
     topic: Optional[str] = None
     min_confidence: Optional[float] = 0.0
     format: Optional[str] = "json"  # "json", "csv"
+
+
+
+# Ajouter dans la classe de configuration (MemoryConfig)
+class MemoryConfig:
+    vector_dimension: int = 1536
+    max_history_length: int = 50
+    synthetic_memory_refresh_interval: int = 10
+    use_chatgpt_for_symbolic_memory: bool = False  # Nouveau paramètre
+
+
+
 
 # Routes existantes
 
@@ -555,3 +570,104 @@ def _format_graph_cytoscape(G: nx.DiGraph) -> Dict[str, Any]:
         })
     
     return {"elements": elements}
+
+
+@router.post("/update_symbolic_graph", response_model=Dict[str, Any])
+async def update_symbolic_graph(text: str = Body(...), confidence: float = Body(0.7)):
+    """
+    Met à jour le graphe symbolique à partir d'un texte.
+    Utilise ChatGPT si activé dans la configuration, sinon utilise l'extracteur local.
+    """
+    try:
+        # Utiliser la version améliorée qui choisit automatiquement entre ChatGPT et local
+        result = await enhanced_symbolic_memory.update_graph_from_text(
+            text=text,
+            confidence=confidence
+        )
+        
+        return {
+            "status": "success",
+            "result": result
+        }
+    
+    except Exception as e:
+        logger.error(f"Erreur lors de la mise à jour du graphe symbolique: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+
+
+
+@router.get("/symbolic_extraction_config")
+async def get_symbolic_extraction_config():
+    """
+    Récupère la configuration actuelle de l'extraction symbolique.
+    """
+    try:
+        # Version plus robuste pour vérifier la configuration
+        use_chatgpt = False
+        try:
+            if hasattr(config, "memory") and hasattr(config.memory, "use_chatgpt_for_symbolic_memory"):
+                use_chatgpt = config.memory.use_chatgpt_for_symbolic_memory
+        except Exception as config_error:
+            logger.error(f"Erreur lors de l'accès à la configuration: {str(config_error)}")
+        
+        # Vérification de la clé API avec gestion d'erreurs
+        has_api_key = False
+        try:
+            has_api_key = bool(enhanced_symbolic_memory.openai_api_key)
+        except Exception as key_error:
+            logger.error(f"Erreur lors de la vérification de la clé API: {str(key_error)}")
+        
+        return {
+            "use_chatgpt": use_chatgpt,
+            "has_api_key": has_api_key,
+            "extraction_available": use_chatgpt and has_api_key
+        }
+    except Exception as e:
+        # Log détaillé de l'erreur
+        logger.error(f"Erreur lors de la récupération de la configuration: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        
+        # Renvoyer une réponse de secours plutôt qu'une erreur 500
+        return JSONResponse(
+            status_code=200,
+            content={
+                "use_chatgpt": False,
+                "has_api_key": False,
+                "extraction_available": False,
+                "error": str(e)
+            }
+        )
+
+
+
+
+@router.post("/toggle_chatgpt_extraction")
+async def toggle_chatgpt_extraction(enable: bool = Body(...)):
+    """
+    Active ou désactive l'utilisation de ChatGPT pour l'extraction symbolique.
+    """
+    try:
+        # Vérifier si la clé API est disponible
+        if enable and not enhanced_symbolic_memory.openai_api_key:
+            return {
+                "status": "error",
+                "message": "Clé API OpenAI non configurée. Veuillez définir la variable d'environnement OPENAI_API_KEY."
+            }
+        
+        # Mettre à jour la configuration
+        config.memory.use_chatgpt_for_symbolic_memory = enable
+        
+        # Sauvegarder la configuration (à adapter selon votre système)
+        # config.save()
+        
+        return {
+            "status": "success",
+            "message": f"Extraction symbolique via ChatGPT {'activée' if enable else 'désactivée'}",
+            "current_state": enable
+        }
+    except Exception as e:
+        logger.error(f"Erreur lors de la modification de la configuration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
