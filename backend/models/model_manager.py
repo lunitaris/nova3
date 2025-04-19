@@ -147,7 +147,9 @@ class ModelManager:
             top_k=model_config.parameters.get("top_k", 40),
             num_ctx=model_config.context_window,
             base_url=model_config.api_base,
-            callbacks=[StreamingStdOutCallbackHandler()]  # Utiliser callbacks au lieu de callback_manager
+            callbacks=[]  # FIX: Retirez les callbacks de démarrage qui pourraient causer des problèmes
+
+            #callbacks=[StreamingStdOutCallbackHandler()]  # Utiliser callbacks au lieu de callback_manager
         )
         
     def _get_appropriate_model(self, prompt: str, complexity: str = "auto", websocket=None):

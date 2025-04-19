@@ -8,6 +8,7 @@ import io
 from enum import Enum
 from datetime import datetime
 
+from backend.config import config
 from backend.memory.synthetic_memory import synthetic_memory
 from backend.memory.vector_store import vector_store
 from backend.memory.symbolic_memory import symbolic_memory
@@ -643,7 +644,6 @@ async def get_symbolic_extraction_config():
 
 
 
-
 @router.post("/toggle_chatgpt_extraction")
 async def toggle_chatgpt_extraction(enable: bool = Body(...)):
     """
@@ -654,14 +654,12 @@ async def toggle_chatgpt_extraction(enable: bool = Body(...)):
         if enable and not enhanced_symbolic_memory.openai_api_key:
             return {
                 "status": "error",
-                "message": "Clé API OpenAI non configurée. Veuillez définir la variable d'environnement OPENAI_API_KEY."
+                "message": "Clé API OpenAI non configurée. Veuillez définir la variable d'environnement OPENAI_API_KEY.",
+                "current_state": False
             }
         
         # Mettre à jour la configuration
         config.memory.use_chatgpt_for_symbolic_memory = enable
-        
-        # Sauvegarder la configuration (à adapter selon votre système)
-        # config.save()
         
         return {
             "status": "success",
