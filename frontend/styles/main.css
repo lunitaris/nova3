@@ -216,19 +216,60 @@
   }
   
   .sidebar-footer {
-    padding: var(--spacing-md);
-    border-top: 1px solid var(--border-color);
     display: flex;
-    justify-content: space-between;
+    flex-direction: column;
+    gap: 10px;
+    padding: 15px;
   }
+
+  .status-indicator-container {
+    display: flex;
+    align-items: center;
+    padding: 8px;
+    background: rgba(0,0,0,0.05);
+    border-radius: 8px;
+    margin-top: auto; /* Le pousse vers le bas */
+  }
+
+/* Stylisation correcte du bouton d'envoi */
+#send-button, .send-button {
+  background-color: var(--primary-color);
+  color: var(--text-on-primary);
+  border-radius: var(--border-radius-circle);
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+#send-button:hover, .send-button:hover {
+  background-color: var(--primary-dark);
+}
+
+/* S'assurer que l'icône dans le bouton est visible */
+#send-button i, .send-button i {
+  font-size: 16px;
+  color: var(--text-on-primary);
+  margin: 0;
+}
+
+.sidebar-footer .btn {
+  width: 100%;
+  justify-content: flex-start;
+}
   
   /* Contenu principal */
   .main-content {
-    flex: 1;
     display: flex;
     flex-direction: column;
+    height: 100%;
     overflow: hidden;
-  }
+    flex: 1;
+}
   
   .main-header {
     height: var(--header-height);
@@ -267,9 +308,15 @@
     padding: var(--spacing-md);
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
-  }
-  
+}
+
+/* Assurer le scrolling des messages */
+.messages-container:after {
+  content: '';
+  padding-bottom: var(--spacing-md);
+}
+
+
   .welcome-message {
     text-align: center;
     max-width: 600px;
@@ -410,38 +457,41 @@
   
   .input-area {
     display: none;
-    height: 100%;
-  }
+    width: 100%;
+}
   
-  .input-area.active {
-    display: flex;
-  }
+.input-area.active {
+  display: flex;
+}
   
-  #chat-input-area {
-    display: flex;
-    gap: var(--spacing-md);
-  }
+#chat-input-area {
+  align-items: center;
+  gap: var(--spacing-md);
+  flex: 1;
+}
   
-  .chat-input {
-    flex: 1;
-    min-height: 36px;
-    padding: 6px 10px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-  }
+.chat-input {
+  flex: 1;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-md);
+  background-color: var(--input-bg);
+  resize: none;
+  min-height: 40px;
+  max-height: 100px;
+}
   
   .chat-input:focus {
     outline: none;
     border-color: var(--primary-color);
   }
   
-  #voice-input-area {
-    display: flex;
+#voice-input-area {
     align-items: center;
-    gap: var(--spacing-lg);
     justify-content: center;
-  }
+    gap: var(--spacing-lg);
+    flex: 1;
+}
   
   .mic-btn {
     width: 60px;
@@ -689,6 +739,12 @@
       flex-direction: column;
       gap: var(--spacing-md);
     }
+
+    #system-status-indicator {
+      bottom: 70px; /* Au-dessus de la barre de saisie */
+      right: 15px;
+    }
+  
   }
   
   /* Animation de chargement */
@@ -908,25 +964,33 @@
   margin-right: 1rem;
 }
 
+/* Style amélioré pour l'indicateur de statut système */
 #system-status-indicator {
-  background: white;
-  border: 1px solid #ccc;
-  border-radius: 50%;
-  padding: 4px 8px;
-  box-shadow: 0 0 5px rgba(0,0,0,0.1);
+  margin-right: 8px;
+  font-size: 14px;
+}
+
+
+#system-status-indicator:hover {
+  transform: scale(1.1);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.status-indicator-label {
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .bottom-bar {
-  position: fixed;
+  position: sticky;
   bottom: 0;
-  left: 250px; /* largeur de ta sidebar */
+  left: 0;
   right: 0;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  background-color: #f9f9f9;
-  border-top: 1px solid #ddd;
+  padding: var(--spacing-md);
+  background-color: var(--card-bg);
+  border-top: 1px solid var(--border-color);
   z-index: 10;
+  margin-top: auto;
 }
 

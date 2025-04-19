@@ -27,15 +27,20 @@
             </div>
             <div class="sidebar-footer">
                 <button id="toggle-mode-btn" class="btn secondary">
-                    <i class="fas fa-comments"></i> Mode Chat
+                  <i class="fas fa-comments"></i> Mode Chat
                 </button>
                 <button id="settings-btn" class="btn secondary">
-                    <i class="fas fa-cog"></i> Paramètres
+                  <i class="fas fa-cog"></i> Paramètres
                 </button>
                 <a href="admin.html" class="btn secondary">
-                    <i class="fas fa-tools"></i> Administration
+                  <i class="fas fa-tools"></i> Administration
                 </a>
-            </div>
+                
+                <div class="status-indicator-container">
+                  <div id="system-status-indicator">⏳</div>
+                  <div class="status-indicator-label">État du système</div>
+                </div>
+              </div>
         </aside>
 
         <!-- Contenu principal avec la conversation -->
@@ -84,20 +89,12 @@
 
             <!-- Barre de saisie -->
             <div class="bottom-bar">
-                <button id="mic-button" class="btn mic-btn">
-                    <i class="fas fa-microphone"></i>
-                </button>
-                <button id="settings-btn" class="btn secondary">
-                    <i class="fas fa-cog"></i>
-                </button>
-                <a href="admin.html" class="btn secondary">
-                    <i class="fas fa-tools"></i>
-                </a>
-                <textarea id="chat-input" class="chat-input" placeholder="Écrivez votre message..."></textarea>
-                <button id="send-button" class="btn primary">
-                    <i class="fas fa-paper-plane"></i>
-                </button>
-            </div>
+                <div id="chat-input-area" class="input-area active">
+                    <textarea id="chat-input" class="chat-input" placeholder="Écrivez votre message..."></textarea>
+                    <button id="send-button" class="btn primary">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
                 
                 <!-- Mode Vocal -->
                 <div id="voice-input-area" class="input-area">
@@ -107,7 +104,6 @@
                     <div class="voice-status">
                         <span id="voice-status-text">Prêt à écouter</span>
                         <div id="voice-visualization" class="voice-wave">
-                            <!-- Visualisation audio générée dynamiquement -->
                             <div class="wave-bar"></div>
                             <div class="wave-bar"></div>
                             <div class="wave-bar"></div>
@@ -233,11 +229,11 @@
     <script src="scripts/main.js"></script>
     <script src="scripts/monitoring.js"></script>
 
-
-    <div id="system-status-indicator"
-        title="État du système"
-        style="position: fixed; bottom: 15px; right: 15px; font-size: 24px; z-index: 999;">
-    </div>
+    <div id="system-status-indicator" 
+    title="État du système: en attente..."
+    style="position: fixed; bottom: 15px; right: 15px; font-size: 16px; z-index: 9999; display: flex; align-items: center; justify-content: center; background-color: white; border-radius: 50%; width: 32px; height: 32px; box-shadow: 0 1px 5px rgba(0, 0, 0, 0.2); border: 1px solid #ddd;">
+ ⏳
+</div>
 
 </body>
 </html>
