@@ -45,6 +45,11 @@ class EnhancedSymbolicMemory:
     @property
     def is_chatgpt_enabled(self) -> bool:
         """Vérifie si l'utilisation de ChatGPT est activée dans la configuration."""
+
+        logger.debug(f"⚙️ ChatGPT extraction enabled: {enabled} - "
+                    f"Config: {getattr(config.memory, 'use_chatgpt_for_symbolic_memory', False)}, "
+                    f"API key available: {bool(self.openai_api_key)}")
+
         return (
             hasattr(config.memory, "use_chatgpt_for_symbolic_memory") and 
             config.memory.use_chatgpt_for_symbolic_memory and
@@ -70,7 +75,9 @@ class EnhancedSymbolicMemory:
         """
         if not self.openai_api_key:
             raise ValueError("Clé API OpenAI non configurée dans les variables d'environnement")
-            
+        
+        logger.info(f"📤 Calling OpenAI API with model: {model}")
+        logger.debug(f"📤 Prompt: '{prompt[:100]}...'")
         async with aiohttp.ClientSession() as session:
             headers = {
                 "Content-Type": "application/json",
@@ -146,7 +153,8 @@ Réponds UNIQUEMENT au format JSON suivant:
 
 Ne fournis que des entités et relations clairement mentionnées dans le texte, sans interprétation excessive.
 """
-        
+        logger.info(f"🧠 Starting entity and relation extraction for text: '{text[:50]}...'")
+        logger.info(f"🔍 Using ChatGPT extraction: {self.is_chatgpt_enabled}")
         try:
             response = await self._call_openai_api(prompt)
             

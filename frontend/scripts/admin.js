@@ -1018,6 +1018,55 @@ function setupConfigEvents() {
     // Boutons d'action
     document.getElementById('save-config-btn').addEventListener('click', saveConfig);
     document.getElementById('reset-config-btn').addEventListener('click', loadConfig);
+
+
+
+    /////////// TOOGLE: ENABLE CHATGPT USAGE FOR SYMBOLIC MEMORY (GRAPH POPULATION)
+    // Gestionnaire pour le toggle ChatGPT extraction
+    document.getElementById('use-chatgpt-symbolic').addEventListener('change', async (e) => {
+        try {
+            const enabled = e.target.checked;
+            const toggle = e.target;
+            
+            // Désactiver temporairement pour éviter de multiples changements
+            toggle.disabled = true;
+            
+            // Appeler l'API pour mettre à jour le paramètre
+            const response = await fetch(`${CONFIG.API_BASE_URL}/api/memory/toggle_chatgpt_extraction`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(enabled)  // Envoi de la valeur booléenne directement
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Erreur HTTP: ${response.status}`);
+            }
+            
+            const result = await response.json();
+            
+            // Mettre à jour l'interface selon le résultat
+            if (result.status === 'success') {
+                showToast(result.message, "success");
+                toggle.checked = result.current_state;
+            } else {
+                showToast(result.message, "warning");
+                toggle.checked = !enabled;  // Réinitialiser à l'état précédent
+            }
+        } catch (error) {
+            console.error("Erreur lors de la modification de la configuration:", error);
+            showToast("Erreur lors de la modification de la configuration", "error");
+            e.target.checked = !e.target.checked;  // Réinitialiser à l'état précédent
+        } finally {
+            e.target.disabled = false;  // Réactiver le toggle
+        }
+    });
+
+
+
+
+
 }
 
 /**
