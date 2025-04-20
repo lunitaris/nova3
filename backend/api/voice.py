@@ -11,8 +11,8 @@ import os
 import subprocess
 
 
-from voice.stt import stt_engine
-from voice.tts import tts_engine
+from backend.utils.singletons import stt_engine
+from backend.utils.singletons import tts_engine
 from memory.conversation import conversation_manager
 
 logger = logging.getLogger(__name__)

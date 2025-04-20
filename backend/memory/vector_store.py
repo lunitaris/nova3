@@ -1,20 +1,21 @@
 import os
 import json
 import time
+
+# Désactiver explicitement les tentatives de chargement GPU
+os.environ['FAISS_NO_GPU'] = '1'
 import faiss
 import numpy as np
 import logging
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime
 import pickle
-
+from backend.utils.startup_log import add_startup_event
 # Remplacer HuggingFaceEmbeddings par FakeEmbeddings pour le développement
 from langchain_community.embeddings import FakeEmbeddings
-
 from backend.config import config
 
-# Désactiver explicitement les tentatives de chargement GPU
-os.environ['FAISS_NO_GPU'] = '1'
+
 
 logger = logging.getLogger(__name__)
 
@@ -55,12 +56,15 @@ class VectorMemoryStore:
                 logger.info("Chargement d'un index FAISS existant")
                 self.index = faiss.read_index(f"{self.index_path}.faiss")
                 logger.info(f"Index chargé avec {self.index.ntotal} vecteurs")
+                add_startup_event({"icon": "📚", "label": "Mémoire vectorielle", "message": f"FAISS chargé ({self.index.ntotal} vecteurs)"})
+
             else:
                 # Utiliser IndexIDMap avec un index IVF pour de meilleures performances CPU
-                logger.info(f"Création d'un nouvel index FAISS de dimension {self.embedding_dimension}")
+                # logger.info(f"Création d'un nouvel index FAISS de dimension {self.embedding_dimension}")  ## DEBUG
                 quantizer = faiss.IndexFlatL2(self.embedding_dimension)
                 self.index = faiss.IndexIVFFlat(quantizer, self.embedding_dimension, config.memory.nlist)
-                logger.info("Nouvel index créé")
+                # logger.info("Nouvel index créé")  ## DEBUG
+                add_startup_event({"icon": "📚", "label": "Mémoire vectorielle", "message": "FAISS initialisé (index vierge)"})
 
             # Check si index déjà entraîné sinon entraîner
             if not self.index.is_trained:

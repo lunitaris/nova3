@@ -16,9 +16,12 @@ from backend.models.skills.base import Skill
 
 # Importer explicitement les compétences disponibles
 from backend.models.skills.weather import WeatherSkill
-from backend.models.skills.home_automation import HomeAutomationSkill
 from backend.models.skills.timer_reminder import TimerReminderSkill
 from backend.models.skills.general_qa import GeneralQASkill
+from backend.utils.singletons import shared_skill
+from backend.utils.startup_log import add_startup_event
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -31,16 +34,26 @@ class SkillsManager:
         """Initialise le gestionnaire de compétences."""
         self.skills = {}
         self._load_skills()
+
     
     def _load_skills(self):
         """Charge toutes les compétences disponibles."""
+        loaded_skills = []
         # Méthode manuelle (plus fiable)
         self._register_skill(WeatherSkill)
-        self._register_skill(HomeAutomationSkill)
+        loaded_skills.append("weather")
+
+        self.skills[shared_skill.name] = shared_skill
+        loaded_skills.append("home_automation")
+
         self._register_skill(TimerReminderSkill)
+        loaded_skills.append("timer_reminder")
+
         self._register_skill(GeneralQASkill)
+        loaded_skills.append("general_qa")
         
-        logger.info(f"✅ Compétences chargées: {', '.join(self.skills.keys())}")
+        # logger.info(f"✅ Compétences chargées: {', '.join(self.skills.keys())}") ## DEBUG
+        add_startup_event({"icon": "🧩", "label": "Compétences", "message": ", ".join(loaded_skills)})
     
     def _register_skill(self, skill_class: Type[Skill]):
         """

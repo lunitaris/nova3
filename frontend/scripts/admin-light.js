@@ -47,16 +47,19 @@ async function loadLights() {
         
         roomsContainer.innerHTML = '';
         
-        // Charger les pièces
-        const roomsResponse = await fetch(`${CONFIG.API_BASE_URL}/api/admin/lights/rooms`);
-        
-        if (!roomsResponse.ok) {
-            throw new Error(`Erreur HTTP: ${roomsResponse.status}`);
+
+        // Charger les pièces ET les lumières en un seul appel
+        const fullResponse = await fetch(`${CONFIG.API_BASE_URL}/api/admin/lights/full`);
+
+        if (!fullResponse.ok) {
+            throw new Error(`Erreur HTTP: ${fullResponse.status}`);
         }
-        
-        const rooms = await roomsResponse.json();
+
+        const { rooms, lights } = await fullResponse.json();
+
         // Stocker les données des pièces pour une utilisation ultérieure
         window.lastHueRooms = rooms;
+
         
         // Mettre à jour le filtre de pièces
         const roomFilter = document.getElementById('filter-room');
@@ -130,22 +133,14 @@ async function loadLights() {
             });
         }
         
-        // Charger les lumières
-        const lightsResponse = await fetch(`${CONFIG.API_BASE_URL}/api/admin/lights`);
-        
-        if (!lightsResponse.ok) {
-            throw new Error(`Erreur HTTP: ${lightsResponse.status}`);
-        }
-        
-        const lights = await lightsResponse.json();
-        
+    
         // Vérifier s'il y a des lumières
         if (lights.length === 0) {
             lightsContainer.innerHTML = '';
             document.getElementById('no-lights-message').style.display = 'block';
             return;
         }
-        
+
         // Masquer le message "pas de lumières"
         document.getElementById('no-lights-message').style.display = 'none';
         

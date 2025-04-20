@@ -36,10 +36,6 @@
                   <i class="fas fa-tools"></i> Administration
                 </a>
                 
-                <div class="status-indicator-container">
-                  <div id="system-status-indicator">⏳</div>
-                  <div class="status-indicator-label">État du système</div>
-                </div>
               </div>
         </aside>
 
@@ -52,9 +48,16 @@
                     <span id="conversation-mode">Mode Chat</span>
                 </div>
                 <div class="header-actions">
-                    <div id="system-status-indicator" 
-                         title="État du système"
-                         style="margin-right: 10px; font-size: 16px;">⏳</div>
+                    <div id="component-status-bar" class="component-status">
+                        🧠LLM <span id="status-llm">⏳</span>
+                        🗣️TTS <span id="status-tts">⏳</span>
+                        🎙️STT <span id="status-stt">⏳</span>
+                        💡Hue <span id="status-hue">⏳</span>
+                        🔍Vec <span id="status-memory-vector">⏳</span>
+                        📚Symb <span id="status-memory-symbolic">⏳</span>
+                        🧪Synth <span id="status-memory-synthetic">⏳</span>
+                    </div>
+                
                     <button id="clear-conversation-btn" class="btn secondary">
                         <i class="fas fa-broom"></i> Effacer
                     </button>

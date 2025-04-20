@@ -6,9 +6,9 @@ from backend.models.model_manager import model_manager
 from backend.memory.vector_store import vector_store
 from backend.memory.symbolic_memory import symbolic_memory
 from backend.memory.synthetic_memory import synthetic_memory
-from backend.voice.tts import tts_engine
-from backend.voice.stt import stt_engine
-from backend.models.skills.home_automation import HomeAutomationSkill
+from backend.utils.singletons import tts_engine
+from backend.utils.singletons import stt_engine
+from backend.utils.singletons import hue_controller, shared_skill
 
 router = APIRouter()
 
@@ -60,9 +60,7 @@ async def get_status_details():
 
     # Hue
     try:
-        skill = HomeAutomationSkill()
-        controller = skill.hue_controller
-        lights = controller.get_all_lights()
+        lights = hue_controller.get_all_lights()
         result["components"]["hue"] = {
             "status": "ok",
             "lights": len(lights)

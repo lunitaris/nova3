@@ -14,6 +14,8 @@ from backend.config import config
 from backend.config import OPENAI_API_KEY
 from langchain_core.callbacks.base import BaseCallbackHandler
 from backend.utils.profiler import profile
+from backend.utils.startup_log import add_startup_event
+
 
 
 
@@ -27,6 +29,7 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
         """Initialise le handler avec un WebSocket optionnel."""
         self.websocket = websocket
         self.is_active = True
+        self.sending = False  # ← AJOUTE CETTE VARIABLE POUR CASSER LA BOUCLE
         
     def on_llm_new_token(self, token: str, **kwargs) -> None:
         """Appelé à chaque nouveau token généré par le LLM."""
@@ -116,28 +119,37 @@ class ModelManager:
         self._initialize_models()
         
     def _initialize_models(self):
-        """Initialise les modèles configurés."""
+        llm_models = []
         try:
-            # Initialiser les modèles locaux via Ollama
             for model_id, model_config in config.models.items():
                 if model_config.type == "local":
                     try:
                         self.models[model_id] = self._init_ollama_model(model_config)
-                        logger.info(f"Modèle local {model_id} ({model_config.name}) initialisé")
+                        # logger.info(f"Modèle local {model_id} ({model_config.name}) initialisé")  ## DEBUG
+                        llm_models.append(f"{model_config.name} ({model_id})")
                     except Exception as e:
                         logger.error(f"Erreur d'initialisation du modèle {model_id}: {str(e)}")
-                
+
                 elif model_config.type == "cloud" and model_config.name.startswith("gpt"):
                     try:
-
                         if not OPENAI_API_KEY:
                             logger.warning(f"Clé API OpenAI manquante pour le modèle {model_id}")
+                        else:
+                            # logger.info(f"Modèle cloud {model_config.name} ({model_id}) configuré")   ## DEBUG
+                            llm_models.append(f"{model_config.name} ({model_id}, cloud)")
                     except Exception as e:
                         logger.error(f"Erreur de validation du modèle cloud {model_id}: {str(e)}")
-        
+
+            if llm_models:
+                models_str = ", ".join(llm_models)
+                add_startup_event({
+                    "icon": "🧠",
+                    "label": "Modèles LLM",
+                    "message": models_str
+                })
+
         except Exception as e:
             logger.error(f"Erreur lors de l'initialisation des modèles: {str(e)}")
-    
 
 
     # @profile("ollama_init")       ## DEBUG A DECOMMENTER SI BESOIN
@@ -270,6 +282,7 @@ class ModelManager:
                         response = await model.agenerate([messages])
                         return response.generations[0][0].text
                     else:
+                        logger.debug(f"[GEN] Using model: {model}")
                         response = await model.ainvoke(messages)
                         return response.content
                 else:

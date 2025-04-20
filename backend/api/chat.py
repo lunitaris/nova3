@@ -17,6 +17,7 @@ from backend.memory.symbolic_memory import symbolic_memory
 # Importations absolues au lieu d'importations relatives
 from backend.memory.conversation import conversation_manager
 from backend.models.model_manager import model_manager
+from backend.utils.profiler import profile
 
 logger = logging.getLogger(__name__)
 

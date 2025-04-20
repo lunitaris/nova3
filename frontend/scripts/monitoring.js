@@ -1,86 +1,116 @@
+function allStatusesAvailable(components) {
+    const keys = ["llm", "tts", "stt", "hue", "memory_vector", "memory_symbolic", "memory_synthetic"];
+    return keys.every(k => components[k] && components[k].status);
+  }
+
+  
+
+
+
 async function fetchSystemStatus() {
     try {
-        const res = await fetch(`${CONFIG.API_BASE_URL}/api/admin/status/live`);
-        if (!res.ok) throw new Error(`Erreur HTTP: ${res.status}`);
+        // Appel direct à l'endpoint de diagnostic qui fonctionne
+        const res = await fetch(`${CONFIG.API_BASE_URL}/api/admin/status/details`);
+        
+        if (!res.ok) {
+            console.error("Erreur HTTP:", res.status);
+            updateIndicator("error", "Erreur de connexion");
+            return;
+        }
         
         const data = await res.json();
+        console.log("Données de statut reçues:", data);
         
-        // Mettre à jour l'indicateur dans l'interface principale
-        const indicator = document.getElementById("system-status-indicator");
-        if (indicator) {
-            let symbol = "⏳", color = "gray";
-            if (data.status === "ok") { symbol = "🟢"; color = "green"; }
-            else if (data.status === "degraded") { symbol = "🟡"; color = "orange"; }
-            else if (data.status === "error") { symbol = "🔴"; color = "red"; }
-            
-            indicator.textContent = symbol;
-            indicator.style.color = color;
-            indicator.title = `État: ${data.status.toUpperCase()}\nDernier check: ${data.last_check || new Date().toLocaleTimeString()}`;
-            
-            // Log pour debug
-            console.log("✅ Statut système mis à jour:", data.status);
-        } else {
-            console.warn("⚠️ Élément #system-status-indicator non trouvé dans le DOM");
-        }
+        // Mise à jour de l'indicateur avec le statut reçu
+        const statusFinal = allStatusesAvailable(data.components) ? data.status : "unknown";
+        updateIndicator(statusFinal, data);
+
+        updateMiniIndicators(data);
         
-        // Mise à jour des cartes sur la page admin si applicable
-        if (document.getElementById("system-status-card")) {
-            updateAdminCard("system-status-card", data.status);
-            updateAdminCard("llm-status-card", data.components?.llm?.status);
-            updateAdminCard("tts-status-card", data.components?.tts?.status);
-            updateAdminCard("stt-status-card", data.components?.stt?.status);
-        }
-    } catch (e) {
-        console.warn("❌ Impossible de récupérer l'état système:", e);
-        
-        // Même en cas d'erreur, mettre à jour l'indicateur
-        const indicator = document.getElementById("system-status-indicator");
-        if (indicator) {
-            indicator.textContent = "🔴";
-            indicator.style.color = "red";
-            indicator.title = `Erreur de connexion au serveur de monitoring\n${e.message}`;
-        }
+    } catch (error) {
+        console.error("Erreur lors de la récupération du statut:", error);
+        updateIndicator("error", "Erreur: " + error.message);
     }
 }
 
-// Ne garder qu'une seule initialisation
-document.addEventListener("DOMContentLoaded", () => {
-    fetchSystemStatus(); // appel initial
-    setInterval(fetchSystemStatus, 30000); // toutes les 30s
-});
-  
-  // Appel initial
-  fetchSystemStatus();
-  
-  // Appel périodique toutes les 30 secondes
-  setInterval(fetchSystemStatus, 30000);
 
+
+function updateMiniIndicators(data) {
+    const statusMap = {
+      ok: "🟢",
+      degraded: "🟡",
+      error: "🔴",
+      unknown: "⏳"
+    };
   
-  function updateAdminCard(cardId, status) {
-    const card = document.getElementById(cardId);
-    if (!card) return;
+    const set = (id, status) => {
+      const el = document.getElementById(`status-${id}`);
+      if (el) el.textContent = statusMap[status] || "⏳";
+    };
   
-    const dot = card.querySelector(".status-dot");
-    const text = card.querySelector(".status-text");
-  
-    dot.style.backgroundColor = {
-      ok: "green",
-      degraded: "orange",
-      error: "red"
-    }[status] || "gray";
-  
-    text.textContent = {
-      ok: "Fonctionnel",
-      degraded: "Dégradé",
-      error: "Erreur"
-    }[status] || "Inconnu";
+    set("llm", data.components.llm?.status || "unknown");
+    set("tts", data.components.tts?.status || "unknown");
+    set("stt", data.components.stt?.status || "unknown");
+    set("hue", data.components.hue?.status || "unknown");
+    set("memory-vector", data.components.memory_vector?.status || "unknown");
+    set("memory-symbolic", data.components.memory_symbolic ? "ok" : "unknown");
+    set("memory-synthetic", data.components.memory_synthetic ? "ok" : "unknown");
   }
   
-  // Mise à jour toutes les 30s
-  fetchSystemStatus();
-  setInterval(fetchSystemStatus, 30000);
-  
-  document.addEventListener("DOMContentLoaded", () => {
-    fetchSystemStatus(); // appel initial
-    setInterval(fetchSystemStatus, 30000); // toutes les 30s
-  });
+
+
+
+// Fonction pour mettre à jour l'indicateur
+function updateIndicator(status, data) {
+    const indicator = document.getElementById("system-status-indicator");
+    if (!indicator) return;
+    
+    let symbol, color;
+    
+    switch(status) {
+        case "ok":
+            symbol = "🟢";
+            color = "green";
+            break;
+        case "degraded":
+            symbol = "🟡";
+            color = "orange";
+            break;
+        case "error":
+            symbol = "🔴";
+            color = "red";
+            break;
+        case "unknown":
+            symbol = "⏳";
+            color = "gray";
+            break;
+        default:
+            symbol = "⚠️";
+            color = "gray";
+    }
+    
+    indicator.textContent = symbol;
+    indicator.style.color = color;
+    
+    // Créer un titre détaillé pour le survol
+    let title = `État système: ${status.toUpperCase()}`;
+    title += `\nMis à jour: ${new Date().toLocaleTimeString()}`;
+    
+    // Si des données détaillées sont disponibles, les ajouter
+    if (data && data.components) {
+        if (data.components.llm) title += `\nLLM: ${data.components.llm.status}`;
+        if (data.components.tts) title += `\nTTS: ${data.components.tts.status}`;
+        if (data.components.stt) title += `\nSTT: ${data.components.stt.status}`;
+    }
+    
+    indicator.title = title;
+}
+
+// Initialisation
+document.addEventListener("DOMContentLoaded", () => {
+    // Premier appel immédiat
+    fetchSystemStatus();
+    
+    // Puis toutes les 30 secondes
+    setInterval(fetchSystemStatus, 30000);
+});

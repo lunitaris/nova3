@@ -979,6 +979,22 @@
   transform: scale(1.2);
 }
 
+.component-status {
+  font-size: 13px;
+  background-color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 6px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.component-status span {
+  font-weight: bold;
+}
+
 
 
 #system-status-indicator:hover {

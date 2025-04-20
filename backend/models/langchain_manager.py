@@ -20,6 +20,9 @@ from backend.memory.symbolic_memory import symbolic_memory
 from backend.models.skills.manager import skills_manager
 from backend.config import config
 
+from backend.utils.profiler import profile
+from backend.utils.startup_log import add_startup_event
+
 
 
 
@@ -49,7 +52,8 @@ Voici quelques règles que tu dois suivre:
     
     def _init_memory_chains(self):
         """Initialise les chaînes de mémoire."""
-        logger.info("Initialisation des chaînes de mémoire")
+        # logger.info("Initialisation des chaînes de mémoire")  ## DEBUG
+        add_startup_event({"icon": "🧠", "label": "LangChain", "message": "chaînes conversationnelles prêtes"})
     
     async def _get_relevant_context(self, query: str, conversation_history: List[Dict[str, Any]]) -> str:
         """

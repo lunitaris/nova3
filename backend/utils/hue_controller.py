@@ -7,6 +7,7 @@ import logging
 from typing import Dict, List, Any, Optional, Tuple
 from phue import Bridge, Light
 from backend.utils.profiler import profile
+from backend.utils.startup_log import add_startup_event
 
 
 logger = logging.getLogger(__name__)
@@ -29,11 +30,13 @@ class HueLightController:
         Args:
             config_path: Chemin vers le fichier de configuration Hue (optionnel)
         """
+        # logger.info("🧪 HueLightController __init__ appelé")  ## DEBUG
         self.bridge = None
         self.lights = {}
         self.rooms = {}
         self.config = {}
         self.is_available = False
+        self._lights_loaded = False
         
         # Déterminer le chemin de configuration
         if not config_path:
@@ -73,7 +76,9 @@ class HueLightController:
             # Essayer de récupérer les lumières pour vérifier la connexion
             self._refresh_lights()
             
-            logger.info(f"✅ Connecté au Hue Bridge à {self.config['bridge_ip']} avec succès")
+            # logger.info(f"✅ Connecté au Hue Bridge à {self.config['bridge_ip']} avec succès")    ## DEBUG
+            add_startup_event({"icon": "💡", "label": "Lumières", "message": "Lights system opérationnel"})
+
             self.is_available = True
             return True
             
@@ -82,9 +87,9 @@ class HueLightController:
             self.is_available = False
             return False
     
-    def _refresh_lights(self) -> None:
+    def _refresh_lights(self, force: bool = False) -> None:
         """Récupère et met à jour la liste des lumières disponibles."""
-        if not self.bridge:
+        if not self.bridge or (self._lights_loaded and not force):
             return
         
         try:
@@ -107,6 +112,7 @@ class HueLightController:
                 logger.debug(f"Pièces Hue rafraîchies: {len(self.rooms)} trouvées")
             except:
                 logger.warning("Impossible de récupérer les pièces/groupes Hue")
+            self._lights_loaded = True
                 
         except Exception as e:
             logger.error(f"Erreur lors du rafraîchissement des lumières: {str(e)}")

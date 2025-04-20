@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
         SymbolicGraphUI.addGraphButton({
             target: '.header-actions',
             context: 'chat',
-            buttonText: 'Graph Symbolique de la conv'
+            buttonText: 'Graph'
         });
     }
 

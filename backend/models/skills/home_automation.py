@@ -53,7 +53,8 @@ class HomeAutomationSkill(Skill):
         self.use_real_devices = self.hue_controller is not None and self.hue_controller.is_available
         
         if self.use_real_devices:
-            logger.info("Contrôleur Philips Hue initialisé avec succès - utilisation des lumières réelles")
+            # logger.info("Contrôleur Philips Hue initialisé avec succès - utilisation des lumières réelles")   ## DEBUG
+            pass
         else:
             logger.info("Utilisation des appareils domotiques simulés")
     

@@ -7,6 +7,8 @@ import json
 from typing import Dict, Any
 
 from backend.config import config
+from backend.utils.startup_log import add_startup_event
+
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +56,8 @@ class WhisperCppSTT:
             except Exception as e:
                 logger.error(f"Impossible de modifier les permissions: {e}")
                 raise
+        add_startup_event(f"STT: Whisper.cpp opérationnel (modèle: {os.path.basename(self.model_path)})")
+
     
     async def transcribe_file(self, audio_file: str) -> Dict[str, Any]:
         """
@@ -125,6 +129,3 @@ class WhisperCppSTT:
         except Exception as e:
             logger.error(f"Erreur lors de la transcription des données audio: {str(e)}")
             return {"error": str(e), "text": ""}
-
-# Instance globale du moteur STT
-stt_engine = WhisperCppSTT()

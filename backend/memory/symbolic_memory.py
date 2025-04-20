@@ -9,7 +9,10 @@ from typing import Dict, List, Any, Optional, Set, Tuple
 from datetime import datetime
 
 from backend.models.model_manager import model_manager
+from backend.utils.profiler import profile
 from backend.config import config
+from backend.utils.startup_log import add_startup_event
+
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +65,14 @@ class SymbolicMemory:
         if os.path.exists(self.storage_path):
             try:
                 with open(self.storage_path, 'r', encoding='utf-8') as f:
-                    return json.load(f)
+                    graph = json.load(f)
+                    add_startup_event(f"Graph mémoire symbolique chargé ({len(graph.get('entities', {}))} entités)")
+                    return graph
+
+
             except Exception as e:
                 logger.error(f"Erreur lors du chargement du graphe de connaissances: {str(e)}")
+                add_startup_event("Graph mémoire symbolique initialisé vide (échec du chargement)")
                 return {"entities": {}, "relations": []}
         return {"entities": {}, "relations": []}
     

@@ -9,13 +9,15 @@ import asyncio
 from backend.config import config
 # Import complet des modules de mémoire
 from backend.memory.synthetic_memory import synthetic_memory
-from backend.memory.symbolic_memory import symbolic_memory
+from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory
+from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory as symbolic_memory
+
+
 from backend.models.model_manager import model_manager
 from backend.models.langchain_manager import langchain_manager
 
 
 from backend.memory.vector_store import vector_store
-from backend.memory.symbolic_memory import symbolic_memory
 from backend.models.model_manager import model_manager
 
 from backend.memory.automatic_contextualizer import AutomaticMemoryContextualizer
@@ -57,11 +59,11 @@ class Conversation:
 
         # Initialiser le gestionnaire de mémoire personnelle
         self.memory_processor = ConversationMemoryProcessor(
-            model_manager, vector_store, symbolic_memory
+            model_manager, vector_store, enhanced_symbolic_memory
         )
 
         self.memory_contextualizer = AutomaticMemoryContextualizer(
-            model_manager, vector_store, symbolic_memory
+            model_manager, vector_store, enhanced_symbolic_memory
         )
         
         # Chemin du fichier de conversation
@@ -154,11 +156,11 @@ class Conversation:
         
         # Si c'est un message utilisateur, mettre à jour la mémoire symbolique
         if role == "user":
-            asyncio.create_task(self._update_symbolic_memory(content))
+            asyncio.create_task(self._update_enhanced_symbolic_memory(content))
         
         return message
     
-    async def _update_symbolic_memory(self, content: str):
+    async def _update_enhanced_symbolic_memory(self, content: str):
         """
         Met à jour la mémoire symbolique avec le contenu du message.
         
@@ -171,7 +173,7 @@ class Conversation:
                 return
                 
             logger.info(f"Mise à jour de la mémoire symbolique pour la conversation {self.conversation_id}")
-            update_stats = await symbolic_memory.update_graph_from_text(content)
+            update_stats = await enhanced_symbolic_memory.update_graph_from_text(content)
             
             if update_stats.get("entities_added", 0) > 0 or update_stats.get("relations_added", 0) > 0:
                 logger.info(f"Graph mis à jour: {update_stats.get('entities_added', 0)} entités, {update_stats.get('relations_added', 0)} relations")
@@ -370,18 +372,18 @@ class ConversationManager:
         # C'EST ICI QU'IL FAUT AJOUTER LE CODE :
         # Initialiser le gestionnaire de mémoire personnelle
         self.memory_processor = ConversationMemoryProcessor(
-            model_manager, vector_store, symbolic_memory
+            model_manager, vector_store, enhanced_symbolic_memory
         )
 
 
         self.memory_contextualizer = AutomaticMemoryContextualizer(
-            model_manager, vector_store, symbolic_memory
+            model_manager, vector_store, enhanced_symbolic_memory
         )
 
     
         # Initialiser le contextualiseur automatique
         self.memory_contextualizer = AutomaticMemoryContextualizer(
-            model_manager, vector_store, symbolic_memory
+            model_manager, vector_store, enhanced_symbolic_memory
         )
     
 
@@ -538,7 +540,7 @@ class ConversationManager:
                     memory_id = synthetic_memory.remember_explicit_info(info_to_memorize)
                     
                     # Mettre également à jour la mémoire symbolique
-                    asyncio.create_task(symbolic_memory.update_graph_from_text(info_to_memorize))
+                    asyncio.create_task(enhanced_symbolic_memory.update_graph_from_text(info_to_memorize))
                     
                     # Réponse de confirmation
                     response_text = f"🌀 J'ai mémorisé cette information : \"{info_to_memorize}\""

@@ -1,17 +1,26 @@
 import os
 import sys
 
-
 # Supprimer toutes les variantes ambiguës d'import du module model_manager
 for key in list(sys.modules.keys()):
     if key == "models" or key.startswith("models.") or key == "model_manager" or key.startswith("model_manager."):
         del sys.modules[key]
 
-print(">>> [DEBUG] Suppression des imports ambigus de model_manager effectuée.")
-
 # Ajouter le répertoire parent au chemin Python pour permettre les importations absolues
 current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, current_dir)
+
+import logging
+# Configuration du logger (console + file) 
+# 🔕 Silence de certains modules tiers
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
+logging.getLogger("profiler").setLevel(logging.INFO)
+logging.getLogger("faiss.loader").setLevel(logging.WARNING)
+logging.getLogger("phue").setLevel(logging.WARNING)
+logging.getLogger("faiss").setLevel(logging.WARNING)
+# logging.getLogger("httpx").setLevel(logging.WARNING)  # Facultatif si trop bavard aussi
+
 
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -20,8 +29,9 @@ from typing import Optional, List, Dict, Any
 import asyncio
 import uvicorn
 from backend.api.health_monitor import monitor_health
-import logging
+
 from logging.handlers import RotatingFileHandler
+from contextlib import asynccontextmanager
 
 
 ## Désactiver l'accélération (pour fix les pb avec vectors embeddings)
@@ -31,22 +41,31 @@ os.environ["PYTORCH_ENABLE_MPS_FALLBACK"] = "1"
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
 
 
-# Configuration du logger (console + file)
-logger = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO)
-logging.getLogger("profiler").setLevel(logging.INFO)
+
+######### MONITORING #########################
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    logger.info("🚀 Démarrage Nova avec lifespan")
+    asyncio.create_task(monitor_health())           # Lancer le monitoring santé
+    from backend.utils.startup_log import log_startup_summary
+    log_startup_summary(logger)
+
+    yield                                            # ⬅️ démarre l'app ici
+    logger.info("🛑 Arrêt Nova (fin de lifespan)")
+
 
 # Initialisation de l'application FastAPI
 app = FastAPI(
     title="Assistant IA Local",
     description="API pour un assistant IA local avec fonctionnalités vocales et textuelles",
     version="0.1.0",
+    lifespan=lifespan
 )
 
 # Configuration du CORS pour permettre les requêtes du frontend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # A restreindre en production
+    allow_origins=["http://127.0.0.1:3000", "http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -167,6 +186,8 @@ try:
     from api.admin import router as admin_router
     from api.diagnostic import router as diagnostic_router
     from api.health_monitor import router as health_router
+    from backend.api import health_monitor
+
 
 
 
@@ -177,6 +198,7 @@ try:
     app.include_router(admin_router)
     app.include_router(diagnostic_router)
     app.include_router(health_router)
+    app.include_router(health_monitor.router)  # Ajouter le routeur health_monitor
 
 
     
@@ -184,13 +206,6 @@ except Exception as e:
     logger.error(f"Erreur lors du chargement des routers: {str(e)}")
     raise
 
-
-
-
-#### MONITORING DES SERVICES ########
-@app.on_event("startup")
-async def start_health_monitor():
-    asyncio.create_task(monitor_health())
 
 
 # Point d'entrée pour l'exécution directe

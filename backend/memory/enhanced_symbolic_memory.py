@@ -1,4 +1,3 @@
-
 """
 Extension du système de mémoire symbolique avec intégration ChatGPT facultative.
 """
@@ -14,6 +13,7 @@ import backoff
 
 from backend.config import config
 from backend.memory.symbolic_memory import symbolic_memory, SymbolicMemory
+from backend.utils.profiler import profile
 
 logger = logging.getLogger(__name__)
 from backend.config import OPENAI_API_KEY
@@ -22,60 +22,34 @@ class EnhancedSymbolicMemory:
     """
     Extension du gestionnaire de mémoire symbolique avec intégration ChatGPT optionnelle.
     """
-    
-    def __init__(self, base_memory: SymbolicMemory = None):
-        """
-        Initialise l'extension de mémoire symbolique.
 
-        Args:
-            base_memory: Instance de base de SymbolicMemory
-        """
+    def __init__(self, base_memory: SymbolicMemory = None):
         self.base_memory = base_memory or symbolic_memory
         self.openai_api_key = OPENAI_API_KEY
 
-        # Log pour vérifier si la clé est présente (sécurisé)
         if self.openai_api_key:
             key_length = len(self.openai_api_key)
             first_chars = self.openai_api_key[:4] if key_length > 8 else ""
             last_chars = self.openai_api_key[-4:] if key_length > 8 else ""
-            logger.info(f"✅ OpenAI API key configurée!")
+            # logger.info(f"✅ OpenAI API key configurée!")     ## DEBUG
         else:
             logger.warning("⚠️ Aucune clé API OpenAI configurée. L'extraction via ChatGPT ne sera pas disponible.")
-        
+
     @property
     def is_chatgpt_enabled(self) -> bool:
-        """Vérifie si l'utilisation de ChatGPT est activée dans la configuration."""
-
-        logger.debug(f"⚙️ ChatGPT extraction enabled: {enabled} - "
-                    f"Config: {getattr(config.memory, 'use_chatgpt_for_symbolic_memory', False)}, "
-                    f"API key available: {bool(self.openai_api_key)}")
-
-        return (
+        enabled = (
             hasattr(config.memory, "use_chatgpt_for_symbolic_memory") and 
             config.memory.use_chatgpt_for_symbolic_memory and
             self.openai_api_key
         )
-        
-    @backoff.on_exception(backoff.expo, 
-                         (aiohttp.ClientError, asyncio.TimeoutError),
-                         max_tries=3)
+        logger.debug(f"⚙️ ChatGPT extraction enabled: {enabled} - Config: {getattr(config.memory, 'use_chatgpt_for_symbolic_memory', False)}, API key available: {bool(self.openai_api_key)}")
+        return enabled
+
+    @backoff.on_exception(backoff.expo, (aiohttp.ClientError, asyncio.TimeoutError), max_tries=3)
     async def _call_openai_api(self, prompt: str, model: str = "gpt-3.5-turbo") -> str:
-        """
-        Appelle l'API OpenAI avec un prompt donné.
-        
-        Args:
-            prompt: Le prompt à envoyer à l'API
-            model: Le modèle à utiliser (par défaut gpt-3.5-turbo)
-            
-        Returns:
-            La réponse du modèle en texte
-            
-        Raises:
-            Exception: En cas d'erreur avec l'API
-        """
         if not self.openai_api_key:
-            raise ValueError("Clé API OpenAI non configurée dans les variables d'environnement")
-        
+            raise ValueError("Clé API OpenAI non configurée")
+
         logger.info(f"📤 Calling OpenAI API with model: {model}")
         logger.debug(f"📤 Prompt: '{prompt[:100]}...'")
         async with aiohttp.ClientSession() as session:
@@ -83,128 +57,67 @@ class EnhancedSymbolicMemory:
                 "Content-Type": "application/json",
                 "Authorization": f"Bearer {self.openai_api_key}"
             }
-            
             payload = {
                 "model": model,
                 "messages": [
-                    {"role": "system", "content": "Tu es un assistant d'extraction d'informations précis."},
+                    {"role": "system", "content": "Tu es un assistant d'extraction d'informations symboliques intelligent, exhaustif, et structurant."},
                     {"role": "user", "content": prompt}
                 ],
-                "temperature": 0.2  # Température basse pour des réponses plus précises
+                "temperature": 0.2
             }
-            
-            try:
-                async with session.post(
-                    "https://api.openai.com/v1/chat/completions",
-                    headers=headers,
-                    json=payload,
-                    timeout=15  # Timeout de 15 secondes
-                ) as response:
-                    if response.status != 200:
-                        response_text = await response.text()
-                        logger.error(f"Erreur API OpenAI: {response.status} - {response_text}")
-                        raise Exception(f"Erreur API OpenAI: {response.status}")
-                        
-                    data = await response.json()
-                    return data["choices"][0]["message"]["content"]
-            except Exception as e:
-                logger.error(f"Erreur lors de l'appel à l'API OpenAI: {str(e)}")
-                raise
-    
-    async def extract_entities_and_relations_with_chatgpt(self, text: str) -> Dict[str, Any]:
-        """
-        Extrait des entités et relations d'un texte en utilisant ChatGPT.
-        
-        Args:
-            text: Texte à analyser
-            
-        Returns:
-            Dictionnaire contenant les entités et relations extraites
-        """
-        prompt = f"""Analyse ce texte et extrais-en toutes les entités et relations importantes.
+            async with session.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=15) as response:
+                if response.status != 200:
+                    response_text = await response.text()
+                    logger.error(f"Erreur API OpenAI: {response.status} - {response_text}")
+                    raise Exception(f"Erreur API OpenAI: {response.status}")
+                data = await response.json()
+                return data["choices"][0]["message"]["content"]
 
-Texte à analyser: 
-"{text}"
 
-Pour les entités, identifie le nom, le type (personne, lieu, objet, concept, etc.), et tout attribut pertinent.
-Pour les relations, identifie la source, le type de relation, la cible, et un niveau de confiance (0.0 à 1.0).
-
-Réponds UNIQUEMENT au format JSON suivant:
-```json
-{{
-  "entities": [
-    {{
-      "name": "Nom de l'entité",
-      "type": "Type (person, place, device, concept, etc.)",
-      "attributes": {{"attr1": "valeur1", "attr2": "valeur2"}},
-      "confidence": 0.95
-    }}
-  ],
-  "relations": [
-    {{
-      "source": "Nom de l'entité source",
-      "relation": "Type de relation",
-      "target": "Nom de l'entité cible",
-      "confidence": 0.9
-    }}
-  ]
-}}
-```
-
-Ne fournis que des entités et relations clairement mentionnées dans le texte, sans interprétation excessive.
-"""
-        logger.info(f"🧠 Starting entity and relation extraction for text: '{text[:50]}...'")
-        logger.info(f"🔍 Using ChatGPT extraction: {self.is_chatgpt_enabled}")
-        try:
-            response = await self._call_openai_api(prompt)
-            
-            # Nettoyer la réponse JSON
-            import re
-            json_match = re.search(r'```json\s*(.*?)\s*```', response, re.DOTALL)
-            if json_match:
-                json_str = json_match.group(1)
-            else:
-                # Essayer sans les délimiteurs markdown
-                json_match = re.search(r'({.*})', response, re.DOTALL)
-                if json_match:
-                    json_str = json_match.group(1)
-                else:
-                    raise ValueError("Format JSON non détecté dans la réponse")
-            
-            # Parser le JSON
-            data = json.loads(json_str)
-            
-            # Valider le format de données
-            if "entities" not in data or "relations" not in data:
-                raise ValueError("Format de données invalide: entities ou relations manquants")
-                
-            for entity in data.get("entities", []):
-                if "name" not in entity or "type" not in entity:
-                    logger.warning(f"Entité malformée ignorée: {entity}")
-                
-            for relation in data.get("relations", []):
-                if "source" not in relation or "relation" not in relation or "target" not in relation:
-                    logger.warning(f"Relation malformée ignorée: {relation}")
-            
-            return data
-                
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction via ChatGPT: {str(e)}")
-            # En cas d'erreur, on retourne un dictionnaire vide qui sera complété par la méthode de fallback
-            return {"entities": [], "relations": []}
-    
     async def extract_entities_and_relations(self, text: str, confidence: float = 0.7) -> Dict[str, Any]:
         """
-        Point d'entrée principal pour l'extraction d'entités et de relations.
-        Utilise ChatGPT si activé, sinon utilise l'extracteur local.
-        
-        Args:
-            text: Texte à analyser
-            confidence: Niveau de confiance par défaut
-            
-        Returns:
-            Dictionnaire contenant les entités et relations extraites
+        Alias de compatibilité vers extract_entities_and_relations_with_chatgpt.
+        Utilise l’extraction hybride (ChatGPT si activé, sinon fallback local).
         """
+        return await self.extract_entities_and_relations_with_chatgpt(text, confidence)
+
+
+
+    async def extract_entities_and_relations_with_chatgpt(self, text: str, confidence: float = 0.7) -> Dict[str, Any]:
+        prompt_template = """
+Analyse le texte ci-dessous et extrait toutes les entités, attributs et relations possibles.
+Inclut également les préférences, rôles, professions, et toute information implicite évidente.
+
+Texte :
+"{text}"
+
+Objectifs :
+1. Détecte les entités (nom, type comme person/place/device/concept/etc, attributs, confiance).
+2. Déduis toutes les relations logiques entre ces entités (même implicites ou affectives).
+3. Garde un style synthétique, compact, mais précis. Ne rate rien.
+
+Format attendu (JSON uniquement) :
+```json
+{
+  "entities": [
+    {
+      "name": "Nom",
+      "type": "person/place/device/concept/...",
+      "attributes": {"key": "valeur", ...},
+      "confidence": 0.9
+    }
+  ],
+  "relations": [
+    {
+      "source": "Nom",
+      "relation": "relation",
+      "target": "Nom",
+      "confidence": 0.9
+    }
+  ]
+}
+```"""
+        prompt = prompt_template.replace("{text}", text)
         method_used = "local"
         result = {"entities": [], "relations": []}
         
@@ -217,15 +130,15 @@ Ne fournis que des entités et relations clairement mentionnées dans le texte, 
                 # Vérifier si le résultat est valide et non vide
                 if result and result.get("entities") and len(result["entities"]) > 0:
                     method_used = "chatgpt"
-                    logger.info(f"Extraction réussie via ChatGPT: {len(result.get('entities', []))} entités, {len(result.get('relations', []))} relations")
+                    logger.info(f"(Ehanced memory) Extraction réussie via ChatGPT: {len(result.get('entities', []))} entités, {len(result.get('relations', []))} relations")
                 else:
-                    logger.warning("Extraction via ChatGPT vide ou invalide, fallback vers extraction locale")
+                    logger.warning("(Ehanced memory) Extraction via ChatGPT vide ou invalide, fallback vers extraction locale")
             except Exception as e:
-                logger.error(f"Erreur lors de l'extraction via ChatGPT, fallback vers extraction locale: {str(e)}")
+                logger.error(f"(Ehanced memory) Erreur lors de l'extraction via ChatGPT, fallback vers extraction locale: {str(e)}")
         
         # Si ChatGPT n'est pas activé ou a échoué, utiliser l'extracteur local
-        if method_used == "local" or not result.get("entities"):
-            logger.info("Utilisation de l'extracteur local")
+        if method_used == "local" or not result.get("entities") or not result.get("relations"):
+            logger.info("(Ehanced memory) Utilisation de l'extracteur local")
             
             # Obtenir les entités via l'extracteur local
             local_entities = await self.base_memory.extract_entities_from_text(text, confidence)
@@ -240,12 +153,13 @@ Ne fournis que des entités et relations clairement mentionnées dans le texte, 
             }
             
             method_used = "local"
-            logger.info(f"Extraction locale: {len(local_entities)} entités, {len(local_relations)} relations")
+            logger.info(f"(Ehanced memory) Extraction locale: {len(local_entities)} entités, {len(local_relations)} relations")
         
         # Journaliser la méthode utilisée
-        logger.info(f"Méthode d'extraction utilisée: {method_used}")
+        logger.info(f"(Ehanced memory) Méthode d'extraction utilisée: {method_used}")
         result["method_used"] = method_used
         
+        logger.info(f"🧪 (Ehanced memory) Méthode d'extraction utilisée : {method_used}")
         return result
     
     async def update_graph_from_text(self, text: str, confidence: float = 0.7, valid_from: str = None, valid_to: str = None) -> Dict[str, int]:
@@ -293,7 +207,7 @@ Ne fournis que des entités et relations clairement mentionnées dans le texte, 
             
             # Traiter les relations extraites
             relations_added = 0
-            
+            logger.info(f"📡 (Ehanced memory) Relations reçues de l'extracteur : {extraction_result.get('relations', [])}")
             for relation in extraction_result.get("relations", []):
                 source_name = relation.get("source")
                 target_name = relation.get("target")

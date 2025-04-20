@@ -7,10 +7,10 @@ from typing import Optional, BinaryIO, Generator, AsyncGenerator
 from concurrent.futures import ThreadPoolExecutor
 import numpy as np
 import io
-
+from backend.utils.startup_log import add_startup_event
 from backend.config import config
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("voice.tts")
 
 class PiperTTS:
     """
@@ -38,7 +38,8 @@ class PiperTTS:
         """Vérifie si Piper est installé et disponible."""
         try:
             subprocess.run(["piper", "--help"], capture_output=True, check=False)
-            logger.info("✅ Piper TTS correctement installé")
+            # logger.info("✅ Piper TTS correctement installé") ## DEBUG
+            add_startup_event({"icon": "🗣️", "label": "TTS", "message": "Piper TTS opérationnel"})
         except FileNotFoundError:
             logger.error("Piper TTS n'est pas installé ou n'est pas dans le PATH")
             logger.info("Veuillez installer Piper avec: pip install piper-tts")
@@ -297,5 +298,3 @@ class PiperTTS:
             async for audio_data in self.stream_text_to_speech_pcm(buffer):
                 yield audio_data
 
-# Instance globale du moteur TTS
-tts_engine = PiperTTS()

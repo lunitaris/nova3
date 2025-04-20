@@ -14,13 +14,9 @@ from backend.models.model_manager import model_manager
 from backend.memory.synthetic_memory import synthetic_memory
 from backend.memory.symbolic_memory import symbolic_memory
 from backend.memory.vector_store import vector_store
-from backend.voice.stt import stt_engine
-from backend.voice.tts import tts_engine
-
-from backend.models.skills.home_automation import HomeAutomationSkill
-
-shared_skill = HomeAutomationSkill()
-hue_controller = shared_skill.hue_controller
+from backend.utils.singletons import stt_engine
+from backend.utils.singletons import tts_engine
+from backend.utils.singletons import hue_controller
 
 logger = logging.getLogger(__name__)
 
@@ -93,7 +89,9 @@ async def get_system_status():
                 break
             elif comp["status"] == "degraded" and global_status != "error":
                 global_status = "degraded"
-        
+
+        logger.info("📡 get_system_status() appelé")
+
         return SystemStatus(
             status=global_status,
             cpu_usage=cpu_percent,
@@ -662,7 +660,7 @@ async def get_lights():
         
         # Si pas de lumières Hue ou si elles ne sont pas disponibles, utiliser les simulées
         if not lights:
-            # Utiliser les lumières simulées de HomeAutomationSkill
+            # Utiliser les lumières simulées
             skill = shared_skill            
             simulated_devices = skill.devices
             
@@ -904,3 +902,28 @@ def _get_node_group(entity_type: str) -> int:
     }
     
     return type_groups.get(entity_type.lower(), 9)  # 9 = autre type
+
+
+@router.get("/lights/full")
+async def get_lights_and_rooms():
+    """
+    Récupère à la fois la liste des lumières et des pièces dans un seul appel.
+    """
+    try:
+        if hue_controller and hue_controller.is_available:
+            # Forcer un seul refresh
+            hue_controller._refresh_lights(force=True)
+            rooms = hue_controller.get_rooms()
+            lights = hue_controller.get_all_lights()
+        else:
+            rooms = []
+            lights = []
+
+        return {
+            "rooms": rooms,
+            "lights": lights
+        }
+    
+    except Exception as e:
+        logger.error(f"Erreur lors du chargement combiné lumières/pièces: {str(e)}")
+        raise HTTPException(status_code=500, detail="Erreur lors du chargement des lumières et pièces")
