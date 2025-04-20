@@ -927,3 +927,4 @@ async def get_lights_and_rooms():
     except Exception as e:
         logger.error(f"Erreur lors du chargement combiné lumières/pièces: {str(e)}")
         raise HTTPException(status_code=500, detail="Erreur lors du chargement des lumières et pièces")
+
