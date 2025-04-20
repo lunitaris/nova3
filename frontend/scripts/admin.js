@@ -698,17 +698,37 @@ async function testSTT() {
  * Ouvre le visualiseur de mémoire pour un sujet spécifique
  * @param {string} topic - Sujet de mémoire à visualiser
  */
-function openMemoryViewer(topic = null) {
-    // Afficher le modal
+function openMemoryViewer(topic = null, tab = 'symbolic') {
     const modal = document.getElementById('memory-viewer-modal');
     modal.classList.add('active');
-    
-    // Si un sujet est spécifié, sélectionner l'onglet correspondant
-    if (topic) {
-        // Charger les sujets pour le sélecteur
-        loadMemoryTopics(topic);
+
+    document.querySelectorAll('.memory-viewer-tabs .tab').forEach(t => {
+        t.classList.toggle('active', t.dataset.tab === tab);
+    });
+
+    document.querySelectorAll('.memory-viewer-tabs .tab-pane').forEach(p => {
+        p.classList.toggle('active', p.id === `${tab}-memory-view`);
+    });
+
+    if (tab === 'symbolic') {
+        setTimeout(() => {
+            const container = document.getElementById('graph-container');
+            if (container && window.GraphVisualization?.loadSymbolicGraph) {
+                console.log("🔍 Container trouvé, chargement du graphe depuis admin.js...");
+                const endpoint = '/api/memory/graph';
+                const params = {}; // ← tu peux passer un sujet ici si besoin
+                window.GraphVisualization.loadSymbolicGraph(endpoint, container, params);
+            } else {
+                console.warn("⚠️ Conteneur ou fonction loadSymbolicGraph introuvable");
+            }
+        }, 100);
     }
+
+    if (topic) loadMemoryTopics(topic);
 }
+
+
+
 
 /**
  * Charge les sujets de mémoire pour le visualiseur
@@ -955,12 +975,18 @@ function setupMemoryEvents() {
     document.getElementById('backup-memory-btn').addEventListener('click', () => {
         showToast("Fonctionnalité de sauvegarde non implémentée", "info");
     });
-    
+
+    // Ajout du bouton manuel
+    const addEntityBtn = document.getElementById('add-entity-btn');
+    if (addEntityBtn) {
+        addEntityBtn.addEventListener('click', addManualSymbolicEntity);
+    }
+
     // Événements du visualiseur de mémoire
     document.getElementById('topic-select').addEventListener('change', (e) => {
         loadMemoriesByTopic(e.target.value);
     });
-    
+
     document.getElementById('vector-search-btn').addEventListener('click', () => {
         const query = document.getElementById('vector-search').value;
         if (query.trim()) {
@@ -969,12 +995,7 @@ function setupMemoryEvents() {
             showToast("Veuillez entrer une requête de recherche", "warning");
         }
     });
-    
-    window.SymbolicGraphUI.injectIntoAdmin({ 
-        sectionId: 'memory', 
-        buttonId: 'load-graph-btn',
-        autoLoad: true // 👈 active le chargement dès ouverture
-    });
+
 }
 
 /**
@@ -993,6 +1014,43 @@ function setupVoiceEvents() {
         });
     });
 }
+
+/**
+ * Ajoute manuellement une entité symbolique via l'interface admin
+ */
+async function addManualSymbolicEntity() {
+    const name = document.getElementById('manual-entity-name')?.value.trim();
+    const type = document.getElementById('manual-entity-type')?.value.trim();
+
+    if (!name || !type) {
+        showToast("Veuillez renseigner un nom et un type d'entité", "warning");
+        return;
+    }
+
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/memory/symbolic/add_entity`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, type })
+        });
+
+        if (!response.ok) throw new Error(`Erreur HTTP: ${response.status}`);
+
+        const result = await response.json();
+        if (result.status === 'success') {
+            showToast("Entité ajoutée avec succès", "success");
+            document.getElementById('manual-entity-name').value = '';
+            document.getElementById('manual-entity-type').value = '';
+            loadMemoryStats(); // Met à jour les stats
+        } else {
+            showToast(result.message || "Erreur lors de l'ajout", "error");
+        }
+    } catch (error) {
+        console.error("Erreur ajout entité symbolique:", error);
+        showToast("Erreur lors de l'ajout de l'entité", "error");
+    }
+}
+
 
 /**
  * Configure les événements de la section configuration
@@ -1389,9 +1447,12 @@ async function searchVectorMemory(query) {
 /**
  * Charge et affiche le graphe symbolique
  */
-async function loadSymbolicGraph() {
+async function loadSymbolicGraph(container) {
     try {
-        const container = document.getElementById('graph-container');
+        if (!container) {
+        console.error('❌ Conteneur non fourni à loadSymbolicGraph');
+        return;
+    }
         container.innerHTML = `
             <div class="loading-indicator">
                 <i class="fas fa-spinner fa-spin"></i> Chargement du graphe...

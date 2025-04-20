@@ -704,18 +704,23 @@ DEFAULT_RULES = {
 
 # Charger ou créer les règles
 def _load_symbolic_rules():
+    logger.info(f"📂 Chemin utilisé pour les règles: {RULES_PATH}")  # ✅ LOG AVANT LE RETURN
+
     if os.path.exists(RULES_PATH):
         try:
             with open(RULES_PATH, 'r', encoding='utf-8') as f:
-                logger.info(f"Chargement des du fichier de rêgles du graph symbolic...")
-                return json.load(f)
+                logger.info(f"📄 Chargement du fichier de règles...")
+                content = json.load(f)
+                logger.info(f"🧠 Règles chargées depuis le fichier : {json.dumps(content, indent=2, ensure_ascii=False)}")
+                return content
         except Exception as e:
             logger.error(f"Erreur de chargement des règles: {str(e)}")
-    
-    # Si le fichier n'existe pas ou erreur, créer le fichier avec les valeurs par défaut
+
+    # Fallback : création fichier si manquant ou invalide
     with open(RULES_PATH, 'w', encoding='utf-8') as f:
         json.dump(DEFAULT_RULES, f, indent=2, ensure_ascii=False)
-    
+
+    logger.warning("⚠️ Fichier de règles créé par défaut (fallback)")
     return DEFAULT_RULES
 
 # Sauvegarder les règles
