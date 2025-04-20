@@ -34,11 +34,21 @@ class SymbolicRulesEditor {
     async loadRules() {
         const response = await fetch(`${CONFIG.API_BASE_URL}/api/memory/symbolic_rules`);
         const data = await response.json();
-        console.log("🔍 Règles reçues :", data);  // <<== AJOUT TEMPORAIRE
+        console.log("🔍 Règles reçues :", data);  // Pour débogage
+        if (data.status === "success" && data.rules) {
+            this.rules = data.rules;
+        } else {
+            this.rules = { entity_aliases: {}, entity_types: {}, relation_rewrites: {} };
+        }
+        // Assurez-vous que this.rules est correctement initialisé avec les bonnes clés
         this.rules = data.rules || { entity_aliases: {}, entity_types: {}, relation_rewrites: {} };
+        console.log("🔍 this.rules après assignation:", this.rules);  // Ajoutez ce log
     }
+    
 
     renderInterface() {
+        console.log("Contenu de this.rules:", this.rules);
+
         this.container.innerHTML = `
         <div class="rules-editor">
             <div class="tabs-container">
@@ -65,6 +75,10 @@ class SymbolicRulesEditor {
                 <button class="btn secondary" id="reset-rules-btn"><i class="fas fa-undo"></i> Réinitialiser</button>
             </div>
         </div>`;
+
+        // Pour le contenu des onglets "entity_types" et "relation_rewrites"
+        document.getElementById('entity_types-body').innerHTML = this.generateRulesTableBody('entity_types');
+        document.getElementById('relation_rewrites-body').innerHTML = this.generateRulesTableBody('relation_rewrites');
 
         this.renderAliasGroups();
     }
@@ -157,13 +171,22 @@ class SymbolicRulesEditor {
         });
     }
 
+
     generateRulesTableBody(type) {
+        console.log(`🔍 Génération du corps de table pour: ${type}`, this.rules[type]);
         const entries = Object.entries(this.rules[type] || {});
         if (entries.length === 0) return `<tr><td colspan="3" class="empty-state">Aucune règle définie</td></tr>`;
-        return entries.map(([source, target]) => `<tr><td><input type="text" class="rule-source" value="${source}" placeholder="Source..."></td><td><input type="text" class="rule-target" value="${target}" placeholder="Cible..."></td><td><button class="btn mini delete-rule-btn" data-type="${type}" data-source="${source}"><i class="fas fa-trash"></i></button></td></tr>`).join('');
+        return entries.map(([source, target]) => `<tr>...</tr>`).join('');
     }
 
     attachEvents() {
+
+        console.log("🔍 Éléments ciblés:", {
+            tabs: this.container.querySelectorAll('.rules-tabs .tab'),
+            addButtons: this.container.querySelectorAll('.add-rule-btn'),
+            deleteButtons: this.container.querySelectorAll('.delete-rule-btn')
+        });
+
         this.container.querySelectorAll('.rules-tabs .tab').forEach(tab => {
             tab.addEventListener('click', () => this.switchTab(tab.dataset.tab));
         });
