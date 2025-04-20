@@ -151,26 +151,6 @@ async def remember_info(info: Dict[str, Any]):
     # Implémentation à compléter
     return {"status": "stored", "info": info}
 
-# Importer les routers après la définition de l'application
-# pour éviter les importations circulaires
-try:
-    # Importer les routers d'API
-    from api.chat import router as chat_router
-    from api.voice import router as voice_router
-    from api.memory import router as memory_router
-
-    # Inclure les routers
-    app.include_router(chat_router)
-    app.include_router(voice_router)
-    app.include_router(memory_router)
-    
-except Exception as e:
-    logger.error(f"Erreur lors du chargement des routers: {str(e)}")
-    raise
-
-
-
-
 
 """
 /////////////////////// ADMIN PAGE //////////////////////////////////////////////////////////////

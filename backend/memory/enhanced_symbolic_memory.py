@@ -121,44 +121,48 @@ Format attendu (JSON uniquement) :
         method_used = "local"
         result = {"entities": [], "relations": []}
         
-        # Si ChatGPT est activé, essayer d'abord cette méthode
         if self.is_chatgpt_enabled:
             try:
                 logger.info("Tentative d'extraction via ChatGPT")
-                result = await self.extract_entities_and_relations_with_chatgpt(text)
-                
-                # Vérifier si le résultat est valide et non vide
-                if result and result.get("entities") and len(result["entities"]) > 0:
+                response = await self._call_openai_api(prompt)
+
+                # Nettoyer les balises Markdown si présentes
+                if "```json" in response:
+                    response = response.split("```json")[1].split("```")[0].strip()
+                elif "```" in response:
+                    response = response.split("```")[1].strip()
+
+                try:
+                    parsed = json.loads(response)
+                    result["entities"] = parsed.get("entities", [])
+                    result["relations"] = parsed.get("relations", [])
+                except json.JSONDecodeError:
+                    logger.error("(Enhanced memory) Réponse OpenAI invalide ou non JSON")
+                    result["entities"] = []
+                    result["relations"] = []
+
+                if result["entities"]:
                     method_used = "chatgpt"
-                    logger.info(f"(Ehanced memory) Extraction réussie via ChatGPT: {len(result.get('entities', []))} entités, {len(result.get('relations', []))} relations")
+                    logger.info(f"(Ehanced memory) Extraction réussie via ChatGPT: {len(result['entities'])} entités, {len(result['relations'])} relations")
                 else:
                     logger.warning("(Ehanced memory) Extraction via ChatGPT vide ou invalide, fallback vers extraction locale")
+
             except Exception as e:
                 logger.error(f"(Ehanced memory) Erreur lors de l'extraction via ChatGPT, fallback vers extraction locale: {str(e)}")
+
         
         # Si ChatGPT n'est pas activé ou a échoué, utiliser l'extracteur local
-        if method_used == "local" or not result.get("entities") or not result.get("relations"):
+        # Si échec ou vide → fallback local
+        if method_used == "local" or not result.get("entities"):
             logger.info("(Ehanced memory) Utilisation de l'extracteur local")
-            
-            # Obtenir les entités via l'extracteur local
             local_entities = await self.base_memory.extract_entities_from_text(text, confidence)
-            
-            # Obtenir les relations via l'extracteur local
             local_relations = await self.base_memory.extract_relations_from_text(text, confidence)
-            
-            # Formater les résultats dans le même format que ChatGPT
-            result = {
-                "entities": local_entities,
-                "relations": local_relations
-            }
-            
-            method_used = "local"
+
+            result["entities"] = local_entities
+            result["relations"] = local_relations
             logger.info(f"(Ehanced memory) Extraction locale: {len(local_entities)} entités, {len(local_relations)} relations")
-        
-        # Journaliser la méthode utilisée
-        logger.info(f"(Ehanced memory) Méthode d'extraction utilisée: {method_used}")
+
         result["method_used"] = method_used
-        
         logger.info(f"🧪 (Ehanced memory) Méthode d'extraction utilisée : {method_used}")
         return result
     

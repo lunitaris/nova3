@@ -1368,3 +1368,114 @@ input:checked + .toggle-slider:before {
   background-color: #453a00;
   color: #ffd761;
 }
+
+
+/* --------------------------------------------------------------------------------------------------------------------------------------- */
+
+/* Styles pour l'éditeur de règles symboliques */
+#symbolic-rules-editor {
+  padding: var(--spacing-md);
+}
+
+.rules-tabs {
+  display: flex;
+  background-color: rgba(var(--primary-color-rgb), 0.1);
+  border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+  overflow: hidden;
+  margin-bottom: 0;
+}
+
+.rules-tabs .tab {
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.rules-tabs .tab:hover {
+  background-color: rgba(var(--primary-color-rgb), 0.2);
+}
+
+.rules-tabs .tab.active {
+  background-color: var(--primary-color);
+  color: var(--text-on-primary);
+}
+
+.tab-content {
+  background-color: var(--card-bg);
+  border-radius: 0 0 var(--border-radius-md) var(--border-radius-md);
+  box-shadow: var(--shadow-sm);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+  animation: fade-in 0.3s ease;
+}
+
+.rules-table {
+  margin-bottom: var(--spacing-md);
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.rules-table-content {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.rules-table-content th,
+.rules-table-content td {
+  padding: var(--spacing-sm);
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.rules-table-content th {
+  background-color: rgba(var(--text-muted-rgb), 0.1);
+  font-weight: 600;
+}
+
+.rules-table-content input[type="text"] {
+  width: 100%;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--input-bg);
+}
+
+.rules-table-content input[type="text"]:focus {
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+.rules-table-content .empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: var(--spacing-md);
+}
+
+.rules-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--spacing-md);
+}
+
+.help-text {
+  margin-bottom: var(--spacing-md);
+  color: var(--text-secondary);
+  font-size: var(--font-size-sm);
+}
+
+/* Thème sombre */
+[data-theme="dark"] .rules-tabs {
+  background-color: rgba(var(--text-muted-rgb), 0.2);
+}
+
+[data-theme="dark"] .rules-table-content th {
+  background-color: rgba(var(--text-muted-rgb), 0.2);
+}

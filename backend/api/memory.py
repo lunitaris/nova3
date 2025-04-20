@@ -7,6 +7,8 @@ import csv
 import io
 from enum import Enum
 from datetime import datetime
+import os
+import json
 
 from backend.config import config
 from backend.memory.synthetic_memory import synthetic_memory
@@ -421,7 +423,6 @@ async def get_entity_timeline(entity_id: str):
 
 ############################## API FOR SYMBLIC GRAPH #########################################
 
-
 @router.get("/graph")
 async def get_memory_graph(
     format: str = Query("d3", description="Format de sortie: d3, cytoscape"),
@@ -672,4 +673,119 @@ async def toggle_chatgpt_extraction(enable: bool = Body(...)):
         }
     except Exception as e:
         logger.error(f"Erreur lors de la modification de la configuration: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+
+####################################################################################################################################################
+########################################################    ROUTES POUR CONFIG DES RULES DU GRAPH SYMBOLIC  ###############################################
+##########################################################################################################################################################
+
+
+# Chemins des fichiers de règles (à ajouter)
+RULES_PATH = os.path.join(config.data_dir, "memories", "symbolic_rules.json")
+
+
+
+DEFAULT_RULES = {
+    "entity_aliases": {
+        "moi": "Maël",
+        # autres valeurs par défaut
+    },
+    "entity_types": {
+        "chat": "mode_de_communication",
+        # autres mappages de types
+    },
+    "relation_rewrites": {
+        "est": "est une instance de",
+        # autres réécritures
+    }
+}
+
+# Charger ou créer les règles
+def _load_symbolic_rules():
+    if os.path.exists(RULES_PATH):
+        try:
+            with open(RULES_PATH, 'r', encoding='utf-8') as f:
+                logger.info(f"Chargement des du fichier de rêgles du graph symbolic...")
+                return json.load(f)
+        except Exception as e:
+            logger.error(f"Erreur de chargement des règles: {str(e)}")
+    
+    # Si le fichier n'existe pas ou erreur, créer le fichier avec les valeurs par défaut
+    with open(RULES_PATH, 'w', encoding='utf-8') as f:
+        json.dump(DEFAULT_RULES, f, indent=2, ensure_ascii=False)
+    
+    return DEFAULT_RULES
+
+# Sauvegarder les règles
+def _save_symbolic_rules(rules):
+    try:
+        with open(RULES_PATH, 'w', encoding='utf-8') as f:
+            json.dump(rules, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        logger.error(f"Erreur de sauvegarde des règles: {str(e)}")
+        return False
+
+# Endpoint pour obtenir les règles
+@router.get("/symbolic_rules")
+async def get_symbolic_rules():
+    """
+    Récupère les règles de post-traitement du graphe symbolique.
+    """
+    try:
+        rules = _load_symbolic_rules()
+        return {
+            "status": "success",
+            "rules": rules
+        }
+    except Exception as e:
+        logger.error(f"Erreur lors de la récupération des règles: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+# Endpoint pour mettre à jour les règles
+@router.put("/symbolic_rules")
+async def update_symbolic_rules(rules: Dict[str, Any] = Body(...)):
+    """
+    Met à jour les règles de post-traitement du graphe symbolique.
+    """
+    try:
+        success = _save_symbolic_rules(rules)
+        if success:
+            # Notifier le module de mémoire symbolique pour qu'il recharge les règles
+            if hasattr(symbolic_memory, "reload_rules"):
+                symbolic_memory.reload_rules()
+            
+            return {
+                "status": "success",
+                "message": "Règles mises à jour avec succès"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Échec de la sauvegarde des règles")
+    except Exception as e:
+        logger.error(f"Erreur lors de la mise à jour des règles: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+# Endpoint pour réinitialiser les règles
+@router.post("/symbolic_rules/reset")
+async def reset_symbolic_rules():
+    """
+    Réinitialise les règles aux valeurs par défaut.
+    """
+    try:
+        success = _save_symbolic_rules(DEFAULT_RULES)
+        if success:
+            # Notifier le module de mémoire symbolique
+            if hasattr(symbolic_memory, "reload_rules"):
+                symbolic_memory.reload_rules()
+            
+            return {
+                "status": "success",
+                "message": "Règles réinitialisées aux valeurs par défaut"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Échec de la réinitialisation des règles")
+    except Exception as e:
+        logger.error(f"Erreur lors de la réinitialisation des règles: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")

@@ -32,33 +32,13 @@ class SymbolicMemory:
         self.storage_path = storage_path or os.path.join(config.data_dir, "memories", "symbolic_memory.json")
         self.memory_graph = self._load_graph()
         
-        # Structure: {
-        #   "entities": {
-        #     "entity_id": {
-        #       "name": "Entity Name",
-        #       "type": "person|place|device|concept",
-        #       "attributes": {"key": "value"},
-        #       "last_updated": "timestamp",
-        #       "valid_from": "timestamp",  # Nouveau
-        #       "valid_to": "timestamp",    # Nouveau
-        #       "confidence": 0.95,         # Nouveau
-        #       "history": [                # Nouveau
-        #         {"timestamp": "...", "old_value": {...}}
-        #       ]
-        #     }
-        #   },
-        #   "relations": [
-        #     {
-        #       "source": "entity_id1",
-        #       "relation": "relation_type",
-        #       "target": "entity_id2",
-        #       "confidence": 0.95,
-        #       "timestamp": "timestamp",
-        #       "valid_from": "timestamp",  # Nouveau
-        #       "valid_to": "timestamp"     # Nouveau
-        #     }
-        #   ]
-        # }
+        # Initialiser les règles
+        self.entity_aliases = {}
+        self.entity_types = {}
+        self.relation_rewrites = {}
+        self.reload_rules()  # Charger les règles dynamiquement
+    
+    
     
     def _load_graph(self) -> Dict[str, Any]:
         """Charge le graphe de connaissances existant."""
@@ -792,6 +772,33 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
         except Exception as e:
             logger.error(f"Erreur lors de la récupération du contexte du graphe: {str(e)}")
             return ""
+
+
+
+
+    def reload_rules(self):
+        """
+        Recharge les règles de post-traitement depuis le fichier de règles.
+        """
+        try:
+            rules_path = os.path.join(config.data_dir, "memories", "symbolic_rules.json")
+            if os.path.exists(rules_path):
+                with open(rules_path, 'r', encoding='utf-8') as f:
+                    rules = json.load(f)
+                    
+                    # Mettre à jour les règles en mémoire
+                    self.entity_aliases = rules.get("entity_aliases", {})
+                    self.entity_types = rules.get("entity_types", {})
+                    self.relation_rewrites = rules.get("relation_rewrites", {})
+                    
+                    logger.info("Règles symboliques rechargées avec succès")
+                    return True
+        except Exception as e:
+            logger.error(f"Erreur lors du rechargement des règles: {str(e)}")
+        
+        return False
+
+
 
 # Instance globale du gestionnaire de mémoire symbolique
 symbolic_memory = SymbolicMemory()
