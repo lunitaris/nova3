@@ -20,14 +20,17 @@ from backend.config import OPENAI_API_KEY
 
 
 def log_extraction_summary(method: str, entities: List[dict], relations: List[dict]):
+    """Log le résultat de l'extraction avec un identifiant unique pour le suivi"""
+    extract_id = f"extract_{int(time.time() * 1000) % 10000:04d}"
+    
     logger.info(f"""
-🧠 (Enhanced memory) Résultat extraction via {method.upper()} :
+🧠 [{extract_id}] Résultat extraction via {method.upper()} :
 • Entités extraites   : {len(entities)}
 • Relations extraites : {len(relations)}
 • Relations brutes    : {json.dumps(relations, ensure_ascii=False) if relations else "[]"}
 """.strip())
-
-
+    
+    return extract_id  # Retourner l'identifiant pour le traçage
 
 class EnhancedSymbolicMemory:
     """

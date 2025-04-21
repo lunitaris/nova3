@@ -15,6 +15,7 @@ from backend.memory.symbolic_memory import symbolic_memory
 from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory
 from backend.utils.profiler import profile
 import time
+from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
 
 
 logger = logging.getLogger(__name__)
@@ -103,10 +104,11 @@ class SmartContextRouter:
                 })
             except Exception as e:
                 logger.error(f"Erreur lors de l'envoi du message de début de streaming: {str(e)}")
-            
+
             # Appel avec streaming
             logger.info(f"[SmartRouter] Appel LLM final | complexité={complexity} | prompt:\n{prompt[:100]}...")
             response_text = await self.model_manager.generate_response(prompt=prompt,websocket=websocket,complexity=complexity, caller="smart_router")
+            
 
             llm_time = time.time() - llm_start
             logger.info("⚡ SmartRouter: réponse LLM générée en %.2f ms, taille=%d caractères", llm_time * 1000, len(response_text))
@@ -132,6 +134,8 @@ class SmartContextRouter:
             "mode": mode
         }
         
+
+
     async def _handle_memory_command(self, user_input: str, conversation_id: str, user_id: str, mode: str) -> Dict[str, Any]:
         """Traite les commandes de mémorisation explicites"""
         logger.info("💾 SmartRouter: traitement commande de mémorisation")
@@ -150,10 +154,11 @@ class SmartContextRouter:
             memory_id = self.synthetic_memory.remember_explicit_info(info_to_memorize)
             logger.info("📝 SmartRouter: mémorisation explicite - memory_id=%s", memory_id)
 
-            # Mise à jour du graphe symbolique (ne bloque pas la réponse)
-            asyncio.create_task(
-                self.symbolic_memory.update_graph_from_text(info_to_memorize)
-            )
+            # [COMMENTÉ] Cette ligne provoque des extractions multiples
+            # La mise à jour symbolique sera gérée par la conversation
+            # asyncio.create_task(
+            #     self.symbolic_memory.update_graph_from_text(info_to_memorize)
+            # )
             
             return {
                 "response": f"J'ai mémorisé cette information : \"{info_to_memorize}\"",
@@ -170,7 +175,8 @@ class SmartContextRouter:
                 "mode": mode,
                 "error": str(e)
             }
-    
+
+
 
 
     @profile("selective_context")
@@ -315,25 +321,28 @@ INSTRUCTIONS:
         base_prompt += "\nRÉPONSE:"
         
         return base_prompt
-    
-    async def _background_memory_processing(
-        self, user_input: str, user_id: str, response_text: str
-    ) -> None:
+
+
+    async def _background_memory_processing(self, user_input: str, user_id: str, response_text: str) -> None:
         """
         Traite la mémorisation en arrière-plan sans bloquer la réponse.
         Analyse et stocke les informations pertinentes pour un apprentissage continu.
         """
         try:
+            # Commenté pour éviter la duplication avec l'extraction de Conversation
+            # L'extraction symbolique est déjà gérée par la classe Conversation
             # 1. Mise à jour du graphe symbolique (si pertinent)
-            if len(user_input.split()) > 5:  # Ignorer les entrées très courtes
-                asyncio.create_task(
-                    self.symbolic_memory.update_graph_from_text(user_input, confidence=0.7)
-                )
+            # if len(user_input.split()) > 5:  # Ignorer les entrées très courtes
+            #     asyncio.create_task(
+            #         self.symbolic_memory.update_graph_from_text(user_input, confidence=0.7)
+            #     )
             
             # 2. D'autres traitements de mémoire peuvent être ajoutés ici
             # Par exemple, analyser le dialogue pour extraire des préférences utilisateur
             # ou mettre à jour un profile utilisateur, etc.
             
+            pass
+                
         except Exception as e:
             # Ne pas interrompre la réponse principale en cas d'erreur
             logger.error(f"Erreur dans le traitement mémoire en arrière-plan: {str(e)}")

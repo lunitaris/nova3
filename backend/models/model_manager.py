@@ -16,6 +16,9 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from backend.utils.profiler import profile
 from backend.utils.startup_log import add_startup_event
 import textwrap
+from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
+import asyncio  # <-- Ajout important !
+from typing import Dict, Any, Optional
 
 
 
@@ -302,6 +305,8 @@ class ModelManager:
                 from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
                 callback = StreamingWebSocketCallbackHandler(websocket)
                 response = await model.ainvoke(prompt, config={"callbacks": [callback]})
+                # Envoyer les tokens restants à la fin
+                await callback.flush_remaining_tokens()
                 return response.content
             else:
                 response = await model.ainvoke(prompt)
@@ -311,14 +316,31 @@ class ModelManager:
         if websocket:
             from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
             callback = StreamingWebSocketCallbackHandler(websocket)
+            callback.loop = asyncio.get_running_loop()  # Important: capturer la boucle courante
+            
             streamed_chunks = []
-            async for chunk in model.astream(prompt, config={"callbacks": [callback]}):
-                streamed_chunks.append(chunk)
-            return "".join(streamed_chunks)
+            try:
+                # Utiliser astream avec le callback
+                async for chunk in model.astream(prompt, config={"callbacks": [callback]}):
+                    streamed_chunks.append(chunk)
+                
+                # Vider les tokens restants à la fin du streaming
+                await callback.flush_remaining_tokens()
+                
+                return "".join(streamed_chunks)
+            except Exception as e:
+                logger.error(f"Erreur pendant le streaming: {str(e)}")
+                # En cas d'erreur, essayer de vider le buffer si possible
+                try:
+                    await callback.flush_remaining_tokens()
+                except:
+                    pass
+                # Fallback: continuer avec une génération non-streaming
+                return await model.ainvoke(prompt)
 
         # Si pas de WebSocket, réponse normale
         return await model.ainvoke(prompt)
- 
+
 
 # Instance globale du gestionnaire de modèles
 model_manager = ModelManager()

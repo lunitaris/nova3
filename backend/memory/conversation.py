@@ -39,6 +39,10 @@ class Conversation:
         self.conversation_id = conversation_id or str(uuid.uuid4())
         self.user_id = user_id
         self.messages = []
+
+        # Système de verrouillage pour éviter les extractions multiples
+        self._memory_extraction_locks = {}
+
         self.metadata = {
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
@@ -47,6 +51,7 @@ class Conversation:
             "topic": "general",
             "tags": []
         }
+        self._memory_extraction_locks = {}
 
 
         # Initialiser le gestionnaire de mémoire personnelle
@@ -109,6 +114,8 @@ class Conversation:
         except Exception as e:
             logger.error(f"Erreur lors de la sauvegarde de la conversation {self.conversation_id}: {str(e)}")
     
+
+
     def add_message(self, content: str, role: str = "user", metadata: Dict[str, Any] = None) -> Dict[str, Any]:
         """
         Ajoute un message à la conversation.
@@ -121,8 +128,9 @@ class Conversation:
         Returns:
             Le message ajouté
         """
+        message_id = str(uuid.uuid4())
         message = {
-            "id": str(uuid.uuid4()),
+            "id": message_id,
             "role": role,
             "content": content,
             "timestamp": datetime.now().isoformat(),
@@ -145,31 +153,52 @@ class Conversation:
         
         # Si c'est un message utilisateur, mettre à jour la mémoire symbolique
         if role == "user":
-            asyncio.create_task(self._update_enhanced_symbolic_memory(content))
+            # Passer l'ID du message pour le verrouillage
+            asyncio.create_task(self._update_enhanced_symbolic_memory(content, message_id))
         
         return message
 
     @profile("symbolic_update")
-    async def _update_enhanced_symbolic_memory(self, content: str):
+    async def _update_enhanced_symbolic_memory(self, content: str, message_id: str = None):
         """
         Met à jour la mémoire symbolique avec le contenu du message.
+        Utilise un verrouillage pour éviter les extractions multiples.
         
         Args:
             content: Contenu du message
+            message_id: ID du message pour le verrouillage
         """
         try:
             # Uniquement traiter les messages suffisamment longs
             if len(content.split()) < 5:
                 return
-                
-            logger.info(f"Mise à jour de la mémoire symbolique pour la conversation {self.conversation_id}")
-            update_stats = await enhanced_symbolic_memory.update_graph_from_text(content)
+
+            # Générer un ID de verrouillage basé sur le contenu si non fourni
+            lock_id = message_id or f"msg_{hash(content)}"
             
-            if update_stats.get("entities_added", 0) > 0 or update_stats.get("relations_added", 0) > 0:
-                logger.info(f"Graph mis à jour: {update_stats.get('entities_added', 0)} entités, {update_stats.get('relations_added', 0)} relations")
+            # Vérifier si ce message est déjà en cours de traitement
+            if lock_id in self._memory_extraction_locks:
+                logger.info(f"⏭️ Extraction symbolique déjà en cours pour message {lock_id[:10]}, ignorée")
+                return
+            
+            # Marquer comme en cours de traitement
+            self._memory_extraction_locks[lock_id] = True
+            
+            try:
+                logger.info(f"🔒 Mise à jour de la mémoire symbolique pour la conversation {self.conversation_id} (lock: {lock_id[:10]})")
+                update_stats = await enhanced_symbolic_memory.update_graph_from_text(content)
+                
+                if update_stats.get("entities_added", 0) > 0 or update_stats.get("relations_added", 0) > 0:
+                    logger.info(f"✅ Graph mis à jour: {update_stats.get('entities_added', 0)} entités, {update_stats.get('relations_added', 0)} relations")
+            finally:
+                # Toujours nettoyer le verrou, même en cas d'erreur
+                if lock_id in self._memory_extraction_locks:
+                    del self._memory_extraction_locks[lock_id]
+                    logger.debug(f"🔓 Verrou d'extraction libéré: {lock_id[:10]}")
         except Exception as e:
-            logger.error(f"Erreur lors de la mise à jour de la mémoire symbolique: {str(e)}")
-    
+            logger.error(f"❌ Erreur lors de la mise à jour de la mémoire symbolique: {str(e)}")
+
+
     async def _synthesize_old_messages(self):
         """Synthétise les messages anciens avant qu'ils ne soient supprimés."""
         try:
