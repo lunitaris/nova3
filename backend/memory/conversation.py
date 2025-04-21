@@ -5,6 +5,8 @@ import logging
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import asyncio
+import time
+
 
 from backend.config import config
 from backend.memory.synthetic_memory import synthetic_memory
@@ -16,6 +18,9 @@ from backend.memory.vector_store import vector_store
 from backend.memory.automatic_contextualizer import AutomaticMemoryContextualizer
 from backend.memory.personal_extractor import ConversationMemoryProcessor
 from backend.utils.profiler import profile
+from backend.memory.smart_router import smart_router
+
+
 
 logger = logging.getLogger(__name__)
 
@@ -491,63 +496,48 @@ class ConversationManager:
 
 
     @profile("process_input")
-    async def process_user_input(self, conversation_id: str, user_input: str, user_id: str = "anonymous", mode: str = "chat", websocket = None ) -> Dict[str, Any]:
+    async def process_user_input(self, conversation_id: str, user_input: str, user_id: str = "anonymous", mode: str = "chat", websocket = None) -> Dict[str, Any]:
+        """
+        Traite une entrée utilisateur avec pipeline optimisé utilisant le Smart Router.
+        """
+        logger.info("🔄 ConversationManager: traitement demande utilisateur - conv_id=%s", conversation_id)
         try:
+            start_time = time.time()
+            # Récupérer la conversation
             conversation = self.get_conversation(conversation_id, user_id)
-
-            # 🧠 Traitement mémoire (asynchrone, non bloquant)
-            asyncio.create_task(self.memory_processor.process_conversation_message(user_input, user_id))
-
-            # Ajouter le message utilisateur
+            logger.info("📋 ConversationManager: conversation récupérée - msg_count=%d", len(conversation.messages))
+            
+            # Ajouter le message utilisateur à l'historique
             conversation.add_message(user_input, role="user", metadata={"mode": mode})
+            logger.info("➕ ConversationManager: message utilisateur ajouté")
 
-            # ⚡️ Enrichir uniquement via mémoire symbolique (pas de vectoriel, plus rapide CPU)
-            symbolic_context = symbolic_memory.get_context_for_query(user_input, max_results=3)
-
-            # 🔀 Enrichissement synthétique (remplace l'historique brut, plus compact)
-            synthetic_context_blocks = synthetic_memory.get_relevant_memories(user_input)
-            synthetic_context = "\n\n".join([block["content"] for block in synthetic_context_blocks]) if synthetic_context_blocks else ""
-
-            # 🔗 Fusion contextes pour le prompt final
-            context = symbolic_context + ("\n\n" + synthetic_context if synthetic_context else "")
-
-            # 🎯 Instructions explicites de mémorisation (rappelle-toi...)
-            if user_input.lower().startswith("souviens-toi") or \
-               user_input.lower().startswith("rappelle-toi") or \
-               user_input.lower().startswith("mémorise"):
-
-                info_to_memorize = user_input.split(" ", 1)[1] if " " in user_input else ""
-                if info_to_memorize:
-                    memory_id = synthetic_memory.remember_explicit_info(info_to_memorize)
-                    asyncio.create_task(enhanced_symbolic_memory.update_graph_from_text(info_to_memorize))
-                    response_text = f"🌀 J'ai mémorisé cette information : \"{info_to_memorize}\""
-                else:
-                    response_text = "⚡️ Je n'ai pas compris ce que je dois mémoriser. Pourriez-vous reformuler?"
-
-            else:
-                @profile("llm_response")
-                async def _call_llm():
-                    return await langchain_manager.process_message(
-                        message=user_input,
-                        conversation_history=[],  # contexte remplacé par symbolique + synthétique
-                        websocket=websocket,
-                        mode=mode,
-                        additional_context=context
-                    )
-                response_text = await _call_llm()
-
-            # 🧠 Ajouter la réponse dans la conversation
-            conversation.add_message(response_text, role="assistant", metadata={"mode": mode})
+            
+            # Utiliser le Smart Router pour générer la réponse avec un seul appel LLM
+            router_start = time.time()
+            logger.info("🧭 ConversationManager: appel au SmartRouter")
+            result = await smart_router.process_request(
+                user_input=user_input, 
+                conversation_id=conversation_id,
+                user_id=user_id,
+                mode=mode,
+                websocket=websocket
+            )
+            router_time = time.time() - router_start
+            logger.info("⏱️ ConversationManager: SmartRouter a répondu en %.2f ms", router_time * 1000)
+            
+            # Ajouter la réponse à la conversation
+            conversation.add_message(result["response"], role="assistant", metadata={"mode": mode})
+            logger.info("💬 ConversationManager: réponse assistant ajoutée, taille=%d", len(result["response"]))
+            
+            # Générer un titre si c'est une nouvelle conversation
             if len(conversation.messages) <= 4 and not conversation.metadata.get("title"):
                 asyncio.create_task(conversation.generate_title())
+            
 
-            return {
-                "response": response_text,
-                "conversation_id": conversation.conversation_id,
-                "timestamp": datetime.now().isoformat(),
-                "mode": mode
-            }
+            total_time = time.time() - start_time
+            logger.info("✅ ConversationManager: requête complète traitée en %.2f ms", total_time * 1000)
 
+            return result
         except Exception as e:
             logger.error(f"Erreur lors du traitement de l'entrée utilisateur: {str(e)}")
             return {

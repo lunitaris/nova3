@@ -51,11 +51,16 @@ async def send_message(message: ChatMessage):
     """
     Envoie un message et reçoit une réponse.
     """
+    logger.info("📩 API: requête /send - mode=%s, conv_id=%s", message.mode, message.conversation_id)
     try:
+        start_time = time.time()
+        logger.info("🧠 API: initialisation mise à jour symbolique")
         # 1. Injecter le message dans la mémoire symbolique
         asyncio.create_task(symbolic_memory.update_graph_from_text(message.content))
 
 
+        process_start = time.time()
+        logger.info("⚙️ API: appel au ConversationManager.process_user_input")
         # 2. Puis traitement normal de la conversation
         response = await conversation_manager.process_user_input(
             conversation_id=message.conversation_id,
@@ -63,6 +68,10 @@ async def send_message(message: ChatMessage):
             user_id=message.user_id,
             mode=message.mode
         )
+        process_time = time.time() - process_start
+        logger.info("✅ API: réponse générée en %.2f secondes", process_time)
+        total_time = time.time() - start_time
+        logger.info("🏁 API: traitement total /send en %.2f secondes", total_time)
         
         return ChatResponse(**response)
     
@@ -186,14 +195,19 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
             try:
                 # Analyser le message JSON
                 message_data = json.loads(data)
-                logger.debug(f"Message WebSocket reçu: {message_data}")
+                logger.info("🔄 WebSocket: message reçu - client=%s", client_id)
+                logger.debug(f"🔄 WebSocket: message reçu {message_data}")
+
                 
                 # Extraire les informations
                 conversation_id = message_data.get("conversation_id")
                 content = message_data.get("content", "")
                 mode = message_data.get("mode", "chat")
                 user_id = message_data.get("user_id", "anonymous")
+                logger.info("🧠 WebSocket: traitement de la requête - conv_id=%s, len=%d", conversation_id, len(content))
                 
+
+                start_time = time.time()
                 if not content:
                     await websocket.send_json({
                         "type": "error",
@@ -283,6 +297,9 @@ Commence ta réponse maintenant :"""
                         "type": "error",
                         "content": f"Erreur: {str(e)}"
                     })
+
+                process_time = time.time() - start_time
+                logger.info("⏱️ WebSocket: requête traitée en %.2f secondes", process_time)
                 
             except json.JSONDecodeError:
                 logger.error(f"Format JSON invalide: {data}")
