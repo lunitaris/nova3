@@ -42,7 +42,7 @@ class AppConfig(BaseModel):
     debug: bool = os.getenv("DEBUG", "False").lower() in ("true", "1", "t")
     models: Dict[str, ModelConfig] = {
         "fast": ModelConfig(
-            name="gemma:2b",
+            name="zephyr",
             api_base="http://localhost:11434",
             type="local",
             priority=1,
@@ -68,16 +68,13 @@ class AppConfig(BaseModel):
             }
         ),
         "cloud_fallback": ModelConfig(
-            name="gpt-3.5-turbo",
-            api_base="https://api.openai.com/v1",
-            type="cloud",
-            priority=3,
-            latency_threshold=10.0,
-            context_window=16384,
-            parameters={
-                "temperature": 0.7,
-                "max_tokens": 2048
-            }
+            name="disabled",
+            api_base="http://localhost:0",
+            type="disabled",
+            priority=99,
+            latency_threshold=999.0,
+            context_window=0,
+            parameters={}
         )
     }
     voice: VoiceConfig = VoiceConfig()

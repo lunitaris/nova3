@@ -52,6 +52,11 @@ async def send_message(message: ChatMessage):
     Envoie un message et reçoit une réponse.
     """
     try:
+        # 1. Injecter le message dans la mémoire symbolique
+        asyncio.create_task(symbolic_memory.update_graph_from_text(message.content))
+
+
+        # 2. Puis traitement normal de la conversation
         response = await conversation_manager.process_user_input(
             conversation_id=message.conversation_id,
             user_input=message.content,
@@ -64,6 +69,7 @@ async def send_message(message: ChatMessage):
     except Exception as e:
         logger.error(f"Erreur lors du traitement du message: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur de traitement: {str(e)}")
+
 
 @router.get("/conversations", response_model=List[ConversationInfo])
 async def list_conversations(
@@ -209,7 +215,25 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 # Créer une version simplifiée de la génération avec streaming manuel
                 try:
                     # Préparer le prompt
-                    prompt = "Répondez de manière simple et concise: " + content
+                    prompt = f"""{content}
+
+Tu es une intelligence artificielle locale conçue pour assister un humain nommé Maël.
+
+Ta mission :
+- Fournir une réponse directe à chaque demande de Maël.
+- Ne répète jamais ce que Maël a dit.
+- Ne reformule pas ses phrases inutilement.
+- Sois claire, concise et efficace.
+- Adopte un ton oral naturel, adapté à une conversation vocale courte.
+- Ne t'étale pas : vise la brièveté sauf si plus de contexte est nécessaire.
+- Ne fais pas d’introduction, ni de résumé.
+- N’invente rien si tu ne sais pas : dis-le simplement.
+- Utilise un ton non formel, amical. Tutoie l'utilisateur qui te parle.
+
+Maël peut t’envoyer des informations sur lui-même. Tu dois les retenir mentalement si utile, mais ne pas les reformuler à voix haute.
+Langue : Réponds en français si Maël écrit en français.
+
+Commence ta réponse maintenant :"""
                     
                     # Utiliser le model manager pour obtenir le modèle adapté, mais sans streaming
                     model = model_manager._get_appropriate_model(prompt, "auto", None)

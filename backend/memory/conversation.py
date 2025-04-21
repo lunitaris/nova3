@@ -7,27 +7,15 @@ from datetime import datetime
 import asyncio
 
 from backend.config import config
-# Import complet des modules de mémoire
 from backend.memory.synthetic_memory import synthetic_memory
 from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory
 from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory as symbolic_memory
-
-
 from backend.models.model_manager import model_manager
 from backend.models.langchain_manager import langchain_manager
-
-
 from backend.memory.vector_store import vector_store
-from backend.models.model_manager import model_manager
-
 from backend.memory.automatic_contextualizer import AutomaticMemoryContextualizer
-
 from backend.memory.personal_extractor import ConversationMemoryProcessor
 from backend.utils.profiler import profile
-
-
-
-
 
 logger = logging.getLogger(__name__)
 
@@ -159,7 +147,8 @@ class Conversation:
             asyncio.create_task(self._update_enhanced_symbolic_memory(content))
         
         return message
-    
+
+    @profile("symbolic_update")
     async def _update_enhanced_symbolic_memory(self, content: str):
         """
         Met à jour la mémoire symbolique avec le contenu du message.
@@ -499,105 +488,74 @@ class ConversationManager:
         except Exception as e:
             logger.error(f"Erreur lors de la suppression de la conversation {conversation_id}: {str(e)}")
             return False
-    
-    @profile("process_input")   # profiler pour debug
+
+
+    @profile("process_input")
     async def process_user_input(self, conversation_id: str, user_input: str, user_id: str = "anonymous", mode: str = "chat", websocket = None ) -> Dict[str, Any]:
-        """
-        Traite l'entrée utilisateur et génère une réponse.
-        
-        Args:
-            conversation_id: ID de la conversation
-            user_input: Texte de l'entrée utilisateur
-            user_id: ID de l'utilisateur
-            mode: Mode de conversation ("chat" ou "voice")
-            websocket: WebSocket optionnel pour streaming
-            
-        Returns:
-            Réponse générée avec métadonnées
-        """
         try:
-            # Récupérer ou créer la conversation
             conversation = self.get_conversation(conversation_id, user_id)
 
-            # Traiter la mémoire personnelle
-            memory_results = await self.memory_processor.process_conversation_message(user_input, user_id)
-            
+            # 🧠 Traitement mémoire (asynchrone, non bloquant)
+            asyncio.create_task(self.memory_processor.process_conversation_message(user_input, user_id))
+
             # Ajouter le message utilisateur
             conversation.add_message(user_input, role="user", metadata={"mode": mode})
 
-            # Récupérer le contexte personnel pour enrichir le contexte
-            personal_context = await self.context_retriever.get_relevant_context(user_input, user_id)
-            
-            # Vérifier si c'est une demande de mémorisation explicite
+            # ⚡️ Enrichir uniquement via mémoire symbolique (pas de vectoriel, plus rapide CPU)
+            symbolic_context = symbolic_memory.get_context_for_query(user_input, max_results=3)
+
+            # 🔀 Enrichissement synthétique (remplace l'historique brut, plus compact)
+            synthetic_context_blocks = synthetic_memory.get_relevant_memories(user_input)
+            synthetic_context = "\n\n".join([block["content"] for block in synthetic_context_blocks]) if synthetic_context_blocks else ""
+
+            # 🔗 Fusion contextes pour le prompt final
+            context = symbolic_context + ("\n\n" + synthetic_context if synthetic_context else "")
+
+            # 🎯 Instructions explicites de mémorisation (rappelle-toi...)
             if user_input.lower().startswith("souviens-toi") or \
                user_input.lower().startswith("rappelle-toi") or \
                user_input.lower().startswith("mémorise"):
-                # Extraire l'information à mémoriser
+
                 info_to_memorize = user_input.split(" ", 1)[1] if " " in user_input else ""
-                
                 if info_to_memorize:
-                    # Stocker dans la mémoire explicite
                     memory_id = synthetic_memory.remember_explicit_info(info_to_memorize)
-                    
-                    # Mettre également à jour la mémoire symbolique
                     asyncio.create_task(enhanced_symbolic_memory.update_graph_from_text(info_to_memorize))
-                    
-                    # Réponse de confirmation
                     response_text = f"🌀 J'ai mémorisé cette information : \"{info_to_memorize}\""
                 else:
                     response_text = "⚡️ Je n'ai pas compris ce que je dois mémoriser. Pourriez-vous reformuler?"
-            
+
             else:
-                # Utiliser LangChain pour générer la réponse et Ajouter le contexte personnel au contexte de conversation
-                response_text = await langchain_manager.process_message(
-                    message=user_input,
-                    conversation_history=conversation.get_messages(max_messages=10),
-                    websocket=websocket,
-                    mode=mode,
-                    additional_context=enriched_context  # ← clé ici
-                )
+                @profile("llm_response")
+                async def _call_llm():
+                    return await langchain_manager.process_message(
+                        message=user_input,
+                        conversation_history=[],  # contexte remplacé par symbolique + synthétique
+                        websocket=websocket,
+                        mode=mode,
+                        additional_context=context
+                    )
+                response_text = await _call_llm()
 
-            # Déterminer si l'assistant doit mentionner qu'il a mémorisé quelque chose
-            should_acknowledge = await self.memory_processor.should_acknowledge_memory(memory_results)
-            
-            if should_acknowledge:
-                acknowledgment = self.memory_processor.get_memory_acknowledgment(memory_results)
-                if acknowledgment:
-                    response_text = f"{response_text} {acknowledgment}"
-        
-
-            # Ajouter la réponse à la conversation
+            # 🧠 Ajouter la réponse dans la conversation
             conversation.add_message(response_text, role="assistant", metadata={"mode": mode})
-            
-            # Si c'est une nouvelle conversation ou peu de messages, générer un titre
             if len(conversation.messages) <= 4 and not conversation.metadata.get("title"):
                 asyncio.create_task(conversation.generate_title())
-            
-            # Préparer la réponse
-            response = {
+
+            return {
                 "response": response_text,
                 "conversation_id": conversation.conversation_id,
                 "timestamp": datetime.now().isoformat(),
-                "mode": mode,
-                # Ajouter les statistiques de mémorisation aux métadonnées
-                "memory_stats": memory_results
+                "mode": mode
             }
-            
-            return response
-            
+
         except Exception as e:
             logger.error(f"Erreur lors du traitement de l'entrée utilisateur: {str(e)}")
-            
-            # Réponse d'erreur
-            error_response = {
+            return {
                 "response": "Je rencontre une difficulté à traiter votre demande. Pourriez-vous réessayer?",
                 "conversation_id": conversation_id,
                 "timestamp": datetime.now().isoformat(),
                 "mode": mode,
                 "error": str(e)
             }
-            
-            return error_response
 
-# Instance globale du gestionnaire de conversations
 conversation_manager = ConversationManager()

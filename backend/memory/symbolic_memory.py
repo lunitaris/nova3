@@ -7,11 +7,15 @@ import logging
 import time
 from typing import Dict, List, Any, Optional, Set, Tuple
 from datetime import datetime
+import re
+import unicodedata
 
 from backend.models.model_manager import model_manager
 from backend.utils.profiler import profile
 from backend.config import config
 from backend.utils.startup_log import add_startup_event
+from backend.memory.graph_postprocessor import postprocess_graph
+
 
 
 logger = logging.getLogger(__name__)
@@ -37,7 +41,8 @@ class SymbolicMemory:
         self.entity_types = {}
         self.relation_rewrites = {}
         self.reload_rules()  # Charger les règles dynamiquement
-    
+        print(f"[DEBUG] Graph path: {self.storage_path}")
+
     
     
     def _load_graph(self) -> Dict[str, Any]:
@@ -55,35 +60,64 @@ class SymbolicMemory:
                 add_startup_event("Graph mémoire symbolique initialisé vide (échec du chargement)")
                 return {"entities": {}, "relations": []}
         return {"entities": {}, "relations": []}
-    
+
+
     def _save_graph(self):
-        """Sauvegarde le graphe de connaissances."""
+        """Sauvegarde le graphe de connaissances avec post-traitement, en créant un backup."""
+
         try:
-            os.makedirs(os.path.dirname(self.storage_path), exist_ok=True)
-            with open(self.storage_path, 'w', encoding='utf-8') as f:
+            # 📍 1. Chemin de sauvegarde
+            path = self.storage_path
+
+            # 📦 2. Sauvegarde le fichier actuel si présent
+            if os.path.exists(path):
+                timestamp = datetime.now().strftime("%Y%m%d_%H%M")
+                backup_path = path.replace(".json", f"_backup_{timestamp}.json")
+                import shutil
+                shutil.copy2(path, backup_path)
+                logger.info(f"📦 Backup mémoire symbolique créé : {backup_path}")
+
+            # 🔄 3. Post-traitement
+            from backend.memory.graph_postprocessor import postprocess_graph
+            cleaned = postprocess_graph(self.memory_graph)
+            self.memory_graph = cleaned
+
+            # 💾 4. Écriture du fichier principal
+            os.makedirs(os.path.dirname(path), exist_ok=True)
+            with open(path, 'w', encoding='utf-8') as f:
                 json.dump(self.memory_graph, f, ensure_ascii=False, indent=2)
-            logger.debug("Graphe de connaissances sauvegardé")
+
+            logger.info("💾 Graphe symbolique sauvegardé avec succès (optimisé)")
+
         except Exception as e:
-            logger.error(f"Erreur lors de la sauvegarde du graphe de connaissances: {str(e)}")
-    
+            logger.error(f"❌ Erreur lors de la sauvegarde du graphe symbolique : {str(e)}")
+
+
     def _generate_entity_id(self, name: str) -> str:
         """
-        Génère un ID d'entité basé sur le nom.
-        
-        Args:
-            name: Nom de l'entité
-            
-        Returns:
-            ID de l'entité
+        Génère un ID stable et lisible basé sur le nom, sans timestamp.
+        Si l'ID existe déjà, ajoute un suffixe numérique.
         """
-        # Simplifier le nom pour l'ID (retirer accents, espaces, etc.)
-        import re
-        simple_name = re.sub(r'[^a-z0-9]', '_', name.lower())
-        timestamp = int(time.time() * 1000) % 10000  # Ajouter un timestamp pour éviter les collisions
-        return f"{simple_name}_{timestamp}"
+        name = unicodedata.normalize("NFD", name)
+        name = name.encode("ascii", "ignore").decode("utf-8")
+        # Nettoyer le nom (minuscule, accents retirés, alphanum uniquement)
+        base = re.sub(r'[^a-z0-9]', '_', name.lower())
+    
+
+        # S'assurer que l'ID est unique dans le graphe
+        entity_ids = set(self.memory_graph.get("entities", {}).keys())
+        entity_id = base
+        count = 1
+
+        while entity_id in entity_ids:
+            entity_id = f"{base}_{count}"
+            count += 1
+
+        return entity_id
     
     def add_entity(self, name: str, entity_type: str, attributes: Dict[str, Any] = None, 
-                  confidence: float = 0.9, valid_from: str = None, valid_to: str = None) -> str:
+                confidence: float = 0.9, valid_from: str = None, valid_to: str = None, batched: bool = False) -> str:
+
         """
         Ajoute une entité au graphe.
         
@@ -98,6 +132,7 @@ class SymbolicMemory:
         Returns:
             ID de l'entité ajoutée
         """
+        batched: bool = False
         try:
             # Si valid_from n'est pas spécifié, utiliser la date courante
             if valid_from is None:
@@ -137,7 +172,6 @@ class SymbolicMemory:
                 if valid_to:
                     self.memory_graph["entities"][existing_id]["valid_to"] = valid_to
                 
-                self._save_graph()
                 return existing_id
             
             # Créer une nouvelle entité
@@ -156,9 +190,13 @@ class SymbolicMemory:
             if valid_to:
                 self.memory_graph["entities"][entity_id]["valid_to"] = valid_to
             
-            self._save_graph()
-            logger.info(f"Entité ajoutée: {name} ({entity_id}) avec confiance {confidence:.2f}")
+            if not batched:
+                self._save_graph()
+                logger.info(f"Entité ajoutée: {name} ({entity_id}) avec confiance {confidence:.2f}")
+
             return entity_id
+            
+
             
         except Exception as e:
             logger.error(f"Erreur lors de l'ajout d'entité: {str(e)}")
@@ -181,7 +219,8 @@ class SymbolicMemory:
         return None
     
     def add_relation(self, source_id: str, relation: str, target_id: str, 
-                    confidence: float = 0.9, valid_from: str = None, valid_to: str = None) -> bool:
+                    confidence: float = 0.9, valid_from: str = None, valid_to: str = None, batched: bool = False) -> bool:
+
         """
         Ajoute une relation entre deux entités.
         
@@ -234,8 +273,9 @@ class SymbolicMemory:
                 
             self.memory_graph["relations"].append(new_relation)
             
-            self._save_graph()
-            logger.info(f"Relation ajoutée: {source_id} -{relation}-> {target_id} avec confiance {confidence:.2f}")
+            if not batched:
+                self._save_graph()
+                logger.info(f"Relation ajoutée: {source_id} -{relation}-> {target_id} avec confiance {confidence:.2f}")
             return True
             
         except Exception as e:
@@ -608,7 +648,8 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
                     entity_type=entity["type"],
                     confidence=entity.get("confidence", confidence),
                     valid_from=valid_from,
-                    valid_to=valid_to
+                    valid_to=valid_to,
+                    batched=True
                 )
                 if entity_id:
                     entity_ids[entity["name"]] = entity_id
@@ -643,7 +684,8 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
                         target_id=target_id, 
                         confidence=relation_confidence,
                         valid_from=valid_from, 
-                        valid_to=valid_to
+                        valid_to=valid_to,
+                        batched=True
                     )
                     
                     if success:
@@ -697,7 +739,9 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
             
             if failed_relations:
                 logger.warning(f"Échec d'ajout pour {len(failed_relations)} relations: {', '.join(failed_relations)}")
-                
+            
+            self._save_graph()
+
             return {
                 "entities_added": entities_added,
                 "relations_added": relations_added

@@ -37,16 +37,17 @@ class LangChainManager:
     
     def __init__(self):
         """Initialise le gestionnaire de chaînes LangChain."""
-        self.system_prompt = """Tu es un assistant IA local nommé Assistant. Tu es serviable, poli et informatif.
-Voici quelques règles que tu dois suivre:
-- Réponds de manière concise et précise aux questions.
-- Si tu ne connais pas la réponse, dis simplement que tu ne sais pas.
-- Utilise un langage simple et accessible, sauf si on te demande d'être plus technique.
-- N'invente pas d'informations.
-- Respecte les préférences de l'utilisateur.
-- Pour les commandes domotiques et les actions spécifiques, sois précis dans ta compréhension.
+        self.system_prompt = """Tu es une intelligence artificielle locale appelée Nova, conçue pour assister Maël dans son quotidien.
 
+Voici ce que tu sais sur Maël, ton utilisateur :
 {context}
+
+Voici tes instructions :
+- Réponds directement à ce qu’on te demande, sans reformuler ce que Maël a dit.
+- Ne redis pas ce que tu sais déjà, sauf si on te le demande.
+- Sois concise, pertinente et naturelle, comme une IA vocale intelligente.
+- Si tu ne sais pas, dis-le simplement, sans inventer.
+- Tu peux te baser sur le contexte symbolique pour enrichir ta réponse intelligemment.
 """
         self._init_memory_chains()
     
@@ -142,11 +143,14 @@ Format de réponse (JSON):
         
         try:
             # Utiliser un modèle rapide pour la détection d'intention
+
+            intent_prompt_filled = intent_prompt.replace("{query}", query)
+
             response = await model_manager.generate_response(
-                intent_prompt.replace("{query}", query),
-                complexity="low"
+                prompt=intent_prompt_filled,
+                complexity="balanced"
             )
-            
+
             # Extraire la partie JSON
             import json
             try:
@@ -201,6 +205,8 @@ Format de réponse (JSON):
             if additional_context:
                 # Ajouter le contexte personnel en début de contexte pour lui donner plus d'importance
                 context = f"{additional_context}\n\n{context}"
+                logger.debug(f"[CTX] Contexte personnel injecté:\n{additional_context}")
+                logger.debug(f"[CTX] Contexte combiné total:\n{context}")
             
             # 4. Déterminer la complexité requise selon l'intention et la longueur
             if mode == "voice" or intent_data["intent"] == "general":

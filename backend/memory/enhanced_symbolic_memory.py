@@ -35,6 +35,10 @@ class EnhancedSymbolicMemory:
         else:
             logger.warning("⚠️ Aucune clé API OpenAI configurée. L'extraction via ChatGPT ne sera pas disponible.")
 
+
+    def __getattr__(self, attr):
+        return getattr(self.base_memory, attr)
+
     @property
     def is_chatgpt_enabled(self) -> bool:
         enabled = (

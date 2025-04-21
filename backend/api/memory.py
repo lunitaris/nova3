@@ -18,6 +18,8 @@ import networkx as nx
 from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory
 from fastapi import Body
 from backend.utils.profiler import profile
+from backend.memory.graph_postprocessor import postprocess_graph
+
 
 
 logger = logging.getLogger(__name__)
@@ -794,3 +796,44 @@ async def reset_symbolic_rules():
     except Exception as e:
         logger.error(f"Erreur lors de la réinitialisation des règles: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
+
+
+##########################################################################################################################################
+# ALLOW POST FORMATAGE DU GRAPH SYMBOLIQUE
+
+entities = symbolic_memory.get_all_entities(include_expired=True)
+relations = symbolic_memory.get_all_relations(include_expired=True)
+# Avant le formatage final
+raw_graph = {
+    "entities": {e["entity_id"]: e for e in entities},
+    "relations": relations
+}
+
+# 🔧 Post-traitement avec les règles
+processed_graph = postprocess_graph(raw_graph)
+
+# Reformater avec D3
+if format == "d3":
+    result = _format_graph_d3(nx_from_graph(processed_graph))
+elif format == "cytoscape":
+    result = _format_graph_cytoscape(nx_from_graph(processed_graph))
+
+
+
+def nx_from_graph(graph: dict) -> nx.DiGraph:
+    G = nx.DiGraph()
+    for entity_id, entity in graph["entities"].items():
+        G.add_node(entity_id, **{
+            "label": entity["name"],
+            "type": entity["type"],
+            "attributes": entity.get("attributes", {}),
+            "confidence": entity.get("confidence", 0.0),
+            "group": _get_node_group(entity["type"])
+        })
+    for rel in graph["relations"]:
+        G.add_edge(rel["source"], rel["target"], **{
+            "label": rel["relation"],
+            "confidence": rel.get("confidence", 0.8),
+            "id": f"{rel['source']}_{rel['relation']}_{rel['target']}"
+        })
+    return G
