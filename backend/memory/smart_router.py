@@ -105,21 +105,16 @@ class SmartContextRouter:
                 logger.error(f"Erreur lors de l'envoi du message de début de streaming: {str(e)}")
             
             # Appel avec streaming
-            response_text = await self.model_manager.generate_response(
-                prompt=prompt,
-                websocket=websocket,
-                complexity=complexity
-            )
+            logger.info(f"[SmartRouter] Appel LLM final | complexité={complexity} | prompt:\n{prompt[:100]}...")
+            response_text = await self.model_manager.generate_response(prompt=prompt,websocket=websocket,complexity=complexity, caller="smart_router")
 
             llm_time = time.time() - llm_start
             logger.info("⚡ SmartRouter: réponse LLM générée en %.2f ms, taille=%d caractères", llm_time * 1000, len(response_text))
 
         else:
             # Appel sans streaming
-            response_text = await self.model_manager.generate_response(
-                prompt=prompt,
-                complexity=complexity
-            )
+            logger.info(f"[SmartRouter] Appel LLM final (sans streaming) | complexité={complexity} | prompt:\n{prompt[:100]}...")
+            response_text = await self.model_manager.generate_response(prompt=prompt,complexity=complexity, caller="smart_router")
         
         # 7. Déclencher une mémorisation asynchrone en arrière-plan
         asyncio.create_task(
@@ -207,10 +202,16 @@ class SmartContextRouter:
         context_parts = []
         sym_start = time.time()
         # Pour les questions, prioriser le contexte symbolique (plus rapide)
-        if has_question_format:
-            symbolic_context = self.symbolic_memory.get_context_for_query(user_input, max_results=3)
-            if symbolic_context:
-                context_parts.append(symbolic_context)
+        symbolic_context = ""
+        try:
+            if has_question_format:
+                symbolic_context = self.symbolic_memory.get_context_for_query(user_input, max_results=3)
+                if symbolic_context:
+                    context_parts.append(symbolic_context)
+        except Exception as e:
+            logger.warning(f"[SmartRouter] Erreur enrichissement symbolique: {e}")
+
+
         
         sym_time = time.time() - sym_start
         logger.info("🧩 SmartRouter: contexte symbolique obtenu en %.2f ms, taille=%d", 

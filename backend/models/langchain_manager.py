@@ -14,9 +14,6 @@ from langchain_core.runnables import RunnablePassthrough, RunnableLambda
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 
 from backend.models.model_manager import model_manager
-from backend.memory.vector_store import vector_store
-from backend.memory.synthetic_memory import synthetic_memory
-from backend.memory.symbolic_memory import symbolic_memory
 from backend.models.skills.manager import skills_manager
 from backend.config import config
 
@@ -56,49 +53,7 @@ Voici tes instructions :
         # logger.info("Initialisation des chaînes de mémoire")  ## DEBUG
         add_startup_event({"icon": "🧠", "label": "LangChain", "message": "chaînes conversationnelles prêtes"})
     
-    async def _get_relevant_context(self, query: str, conversation_history: List[Dict[str, Any]]) -> str:
-        """
-        Récupère le contexte pertinent à partir des mémoires.
-        
-        Args:
-            query: La requête ou le message actuel de l'utilisateur
-            conversation_history: L'historique récent de la conversation
-            
-        Returns:
-            Contexte formaté pour le prompt
-        """
-        try:
-            # Récupérer les souvenirs pertinents
-            vector_memories = vector_store.search_memories(query, k=3)
-            
-            # Récupérer les souvenirs synthétiques
-            synthetic_memories = synthetic_memory.get_relevant_memories(query, max_results=2)
-            
-            # Formater le contexte
-            context = "Informations issues de la mémoire:\n"
-            
-            if vector_memories:
-                context += "\nMémoire explicite:\n"
-                for i, memory in enumerate(vector_memories, 1):
-                    content = memory.get("content", "")
-                    timestamp = memory.get("timestamp", "")
-                    context += f"{i}. {content} (Mémorisé le: {timestamp})\n"
-            
-            if synthetic_memories:
-                context += "\nMémoire synthétique:\n"
-                for i, memory in enumerate(synthetic_memories, 1):
-                    content = memory.get("content", "")
-                    context += f"{i}. {content}\n"
-            
-            if not vector_memories and not synthetic_memories:
-                context += "Aucune information pertinente en mémoire pour cette requête.\n"
-            
-            return context
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la récupération du contexte mémoriel: {str(e)}")
-            return "Erreur d'accès à la mémoire."
-    
+
     def _format_conversation_history(self, messages: List[Dict[str, Any]]) -> List[Union[HumanMessage, AIMessage]]:
         """
         Formate l'historique de conversation pour LangChain.
@@ -118,65 +73,6 @@ Voici tes instructions :
                 formatted_messages.append(AIMessage(content=msg["content"]))
         
         return formatted_messages
-    
-    async def _detect_intent(self, query: str) -> Dict[str, Any]:
-        """
-        Détecte l'intention de l'utilisateur pour des commandes spécifiques.
-        
-        Args:
-            query: La requête de l'utilisateur
-            
-        Returns:
-            Informations sur l'intention détectée
-        """
-        # Schéma simple pour détecter les commandes domotiques, les rappels, etc.
-        intent_prompt = """Analyse la requête utilisateur et identifie si c'est une commande spécifique.
-Retourne une réponse au format JSON avec:
-- "intent": le type de commande ("domotique", "rappel", "recherche", "general", etc.)
-- "confidence": niveau de confiance entre 0 et 1
-- "entities": entités extraites de la requête (appareils, lieux, dates, etc.)
-
-Requête: {query}
-
-Format de réponse (JSON):
-"""
-        
-        try:
-            # Utiliser un modèle rapide pour la détection d'intention
-
-            intent_prompt_filled = intent_prompt.replace("{query}", query)
-
-            response = await model_manager.generate_response(
-                prompt=intent_prompt_filled,
-                complexity="balanced"
-            )
-
-            # Extraire la partie JSON
-            import json
-            try:
-                # Supprimer les backticks et identifiants de format potentiels
-                clean_response = response.replace("```json", "").replace("```", "").strip()
-                intent_data = json.loads(clean_response)
-                return intent_data
-            except json.JSONDecodeError:
-                logger.warning(f"Réponse d'intention non parsable: {response}")
-                return {
-                    "intent": "general",
-                    "confidence": 0.5,
-                    "entities": {}
-                }
-                
-        except Exception as e:
-            logger.error(f"Erreur lors de la détection d'intention: {str(e)}")
-            # Valeur par défaut
-            return {
-                "intent": "general",
-                "confidence": 0.3,
-                "entities": {}
-            }
-####################################################
-    #
-    #
 
 
     async def process_message( self, message: str, conversation_history: List[Dict[str, Any]], websocket=None, mode: str = "chat", additional_context: str = "") -> str:
@@ -194,29 +90,12 @@ Format de réponse (JSON):
             La réponse générée
         """
         try:
-            # 1. Détecter l'intention (pour traiter différemment selon le type de requête)
-            intent_data = await self._detect_intent(message)
-            logger.info(f"Intention détectée: {intent_data['intent']} (confiance: {intent_data['confidence']})")
-            
-            # 2. Récupérer le contexte depuis les mémoires
-            context = await self._get_relevant_context(message, conversation_history)
-            
-            # 3. Intégrer le contexte personnel s'il existe
-            if additional_context:
-                # Ajouter le contexte personnel en début de contexte pour lui donner plus d'importance
-                context = f"{additional_context}\n\n{context}"
-                logger.debug(f"[CTX] Contexte personnel injecté:\n{additional_context}")
-                logger.debug(f"[CTX] Contexte combiné total:\n{context}")
-            
-            # 4. Déterminer la complexité requise selon l'intention et la longueur
-            if mode == "voice" or intent_data["intent"] == "general":
-                complexity = "low" if len(message.split()) < 10 else "medium"
-            else:
-                complexity = "medium"
-            
-            # 5. Formater l'historique et le contexte
-            formatted_history = self._format_conversation_history(conversation_history[-5:])  # Limiter à 5 derniers messages
-            
+
+
+            context = additional_context
+            formatted_history = self._format_conversation_history(conversation_history)
+            complexity = "low" if mode == "voice" or len(message.split()) < 10 else "medium"
+
             # 6. Construire le prompt
             prompt = ChatPromptTemplate.from_messages([
                 ("system", self.system_prompt.replace("{context}", context)),
@@ -244,60 +123,6 @@ Format de réponse (JSON):
             logger.error(f"Erreur lors du traitement du message: {str(e)}")
             return "Je suis désolé, j'ai rencontré une erreur lors du traitement de votre demande. Pourriez-vous reformuler ou réessayer plus tard?"
 ##############
-    async def _get_relevant_context(self, query: str, conversation_history: List[Dict[str, Any]]) -> str:
-        """
-        Récupère le contexte pertinent à partir des mémoires.
-        
-        Args:
-            query: La requête ou le message actuel de l'utilisateur
-            conversation_history: L'historique récent de la conversation
-            
-        Returns:
-            Contexte formaté pour le prompt
-        """
-        try:
-            # Récupérer les souvenirs pertinents
-            vector_memories = vector_store.search_memories(query, k=3)
-            
-            # Récupérer les souvenirs synthétiques
-            synthetic_memories = synthetic_memory.get_relevant_memories(query, max_results=2)
-            
-            # Récupérer le contexte du graphe symbolique
-            symbolic_context = symbolic_memory.get_context_for_query(query, max_results=2)
-            
-            # Formater le contexte
-            context = "Informations issues de la mémoire:\n"
-            has_content = False
-            
-            if vector_memories:
-                context += "\nMémoire explicite:\n"
-                for i, memory in enumerate(vector_memories, 1):
-                    content = memory.get("content", "")
-                    timestamp = memory.get("timestamp", "")
-                    context += f"{i}. {content} (Mémorisé le: {timestamp})\n"
-                has_content = True
-            
-            if synthetic_memories:
-                context += "\nMémoire synthétique:\n"
-                for i, memory in enumerate(synthetic_memories, 1):
-                    content = memory.get("content", "")
-                    context += f"{i}. {content}\n"
-                has_content = True
-            
-            if symbolic_context:
-                context += "\nMémoire symbolique:\n"
-                context += symbolic_context + "\n"
-                has_content = True
-            
-            if not has_content:
-                context += "Aucune information pertinente en mémoire pour cette requête.\n"
-            
-            return context
-            
-        except Exception as e:
-            logger.error(f"Erreur lors de la récupération du contexte mémoriel: {str(e)}")
-            return "Erreur d'accès à la mémoire."
-
 
 
 # Instance globale du gestionnaire LangChain

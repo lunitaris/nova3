@@ -244,15 +244,8 @@ Limite-toi aux faits clairs et explicites.
             if not query:
                 query = memory_content
             
-            # Extraire des entités symboliques pertinentes pour le souvenir
-            entities = await self.symbolic_memory.extract_entities_from_text(memory_content)
-            
-            # Si aucune entité trouvée, essayer avec la requête
-            if not entities and query != memory_content:
-                entities = await self.symbolic_memory.extract_entities_from_text(query)
-            
-            if not entities:
-                return False
+            logger.warning("⏭️ Enrichissement symbolique désactivé (extraction d’entités supprimée)")
+            return False
             
             # Collecter les informations symboliques pertinentes
             symbolic_context = []

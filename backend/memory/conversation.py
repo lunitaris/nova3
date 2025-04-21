@@ -11,14 +11,13 @@ import time
 from backend.config import config
 from backend.memory.synthetic_memory import synthetic_memory
 from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory
-from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory as symbolic_memory
 from backend.models.model_manager import model_manager
 from backend.models.langchain_manager import langchain_manager
 from backend.memory.vector_store import vector_store
-from backend.memory.automatic_contextualizer import AutomaticMemoryContextualizer
 from backend.memory.personal_extractor import ConversationMemoryProcessor
 from backend.utils.profiler import profile
 from backend.memory.smart_router import smart_router
+
 
 
 
@@ -55,9 +54,6 @@ class Conversation:
             model_manager, vector_store, enhanced_symbolic_memory
         )
 
-        self.memory_contextualizer = AutomaticMemoryContextualizer(
-            model_manager, vector_store, enhanced_symbolic_memory
-        )
         
         # Chemin du fichier de conversation
         self.file_path = os.path.join(
@@ -219,8 +215,9 @@ class Conversation:
 Génère un titre court (5 mots maximum) qui résume le sujet principal de cette conversation.
 Réponds uniquement avec le titre, sans guillemets ni ponctuation supplémentaire."""
             
-            # Générer le titre avec un modèle léger
+            # Générer le titre avec un modèle léger ## AMELIORATION POSSIBLE
             title = await model_manager.generate_response(prompt, complexity="low")
+                
             
             # Nettoyer et limiter la longueur
             title = title.strip().strip('"\'').strip()
@@ -276,7 +273,9 @@ Génère un résumé concis (2-3 phrases) qui capture l'essence de cette convers
 Résumé:"""
             
             # Générer le résumé
-            summary = await model_manager.generate_response(prompt, complexity="medium")
+            if len(self.messages) > 4:
+                summary = await model_manager.generate_response(prompt, complexity="medium")
+
             
             # Mettre à jour et sauvegarder
             self.metadata["summary"] = summary
@@ -366,17 +365,6 @@ class ConversationManager:
         # C'EST ICI QU'IL FAUT AJOUTER LE CODE :
         # Initialiser le gestionnaire de mémoire personnelle
         self.memory_processor = ConversationMemoryProcessor(
-            model_manager, vector_store, enhanced_symbolic_memory
-        )
-
-
-        self.memory_contextualizer = AutomaticMemoryContextualizer(
-            model_manager, vector_store, enhanced_symbolic_memory
-        )
-
-    
-        # Initialiser le contextualiseur automatique
-        self.memory_contextualizer = AutomaticMemoryContextualizer(
             model_manager, vector_store, enhanced_symbolic_memory
         )
     

@@ -18,6 +18,17 @@ from backend.utils.profiler import profile
 logger = logging.getLogger(__name__)
 from backend.config import OPENAI_API_KEY
 
+
+def log_extraction_summary(method: str, entities: List[dict], relations: List[dict]):
+    logger.info(f"""
+🧠 (Enhanced memory) Résultat extraction via {method.upper()} :
+• Entités extraites   : {len(entities)}
+• Relations extraites : {len(relations)}
+• Relations brutes    : {json.dumps(relations, ensure_ascii=False) if relations else "[]"}
+""".strip())
+
+
+
 class EnhancedSymbolicMemory:
     """
     Extension du gestionnaire de mémoire symbolique avec intégration ChatGPT optionnelle.
@@ -122,9 +133,9 @@ Format attendu (JSON uniquement) :
 }
 ```"""
         prompt = prompt_template.replace("{text}", text)
-        method_used = "local"
         result = {"entities": [], "relations": []}
-        
+        method_used = "local"  # valeur par défaut
+
         if self.is_chatgpt_enabled:
             try:
                 logger.info("Tentative d'extraction via ChatGPT")
@@ -136,39 +147,24 @@ Format attendu (JSON uniquement) :
                 elif "```" in response:
                     response = response.split("```")[1].strip()
 
-                try:
-                    parsed = json.loads(response)
-                    result["entities"] = parsed.get("entities", [])
-                    result["relations"] = parsed.get("relations", [])
-                except json.JSONDecodeError:
-                    logger.error("(Enhanced memory) Réponse OpenAI invalide ou non JSON")
-                    result["entities"] = []
-                    result["relations"] = []
-
-                if result["entities"]:
-                    method_used = "chatgpt"
-                    logger.info(f"(Ehanced memory) Extraction réussie via ChatGPT: {len(result['entities'])} entités, {len(result['relations'])} relations")
-                else:
-                    logger.warning("(Ehanced memory) Extraction via ChatGPT vide ou invalide, fallback vers extraction locale")
+                parsed = json.loads(response)
+                result["entities"] = parsed.get("entities", [])
+                result["relations"] = parsed.get("relations", [])
+                method_used = "chatgpt"  # ✅ on note le succès ici
 
             except Exception as e:
                 logger.error(f"(Ehanced memory) Erreur lors de l'extraction via ChatGPT, fallback vers extraction locale: {str(e)}")
 
-        
-        # Si ChatGPT n'est pas activé ou a échoué, utiliser l'extracteur local
-        # Si échec ou vide → fallback local
-        if method_used == "local" or not result.get("entities"):
-            logger.info("(Ehanced memory) Utilisation de l'extracteur local")
-            local_entities = await self.base_memory.extract_entities_from_text(text, confidence)
-            local_relations = await self.base_memory.extract_relations_from_text(text, confidence)
-
-            result["entities"] = local_entities
-            result["relations"] = local_relations
-            logger.info(f"(Ehanced memory) Extraction locale: {len(local_entities)} entités, {len(local_relations)} relations")
+        # Fallback local (non implémenté)
+        if method_used != "chatgpt" or not result.get("entities"):
+            logger.warning("(Ehanced memory) Extraction locale désactivée — aucune entité/relation extraite")
+            result["entities"] = []
+            result["relations"] = []
+            method_used = "local"
 
         result["method_used"] = method_used
-        logger.info(f"🧪 (Ehanced memory) Méthode d'extraction utilisée : {method_used}")
         return result
+
     
     async def update_graph_from_text(self, text: str, confidence: float = 0.7, valid_from: str = None, valid_to: str = None) -> Dict[str, int]:
         """
@@ -215,7 +211,6 @@ Format attendu (JSON uniquement) :
             
             # Traiter les relations extraites
             relations_added = 0
-            logger.info(f"📡 (Ehanced memory) Relations reçues de l'extracteur : {extraction_result.get('relations', [])}")
             for relation in extraction_result.get("relations", []):
                 source_name = relation.get("source")
                 target_name = relation.get("target")
@@ -263,6 +258,7 @@ Format attendu (JSON uniquement) :
                     if success:
                         relations_added += 1
             
+            log_extraction_summary(method_used, extraction_result.get("entities", []), extraction_result.get("relations", []))
             return {
                 "entities_added": entities_added,
                 "relations_added": relations_added,

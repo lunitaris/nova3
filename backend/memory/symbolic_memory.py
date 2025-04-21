@@ -451,180 +451,12 @@ class SymbolicMemory:
             logger.error(f"Erreur lors de la récupération de l'historique de l'entité {entity_id}: {str(e)}")
             return []
     
-    async def extract_entities_from_text(self, text: str, confidence: float = 0.7) -> List[Dict[str, Any]]:
-        """
-        Extrait des entités d'un texte pour enrichir le graphe.
-        
-        Args:
-            text: Texte à analyser
-            confidence: Niveau de confiance par défaut pour les entités extraites
-            
-        Returns:
-            Liste des entités extraites
-        """
-        try:
-            # Utiliser le LLM pour extraire les entités
-            prompt = f"""Extrait les entités suivantes du texte:
-- Personnes
-- Lieux
-- Objets/Appareils
-- Concepts
-
-Texte: {text}
-
-Retourne les résultats au format JSON avec les clés "persons", "places", "devices", "concepts", chacune contenant une liste d'entités.
-"""
-            
-            response = await model_manager.generate_response(prompt, complexity="low")
-            
-            try:
-                # Nettoyer la réponse
-                clean_response = response.replace("```json", "").replace("```", "").strip()
-                # Charger le JSON
-                entities_data = json.loads(clean_response)
-                
-                extracted_entities = []
-                
-                # Traiter chaque type d'entité
-                for entity_type, entities in entities_data.items():
-                    type_mapping = {
-                        "persons": "person",
-                        "places": "place",
-                        "devices": "device",
-                        "concepts": "concept"
-                    }
-                    
-                    mapped_type = type_mapping.get(entity_type, "unknown")
-                    
-                    for entity in entities:
-                        if isinstance(entity, str) and entity.strip():
-                            extracted_entities.append({
-                                "name": entity.strip(),
-                                "type": mapped_type,
-                                "confidence": confidence
-                            })
-                
-                return extracted_entities
-                
-            except json.JSONDecodeError:
-                logger.warning(f"Réponse non parsable: {response}")
-                return []
-                
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction d'entités: {str(e)}")
-            return []
-    
-
-
-
-
-    async def extract_relations_from_text(self, text: str, confidence: float = 0.7) -> List[Dict[str, Any]]:
-        """
-        Extrait des relations d'un texte pour enrichir le graphe.
-        
-        Args:
-            text: Texte à analyser
-            confidence: Niveau de confiance par défaut pour les relations extraites
-            
-        Returns:
-            Liste des relations extraites
-        """
-        try:
-            # Extraire d'abord les entités
-            entities = await self.extract_entities_from_text(text)
-            
-            if not entities:
-                return []
-            
-            # Construire un prompt pour extraire les relations
-            entities_list = "\n".join([f"- {entity['name']} ({entity['type']})" for entity in entities])
-            
-            # CORRECTION : Échapper les accolades dans l'exemple JSON
-            prompt = f"""Identifie les relations entre ces entités extraites du texte:
-    {entities_list}
-
-    Texte original: {text}
-
-    Retourne une liste de relations au format JSON sous forme de tableau où chaque élément contient:
-    - "source": nom de l'entité source
-    - "relation": type de relation (possède, est situé à, aime, connaît, etc.)
-    - "target": nom de l'entité cible
-    - "confidence": niveau de confiance (0.0 à 1.0)
-
-    Retourne UNIQUEMENT le tableau JSON, sans aucun texte d'explication avant ou après.
-    Exemple: [{{"source": "Jean", "relation": "possède", "target": "voiture", "confidence": 0.9}}]
-
-    Ne crée des relations que si elles sont clairement exprimées dans le texte.
-    """
-            
-            response = await model_manager.generate_response(prompt, complexity="medium")
-            
-            try:
-                # Nettoyer la réponse
-                import re
-                json_match = re.search(r'(\[.*?\])', response, re.DOTALL)
-                
-                if not json_match:
-                    logger.warning(f"Aucun JSON trouvé dans la réponse: {response}")
-                    return []
-                
-                clean_response = json_match.group(1)
-                
-                # Nettoyage supplémentaire
-                clean_response = clean_response.replace("'", '"')  # Remplacer les apostrophes par des guillemets
-                clean_response = re.sub(r',\s*]', ']', clean_response)  # Supprimer les virgules finales
-                
-                # Log pour le debug
-                logger.debug(f"JSON nettoyé avant parsing: {clean_response}")
-                
-                # Essai de parsing
-                try:
-                    relations_data = json.loads(clean_response)
-                    
-                    # Vérification des données
-                    valid_relations = []
-                    for relation in relations_data:
-                        if all(k in relation for k in ['source', 'relation', 'target']):
-                            # S'assurer que confidence est un float
-                            if 'confidence' not in relation:
-                                relation['confidence'] = confidence
-                            else:
-                                try:
-                                    relation['confidence'] = float(relation['confidence'])
-                                except:
-                                    relation['confidence'] = confidence
-                            
-                            valid_relations.append(relation)
-                    
-                    return valid_relations
-                    
-                except json.JSONDecodeError as e:
-                    logger.warning(f"Erreur JSON: {e}, Réponse: {clean_response}")
-                    
-                    # Tentative de récupération avec ast.literal_eval
-                    import ast
-                    try:
-                        relations_data = ast.literal_eval(clean_response)
-                        logger.info(f"Récupération réussie avec ast.literal_eval - {len(relations_data)} relations trouvées")
-                        return relations_data
-                    except:
-                        logger.warning(f"Échec de la récupération avec ast.literal_eval")
-                        return []
-                    
-            except Exception as e:
-                logger.warning(f"Réponse de relations non parsable: {response}\nErreur: {str(e)}")
-                return []
-                
-        except Exception as e:
-            logger.error(f"Erreur lors de l'extraction de relations: {str(e)}")
-            return []
-
-
 
 
     async def update_graph_from_text(self, text: str, confidence: float = 0.7, valid_from: str = None, valid_to: str = None) -> Dict[str, int]:
         """
-        Met à jour le graphe de connaissances à partir d'un texte.
+        (Méthode désactivée) Anciennement utilisée pour enrichir le graphe à partir d’un texte via LLM local.
+
         
         Args:
             text: Texte à analyser
@@ -637,7 +469,11 @@ Retourne les résultats au format JSON avec les clés "persons", "places", "devi
         """
         try:
             # 1. Extraire les entités et les ajouter au graphe
-            extracted_entities = await self.extract_entities_from_text(text, confidence=confidence)
+            logger.warning("⏭️ extract_entities_from_text désactivé (LLM call supprimé)")
+            return {
+                "entities_added": 0,
+                "relations_added": 0
+            }
             
             entity_ids = {}
             entities_added = 0

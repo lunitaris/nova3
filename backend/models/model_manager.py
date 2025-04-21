@@ -15,7 +15,7 @@ from backend.config import OPENAI_API_KEY
 from langchain_core.callbacks.base import BaseCallbackHandler
 from backend.utils.profiler import profile
 from backend.utils.startup_log import add_startup_event
-
+import textwrap
 
 
 
@@ -69,22 +69,7 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
             self.is_active = False
             logger.error(f"Impossible d'envoyer un token via WebSocket: {str(e)}")
             # Ne pas lever l'exception pour ne pas interrompre la génération
-    
-    async def _send_token(self, token: str):
-        """Envoie un token via WebSocket."""
-        if not self.websocket or not self.is_active:
-            return
-            
-        try:
-            # Envoyer le token
-            await self.websocket.send_json({
-                "type": "token",
-                "content": token
-            })
-            logger.debug(f"Token envoyé: '{token}'")
-        except Exception as e:
-            self.is_active = False
-            logger.error(f"Échec d'envoi de token: {str(e)}")
+
 
     async def _send_token(self, token: str):
         """Envoie un token via WebSocket."""
@@ -209,16 +194,18 @@ class ModelManager:
             else:
                 model_id = "balanced"  # Par défaut pour complexité moyenne
         
+        
         # Si le modèle n'est pas disponible, fallback
         if model_id not in self.models:
             available_models = list(self.models.keys())
             if not available_models:
                 raise ValueError("Aucun modèle disponible")
             
+            logger.info(f"[LLM] 1.....Modèle sélectionné : {model_id}")
             # Utiliser le premier modèle disponible
-            model_id = available_models[0]
-            logger.warning(f"Modèle {model_id} non disponible, utilisation de {model_id}")
-        
+            model_id = available_models[0]        
+
+        logger.info(f"[ModelManager] Modèle sélectionné : {model_id}")
         # Pour OpenAI, créer une nouvelle instance à chaque fois avec streaming si nécessaire
         if model_id == "cloud_fallback":
             model_config = config.models[model_id]
@@ -243,14 +230,8 @@ class ModelManager:
             model.callbacks.append(StreamingWebSocketCallbackHandler(websocket))
         return model
     
-    async def generate_response(
-        self, 
-        prompt: str, 
-        websocket=None, 
-        complexity: str = "auto",
-        max_retries: int = 2,
-        retry_delay: int = 1
-    ) -> str:
+    @profile("generate_response")
+    async def generate_response(self, prompt: str, websocket=None, complexity: str = "auto",max_retries: int = 2,retry_delay: int = 1,caller: str = "unknown") -> str:
         """
         Génère une réponse à partir du prompt.
         
@@ -264,36 +245,37 @@ class ModelManager:
         Returns:
             Texte généré
         """
+        logger.debug(f"[DEBUG] Prompt complet envoyé au LLM:\n{prompt}")
+        logger.info(f"[DEBUG] Longueur du prompt : {len(prompt)} caractères")
         retries = 0
+
+        logger.info(textwrap.dedent(f"""
+        🧠 Appel LLM via generate_response()
+        • Complexité       : {complexity}
+        • Max tokens       : {model_config.parameters.get("max_tokens", "?" ) if 'model_config' in locals() else "?"}
+        • WebSocket actif  : {"oui" if websocket else "non"}
+        • Prompt (début)   : {repr(prompt[:120])}...
+        """))
+
         
         while retries <= max_retries:
             try:
                 start_time = time.time()
-                
+                safe_prompt = prompt[:200].replace('\n', ' ')
+                logger.info(f"[ModelManager] ➤ Prompt envoyé (complexité={complexity}) : {safe_prompt}...")
+                 
                 # Sélectionner le modèle approprié
                 model = self._get_appropriate_model(prompt, complexity, websocket)
                 
                 # Générer la réponse
-                if isinstance(model, ChatOpenAI):
-                    # Pour ChatOpenAI, utiliser le format de messages
-                    from langchain_core.messages import HumanMessage
-                    messages = [HumanMessage(content=prompt)]
-                    if websocket:
-                        response = await model.agenerate([messages])
-                        return response.generations[0][0].text
-                    else:
-                        logger.debug(f"[GEN] Using model: {model}")
-                        response = await model.ainvoke(messages)
-                        return response.content
-                else:
-                    # Pour les autres modèles (Ollama)
-                    response = await model.ainvoke(prompt)
-                    
+                logger.info(f"[ModelManager] Prompt word count : {len(prompt.split())}")
+                response = await self._generate_from_model(model, prompt, websocket)
                 elapsed_time = time.time() - start_time
                 logger.info(f"Réponse générée en {elapsed_time:.2f}s")
                 
                 # Nettoyer la réponse
                 response = response.strip()
+                logger.info(f"[ModelManager] ✅ Réponse générée - taille: {len(response)} caractères")
                 return response
                 
             except Exception as e:
@@ -308,6 +290,35 @@ class ModelManager:
                     error_msg = f"Erreur lors de la génération de réponse après {max_retries+1} tentatives."
                     logger.error(error_msg)
                     return "Désolé, je rencontre des difficultés techniques. Pourriez-vous reformuler ou réessayer plus tard?"
+
+
+    @profile("llm_generation")
+    async def _generate_from_model(self, model, prompt, websocket):
+        """Génère la réponse avec le modèle spécifié."""
+
+        # Si modèle OpenAI → logique actuelle conservée
+        if isinstance(model, ChatOpenAI):
+            if websocket:
+                from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
+                callback = StreamingWebSocketCallbackHandler(websocket)
+                response = await model.ainvoke(prompt, config={"callbacks": [callback]})
+                return response.content
+            else:
+                response = await model.ainvoke(prompt)
+                return response.content
+
+        # ✅ PATCH OLLAMA STREAMING
+        if websocket:
+            from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
+            callback = StreamingWebSocketCallbackHandler(websocket)
+            streamed_chunks = []
+            async for chunk in model.astream(prompt, config={"callbacks": [callback]}):
+                streamed_chunks.append(chunk)
+            return "".join(streamed_chunks)
+
+        # Si pas de WebSocket, réponse normale
+        return await model.ainvoke(prompt)
+ 
 
 # Instance globale du gestionnaire de modèles
 model_manager = ModelManager()

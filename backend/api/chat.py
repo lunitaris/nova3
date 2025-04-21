@@ -6,6 +6,7 @@ import json
 import logging
 import asyncio
 from datetime import datetime
+import time
 
 
 import os
@@ -58,7 +59,6 @@ async def send_message(message: ChatMessage):
         # 1. Injecter le message dans la mémoire symbolique
         asyncio.create_task(symbolic_memory.update_graph_from_text(message.content))
 
-
         process_start = time.time()
         logger.info("⚙️ API: appel au ConversationManager.process_user_input")
         # 2. Puis traitement normal de la conversation
@@ -66,7 +66,8 @@ async def send_message(message: ChatMessage):
             conversation_id=message.conversation_id,
             user_input=message.content,
             user_id=message.user_id,
-            mode=message.mode
+            mode=message.mode,
+            websocket=None  # Pas de streaming pour l'API REST
         )
         process_time = time.time() - process_start
         logger.info("✅ API: réponse générée en %.2f secondes", process_time)
@@ -78,7 +79,6 @@ async def send_message(message: ChatMessage):
     except Exception as e:
         logger.error(f"Erreur lors du traitement du message: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur de traitement: {str(e)}")
-
 
 @router.get("/conversations", response_model=List[ConversationInfo])
 async def list_conversations(
@@ -226,70 +226,24 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 conversation = conversation_manager.get_conversation(conversation_id, user_id)
                 message = conversation.add_message(content, role="user", metadata={"mode": mode})
                 
+                
                 # Créer une version simplifiée de la génération avec streaming manuel
+                logger.info("🔄 WebSocket: utilisation du SmartRouter avec streaming")
                 try:
-                    # Préparer le prompt
-                    prompt = f"""{content}
-
-Tu es une intelligence artificielle locale conçue pour assister un humain nommé Maël.
-
-Ta mission :
-- Fournir une réponse directe à chaque demande de Maël.
-- Ne répète jamais ce que Maël a dit.
-- Ne reformule pas ses phrases inutilement.
-- Sois claire, concise et efficace.
-- Adopte un ton oral naturel, adapté à une conversation vocale courte.
-- Ne t'étale pas : vise la brièveté sauf si plus de contexte est nécessaire.
-- Ne fais pas d’introduction, ni de résumé.
-- N’invente rien si tu ne sais pas : dis-le simplement.
-- Utilise un ton non formel, amical. Tutoie l'utilisateur qui te parle.
-
-Maël peut t’envoyer des informations sur lui-même. Tu dois les retenir mentalement si utile, mais ne pas les reformuler à voix haute.
-Langue : Réponds en français si Maël écrit en français.
-
-Commence ta réponse maintenant :"""
+                    # Utiliser le même pipeline optimisé que /send
+                    result = await conversation_manager.process_user_input(
+                        conversation_id=conversation_id,
+                        user_input=content,
+                        user_id=user_id,
+                        mode=mode,
+                        websocket=websocket  # Passer le websocket pour permettre le streaming
+                    )
                     
-                    # Utiliser le model manager pour obtenir le modèle adapté, mais sans streaming
-                    model = model_manager._get_appropriate_model(prompt, "auto", None)
-                    
-                    # Générer la réponse complète sans streaming
-                    @profile("llm_ainvoke")
-                    async def _call_llm(m, p):
-                        return await m.ainvoke(p)
-                    response_text = await _call_llm(model, prompt)
-                    
-                    # Simuler le streaming en envoyant des tokens manuellement
-                    last_sent = 0
-                    token_size = 5  # Envoyer 5 caractères à la fois
-                    
-                    while last_sent < len(response_text):
-                        # Extraire le prochain "token"
-                        end = min(last_sent + token_size, len(response_text))
-                        token = response_text[last_sent:end]
-                        last_sent = end
-                        
-                        # Envoyer le token
-                        await websocket.send_json({
-                            "type": "token",
-                            "content": token
-                        })
-                        
-                        # Pause pour simuler le streaming naturel
-                        await asyncio.sleep(0.1)
-                    
-                    # Ajouter la réponse à la conversation
-                    conversation.add_message(response_text, role="assistant", metadata={"mode": mode})
-                    
-                    # Envoyer le message de fin
-                    await websocket.send_json({
-                        "type": "end",
-                        "content": response_text,
-                        "conversation_id": conversation.conversation_id,
-                        "timestamp": datetime.now().isoformat()
-                    })
+                    # Pas besoin d'ajouter manuellement la réponse car process_user_input le fait déjà
+                    # Pas besoin d'envoyer le message de fin car le SmartRouter s'en charge
                     
                 except Exception as e:
-                    logger.error(f"Erreur lors de la génération: {str(e)}")
+                    logger.error(f"Erreur lors du traitement via SmartRouter: {str(e)}")
                     import traceback
                     logger.error(traceback.format_exc())
                     
