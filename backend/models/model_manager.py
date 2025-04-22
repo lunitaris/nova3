@@ -33,45 +33,47 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
         self.websocket = websocket
         self.is_active = True
         self.sending = False  # ← AJOUTE CETTE VARIABLE POUR CASSER LA BOUCLE
+        # AJOUT POUR OPTIMISATION DE STREAMING
+        self.tokens_buffer = []
+        self.last_send_time = time.time()  # 🔧 Pour déclenchement par intervalle
+        self.batch_size = 5  # 🔧 Nombre de tokens avant envoi
+    
         
     def on_llm_new_token(self, token: str, **kwargs) -> None:
-        """Appelé à chaque nouveau token généré par le LLM."""
         if not self.websocket or not self.is_active:
             return
-            
+
         try:
-            # La solution la plus simple : stocker les tokens et laisser le message de fin les envoyer
-            # Cette approche contourne le problème de boucle d'événements
-            
-            # Logger le token pour le débogage
-            logger.debug(f"Token généré: '{token}'")
-            
-            # Envoyer le token de façon synchrone (solution de contournement)
-            try:
-                import asyncio
-                loop = asyncio.get_event_loop()
-            except RuntimeError:
-                # Si pas de boucle d'événements, en créer une nouvelle
-                loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(loop)
-            
-            # Utiliser une approche qui ne bloque pas
-            if not loop.is_running():
-                # Exécuter directement si la boucle n'est pas en cours d'exécution
-                fut = asyncio.run_coroutine_threadsafe(self._send_token(token), loop)
-                # Attendre avec un court timeout
-                try:
-                    fut.result(timeout=0.1)
-                except:
-                    pass  # Ignorer les timeouts
-            else:
-                # Si la boucle est en cours d'exécution, planifier pour plus tard
-                loop.call_soon_threadsafe(lambda: asyncio.create_task(self._send_token(token)))
-                
+            self.tokens_buffer.append(token)
+            now = time.time()
+
+            send_now = len(self.tokens_buffer) >= self.batch_size or (now - self.last_send_time) > 0.5
+
+            if send_now:
+                if self.loop and self.loop.is_running():
+                    self.loop.call_soon_threadsafe(
+                        lambda: asyncio.create_task(self._send_batch())
+                    )
+                    self.last_send_time = now
         except Exception as e:
             self.is_active = False
-            logger.error(f"Impossible d'envoyer un token via WebSocket: {str(e)}")
-            # Ne pas lever l'exception pour ne pas interrompre la génération
+            logger.error(f"[StreamingHandler] Erreur traitement token: {str(e)}")
+
+
+
+    async def _send_batch(self):
+        if not self.websocket or not self.is_active or not self.tokens_buffer:
+            return
+        try:
+            tokens_to_send = "".join(self.tokens_buffer)
+            self.tokens_buffer = []
+            await self.websocket.send_json({
+                "type": "token",
+                "content": tokens_to_send
+            })
+        except Exception as e:
+            self.is_active = False
+            logger.error(f"[StreamingHandler] Erreur envoi batch: {str(e)}")
 
 
     async def _send_token(self, token: str):
@@ -86,6 +88,23 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
             # Si l'envoi échoue, désactiver ce handler
             self.is_active = False
             logger.error(f"Échec d'envoi de token: {str(e)}")
+
+
+
+    async def flush_remaining_tokens(self):
+        if not self.tokens_buffer or not self.websocket or not self.is_active:
+            return
+        try:
+            combined_tokens = "".join(self.tokens_buffer)
+            self.tokens_buffer = []
+            await self.websocket.send_json({
+                "type": "token",
+                "content": combined_tokens
+            })
+            logger.info(f"[StreamingHandler] ✓ Tokens restants envoyés ({len(combined_tokens)} caractères)")
+        except Exception as e:
+            logger.error(f"[StreamingHandler] ❌ Erreur flush: {str(e)}")
+
 
 
 
@@ -248,6 +267,12 @@ class ModelManager:
         Returns:
             Texte généré
         """
+        # ⚠️ OPTIMISATION: logs et surveillance de taille
+        safe_preview = prompt[:100].replace("\n", " ") + ("..." if len(prompt) > 100 else "")
+        logger.info(f"🧠 Appel LLM via generate_response() [{caller}]: complexité={complexity}, longueur={len(prompt)}, début={safe_preview}")
+
+        if len(prompt) > 4000:
+            logger.warning(f"⚠️ Prompt très long détecté ({len(prompt)} caractères) — à optimiser")
         logger.debug(f"[DEBUG] Prompt complet envoyé au LLM:\n{prompt}")
         logger.info(f"[DEBUG] Longueur du prompt : {len(prompt)} caractères")
         retries = 0

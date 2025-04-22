@@ -132,7 +132,6 @@ class SymbolicMemory:
         Returns:
             ID de l'entité ajoutée
         """
-        batched: bool = False
         try:
             # Si valid_from n'est pas spécifié, utiliser la date courante
             if valid_from is None:
@@ -189,10 +188,13 @@ class SymbolicMemory:
             # Ajouter valid_to si spécifié
             if valid_to:
                 self.memory_graph["entities"][entity_id]["valid_to"] = valid_to
-            
+
             if not batched:
                 self._save_graph()
                 logger.info(f"Entité ajoutée: {name} ({entity_id}) avec confiance {confidence:.2f}")
+            else:
+                logger.debug(f"[BATCH] Entité enregistrée en mémoire (non sauvegardée): {name}")
+
 
             return entity_id
             
@@ -276,7 +278,13 @@ class SymbolicMemory:
             if not batched:
                 self._save_graph()
                 logger.info(f"Relation ajoutée: {source_id} -{relation}-> {target_id} avec confiance {confidence:.2f}")
+            else:
+                logger.debug(f"[BATCH] Relation ajoutée en mémoire: {source_id} -{relation}-> {target_id}")
             return True
+
+
+
+
             
         except Exception as e:
             logger.error(f"Erreur lors de l'ajout de relation: {str(e)}")

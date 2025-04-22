@@ -7,6 +7,7 @@ import asyncio
 import threading
 from typing import Any, Dict, List, Optional
 from langchain_core.callbacks.base import BaseCallbackHandler
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -19,14 +20,20 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
         self.is_active = True
         self.tokens_buffer = []
         self.loop = None
+
         
+
+        # 🔧 FIX : buffer pour envoi par lot (optimisation)
+        self.last_send_time = time.time()
+        self.batch_size = 5
+    
         # Tenter d'obtenir la boucle d'événements courante de manière sécurisée
         try:
             self.loop = asyncio.get_running_loop()
         except RuntimeError:
-            # Pas de boucle courante
-            pass
-    
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+
     def on_llm_new_token(self, token: str, **kwargs) -> None:
         """Appelé à chaque nouveau token généré par le LLM."""
         if not self.websocket or not self.is_active:
@@ -45,7 +52,8 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
         except Exception as e:
             self.is_active = False
             logger.error(f"Erreur lors du traitement du token: {str(e)}")
-    
+
+
     def _safe_send_token(self, token: str):
         """
         Méthode synchrone pour gérer l'envoi de tokens de manière sécurisée
@@ -53,42 +61,43 @@ class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
         """
         if not self.websocket or not self.is_active:
             return
-            
+
         try:
-            # Si nous avons une boucle d'événements, nous pouvons utiliser call_soon_threadsafe
+            # S'assurer qu'on a bien une boucle d'événements
+            if not self.loop:
+                try:
+                    self.loop = asyncio.get_running_loop()
+                except RuntimeError:
+                    self.loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(self.loop)
+
+            # Cas 1 : boucle déjà active → thread-safe call
             if self.loop and self.loop.is_running():
-                # Méthode thread-safe pour planifier l'envoi
                 self.loop.call_soon_threadsafe(
                     lambda: asyncio.create_task(self._send_token(token))
                 )
+
+            # Cas 2 : thread principal avec boucle → simple create_task
+            elif threading.current_thread() == threading.main_thread():
+                try:
+                    loop = asyncio.get_running_loop()
+                    asyncio.create_task(self._send_token(token))
+                except RuntimeError:
+                    # Aucune boucle active
+                    pass
+
+            # Cas 3 : thread secondaire → run_coroutine_threadsafe
+            elif hasattr(asyncio, "run_coroutine_threadsafe") and self.loop:
+                asyncio.run_coroutine_threadsafe(self._send_token(token), self.loop)
+
+            # Sinon : fallback silencieux
             else:
-                # Approche alternative: utiliser run_coroutine_threadsafe ou créer une future
-                # et l'envoyer via une méthode non-bloquante
-                current_thread = threading.current_thread()
-                main_thread = threading.main_thread()
-                
-                if current_thread == main_thread:
-                    # Dans le thread principal, on peut tenter de configurer une boucle si nécessaire
-                    try:
-                        loop = asyncio.get_running_loop()
-                    except RuntimeError:
-                        # Pas de boucle active, ne rien faire (le token reste dans le buffer)
-                        pass
-                    else:
-                        # Utiliser la boucle si elle existe
-                        asyncio.create_task(self._send_token(token))
-                else:
-                    # Dans un thread secondaire, on peut essayer d'utiliser run_coroutine_threadsafe
-                    # si nous avons accès à une boucle d'événements
-                    if hasattr(asyncio, "run_coroutine_threadsafe") and self.loop:
-                        asyncio.run_coroutine_threadsafe(self._send_token(token), self.loop)
-                    else:
-                        # Sinon, laisser le token dans le buffer pour qu'il soit traité
-                        # avec les autres à la fin
-                        pass
-                
+                pass
+
         except Exception as e:
             logger.error(f"Erreur lors de l'envoi sécurisé du token: {str(e)}")
+
+
 
     async def _send_token(self, token: str):
         """Envoie un token via WebSocket."""

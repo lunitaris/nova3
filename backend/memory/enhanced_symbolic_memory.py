@@ -40,6 +40,9 @@ class EnhancedSymbolicMemory:
     def __init__(self, base_memory: SymbolicMemory = None):
         self.base_memory = base_memory or symbolic_memory
         self.openai_api_key = OPENAI_API_KEY
+        self._extraction_cache = {}
+        self._cache_timestamps = {}
+        self._successful_extractions = set()
 
         if self.openai_api_key:
             key_length = len(self.openai_api_key)
@@ -102,6 +105,25 @@ class EnhancedSymbolicMemory:
 
 
     async def extract_entities_and_relations_with_chatgpt(self, text: str, confidence: float = 0.7) -> Dict[str, Any]:
+        cache_key = hash(text)  # ✅ doit être en haut
+        current_time = time.time()
+
+        # ✅ Vérification verrou global des extractions déjà réussies
+        if cache_key in self._successful_extractions:
+            logger.debug("⏭️ Extraction déjà réalisée pour ce texte (hash connu)")
+            return {
+                "entities": [],
+                "relations": [],
+                "method_used": "cache_skip"
+            }
+
+        # ✅ Vérification du cache mémoire court terme (moins de 10 minutes)
+        if cache_key in self._extraction_cache:
+            cache_time = self._cache_timestamps.get(cache_key, 0)
+            if current_time - cache_time < 600:
+                logger.info("🔍 Utilisation du cache d'extraction symbolique (âge: %.1f min)", (current_time - cache_time) / 60)
+                return self._extraction_cache[cache_key]
+
         prompt_template = """
 Analyse le texte ci-dessous et extrait toutes les entités, attributs et relations possibles.
 Inclut également les préférences, rôles, professions, et toute information implicite évidente.
@@ -166,6 +188,27 @@ Format attendu (JSON uniquement) :
             method_used = "local"
 
         result["method_used"] = method_used
+
+
+
+        #########################£ Mettre en cache
+        self._extraction_cache[cache_key] = result
+        self._cache_timestamps[cache_key] = current_time
+
+        # Nettoyage : on garde max 50 entrées
+        if len(self._extraction_cache) > 50:
+            oldest_keys = sorted(self._cache_timestamps.keys(), key=lambda k: self._cache_timestamps[k])[:10]
+            for key in oldest_keys:
+                self._extraction_cache.pop(key, None)
+                self._cache_timestamps.pop(key, None)
+            logger.info(f"🧹 Nettoyage du cache d'extraction (suppression de {len(oldest_keys)} entrées)")
+
+
+
+        # ✅ Mémoriser que cette extraction a réussi
+        if result.get("entities") or result.get("relations"):
+            self._successful_extractions.add(cache_key)
+
         return result
 
     
@@ -278,6 +321,19 @@ Format attendu (JSON uniquement) :
                 "error": str(e),
                 "extraction_method": "failed"
             }
+
+
+    def get_recent_context(self, user_id: str = "anonymous", max_items: int = 3) -> List[str]:
+        """
+        Renvoie une liste de triplets récents liés à l'utilisateur spécifié, à titre de rappel rapide.
+        """
+        try:
+            recent = self.base_memory.get_recent_statements_about(user_id, limit=max_items)
+            return [f"{r['source']} {r['relation']} {r['target']}" for r in recent]
+        except Exception as e:
+            logger.warning(f"⚠️ get_recent_context: erreur lors de la récupération des relations récentes pour {user_id} → {e}")
+            return []
+
 
 # Instance globale de la mémoire symbolique améliorée
 enhanced_symbolic_memory = EnhancedSymbolicMemory(symbolic_memory)

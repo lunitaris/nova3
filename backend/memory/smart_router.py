@@ -68,6 +68,15 @@ class SmartContextRouter:
             Dictionnaire contenant la réponse et les métadonnées
         """
         logger.info("🎯 SmartRouter: traitement requête [%s] (mode=%s)", user_input[:30] + "..." if len(user_input) > 30 else user_input, mode)
+
+        # Classification rapide
+        is_memory_command = any(user_input.lower().startswith(prefix) for prefix in self.memory_command_prefixes)
+        has_question_format = any(marker in user_input.lower().split() for marker in self.question_markers)
+        is_short_request = len(user_input.split()) < 8
+        logger.info("🧠 SmartRouter: classification - memory_cmd=%s, question=%s, short=%s", 
+                    is_memory_command, has_question_format, is_short_request)
+
+
         # 1. Analyse rapide pour classification (sans LLM)
         is_memory_command = any(user_input.lower().startswith(prefix) for prefix in self.memory_command_prefixes)
         has_question_format = any(marker in user_input.lower().split() for marker in self.question_markers)
@@ -126,6 +135,19 @@ class SmartContextRouter:
 
         total_time = time.time() - start_time
         logger.info("✅ SmartRouter: requête traitée en %.2f ms (contexte=%.2f ms, LLM=%.2f ms)", total_time * 1000, context_time * 1000, llm_time * 1000)
+
+
+        # OPTIMISATION: Déclencher une mémorisation symbolique en arrière-plan
+        if len(user_input.split()) > 8 and not is_short_request:
+            content_hash = hash(user_input)
+            if not hasattr(self, '_recent_extractions'):
+                self._recent_extractions = {}
+            
+            if content_hash not in self._recent_extractions or time.time() - self._recent_extractions[content_hash] > 300:
+                self._recent_extractions[content_hash] = time.time()
+                asyncio.create_task(
+                    self._background_memory_processing(user_input, user_id, response_text)
+                )
         
         return {
             "response": response_text,
@@ -260,6 +282,14 @@ class SmartContextRouter:
         
         # Combiner tous les contextes
         combined_context = "\n\n".join(filter(None, context_parts))
+
+        # 🔧 AJOUT : fallback si le contexte est vide mais la requête semble personnelle
+        if not combined_context and has_question_format and "qui suis-je" in user_input.lower():
+            # Extraire les derniers messages utilisateur pour reconstruire un mini-contexte
+            recent_context = self.symbolic_memory.get_recent_context(user_id, max_items=2)
+            if recent_context:
+                combined_context = "\n\n".join(recent_context)
+                logger.info("🧠 SmartRouter: fallback utilisé avec contexte utilisateur récent, taille=%d", len(combined_context))
         
         # Stocker en cache pour les prochaines requêtes similaires
         self.context_cache[cache_key] = (combined_context, current_time)
