@@ -1,142 +1,102 @@
-"""
-Gestionnaire de streaming WebSocket pour intégration avec les modèles LLM.
-Permet le streaming token-par-token dans l'interface utilisateur.
-"""
-import logging
-import asyncio
-import threading
-from typing import Any, Dict, List, Optional
-from langchain_core.callbacks.base import BaseCallbackHandler
+from fastapi import APIRouter
+import psutil
 import time
+from backend.config import config
+from backend.memory.vector_store import vector_store
+from backend.memory.symbolic_memory import symbolic_memory
+from backend.memory.synthetic_memory import synthetic_memory
+from backend.utils.singletons import tts_engine
+from backend.utils.singletons import stt_engine
+from backend.utils.singletons import shared_skill
 
-logger = logging.getLogger(__name__)
+router = APIRouter()
 
-class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
-    """Callback handler pour le streaming vers WebSocket."""
-    
-    def __init__(self, websocket=None):
-        """Initialise le handler avec un WebSocket optionnel."""
-        self.websocket = websocket
-        self.is_active = True
-        self.tokens_buffer = []
-        self.loop = None
+@router.get("/api/admin/status/details")
+async def get_status_details():
+    start = time.time()
 
-        
+    result = {
+        "status": "ok",
+        "components": {},
+    }
 
-        # 🔧 FIX : buffer pour envoi par lot (optimisation)
-        self.last_send_time = time.time()
-        self.batch_size = 5
-    
-        # Tenter d'obtenir la boucle d'événements courante de manière sécurisée
-        try:
-            self.loop = asyncio.get_running_loop()
-        except RuntimeError:
-            self.loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(self.loop)
+    # TTS
+    try:
+        result["components"]["tts"] = {
+            "status": "ok",
+            "model": tts_engine.model_name
+        }
+    except Exception as e:
+        result["components"]["tts"] = {"status": "error", "error": str(e)}
+        result["status"] = "degraded"
 
-    def on_llm_new_token(self, token: str, **kwargs) -> None:
-        """Appelé à chaque nouveau token généré par le LLM."""
-        if not self.websocket or not self.is_active:
-            return
-            
-        try:
-            # Ajouter le token au buffer
-            self.tokens_buffer.append(token)
-            
-            # Logger le token pour le débogage
-            logger.debug(f"Token généré: '{token}'")
-            
-            # Méthode de synchronisation sécurisée
-            self._safe_send_token(token)
-                
-        except Exception as e:
-            self.is_active = False
-            logger.error(f"Erreur lors du traitement du token: {str(e)}")
+    # STT
+    try:
+        stt_status = {
+            "binary": stt_engine.binary_path,
+            "model": stt_engine.model_path
+        }
+        result["components"]["stt"] = {"status": "ok", **stt_status}
+    except Exception as e:
+        result["components"]["stt"] = {"status": "error", "error": str(e)}
+        result["status"] = "degraded"
 
+    # Hue
+    try:
+        lights = hue_controller.get_all_lights()
+        result["components"]["hue"] = {
+            "status": "ok",
+            "lights": len(lights)
+        }
+    except Exception as e:
+        result["components"]["hue"] = {"status": "error", "error": str(e)}
+        result["status"] = "degraded"
 
-    def _safe_send_token(self, token: str):
-        """
-        Méthode synchrone pour gérer l'envoi de tokens de manière sécurisée
-        dans différents contextes de thread/boucle d'événements.
-        """
-        if not self.websocket or not self.is_active:
-            return
+    # Mémoire vectorielle
+    try:
+        result["components"]["memory_vector"] = {
+            "status": "ok",
+            "vectors": vector_store.index.ntotal,
+            "dimension": vector_store.embedding_dimension
+        }
+    except Exception as e:
+        result["components"]["memory_vector"] = {"status": "error", "error": str(e)}
+        result["status"] = "degraded"
 
-        try:
-            # S'assurer qu'on a bien une boucle d'événements
-            if not self.loop:
-                try:
-                    self.loop = asyncio.get_running_loop()
-                except RuntimeError:
-                    self.loop = asyncio.new_event_loop()
-                    asyncio.set_event_loop(self.loop)
+    # Mémoire symbolique
+    try:
+        result["components"]["memory_symbolic"] = {
+            "entities": len(symbolic_memory.memory_graph.get("entities", {})),
+            "relations": len(symbolic_memory.memory_graph.get("relations", []))
+        }
+    except Exception as e:
+        result["components"]["memory_symbolic"] = {"status": "error", "error": str(e)}
+        result["status"] = "degraded"
 
-            # Cas 1 : boucle déjà active → thread-safe call
-            if self.loop and self.loop.is_running():
-                self.loop.call_soon_threadsafe(
-                    lambda: asyncio.create_task(self._send_token(token))
-                )
+    # Mémoire synthétique
+    try:
+        topics = synthetic_memory.memory_data.get("topics", {})
+        result["components"]["memory_synthetic"] = {
+            "topics": list(topics.keys()),
+            "count": sum(len(v) for v in topics.values())
+        }
+    except Exception as e:
+        result["components"]["memory_synthetic"] = {"status": "error", "error": str(e)}
+        result["status"] = "degraded"
 
-            # Cas 2 : thread principal avec boucle → simple create_task
-            elif threading.current_thread() == threading.main_thread():
-                try:
-                    loop = asyncio.get_running_loop()
-                    asyncio.create_task(self._send_token(token))
-                except RuntimeError:
-                    # Aucune boucle active
-                    pass
+    # Système
+    try:
+        cpu = psutil.cpu_percent()
+        mem = psutil.virtual_memory()
+        disk = psutil.disk_usage("/")
+        result["components"]["system"] = {
+            "cpu": cpu,
+            "memory_percent": mem.percent,
+            "disk_percent": disk.percent
+        }
+    except Exception as e:
+        result["components"]["system"] = {"status": "error", "error": str(e)}
+        result["status"] = "degraded"
 
-            # Cas 3 : thread secondaire → run_coroutine_threadsafe
-            elif hasattr(asyncio, "run_coroutine_threadsafe") and self.loop:
-                asyncio.run_coroutine_threadsafe(self._send_token(token), self.loop)
-
-            # Sinon : fallback silencieux
-            else:
-                pass
-
-        except Exception as e:
-            logger.error(f"Erreur lors de l'envoi sécurisé du token: {str(e)}")
-
-
-
-    async def _send_token(self, token: str):
-        """Envoie un token via WebSocket."""
-        if not self.websocket or not self.is_active:
-            return
-            
-        try:
-            # Envoyer directement le token
-            await self.websocket.send_json({
-                "type": "token",
-                "content": token
-            })
-            # Ajoutons ce log pour confirmer l'activité positive
-            if len(self.tokens_buffer) % 10 == 0:  # log tous les 10 tokens pour ne pas polluer
-                logger.debug(f"✓ WebSocket streaming actif: {len(token)} caractères envoyés")
-        except Exception as e:
-            # Si l'envoi échoue, désactiver ce handler
-            self.is_active = False
-
-    
-    async def flush_remaining_tokens(self):
-        """
-        Vide le buffer et envoie tous les tokens restants.
-        À appeler explicitement à la fin du streaming.
-        """
-        if not self.tokens_buffer or not self.websocket or not self.is_active:
-            logger.info("✓ Streaming terminé (aucun token restant à envoyer)")
-            return
-            
-        try:
-            combined_tokens = "".join(self.tokens_buffer)
-            token_count = len(self.tokens_buffer)
-            char_count = len(combined_tokens)
-            self.tokens_buffer = []
-            
-            await self.websocket.send_json({
-                "type": "token",
-                "content": combined_tokens
-            })
-            logger.info(f"✓ Tokens restants envoyés: {token_count} tokens, {char_count} caractères")
-        except Exception as e:
-            logger.error(f"❌ Erreur lors du vidage du buffer: {str(e)}")
+    result["latency_total_ms"] = round((time.time() - start) * 1000, 2)
+    return result

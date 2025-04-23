@@ -10,11 +10,11 @@ from datetime import datetime
 import re
 import unicodedata
 
-from backend.models.model_manager import model_manager
 from backend.utils.profiler import profile
 from backend.config import config
 from backend.utils.startup_log import add_startup_event
 from backend.memory.graph_postprocessor import postprocess_graph
+from backend.utils.profiler import trace_step, TreeTracer, current_trace  # AJOUT TRACE
 
 
 
@@ -115,9 +115,9 @@ class SymbolicMemory:
 
         return entity_id
     
+    @trace_step("🧠 symbolic_memory > add_entity()")
     def add_entity(self, name: str, entity_type: str, attributes: Dict[str, Any] = None, 
                 confidence: float = 0.9, valid_from: str = None, valid_to: str = None, batched: bool = False) -> str:
-
         """
         Ajoute une entité au graphe.
         
@@ -133,6 +133,11 @@ class SymbolicMemory:
             ID de l'entité ajoutée
         """
         try:
+
+            global current_trace
+            tracer = TreeTracer("➕ Ajout entité", args={"name": name, "type": entity_type})
+            current_trace = tracer
+
             # Si valid_from n'est pas spécifié, utiliser la date courante
             if valid_from is None:
                 valid_from = datetime.now().isoformat()
@@ -195,13 +200,14 @@ class SymbolicMemory:
             else:
                 logger.debug(f"[BATCH] Entité enregistrée en mémoire (non sauvegardée): {name}")
 
-
+            tracer.done(f"ID = {entity_id}")
             return entity_id
             
 
             
         except Exception as e:
             logger.error(f"Erreur lors de l'ajout d'entité: {str(e)}")
+            tracer.fail(str(e))
             return ""
     
     def find_entity_by_name(self, name: str) -> Optional[str]:
@@ -220,6 +226,7 @@ class SymbolicMemory:
                 return entity_id
         return None
     
+    @trace_step("🔗 symbolic_memory > add_relation()")
     def add_relation(self, source_id: str, relation: str, target_id: str, 
                     confidence: float = 0.9, valid_from: str = None, valid_to: str = None, batched: bool = False) -> bool:
 
@@ -238,6 +245,16 @@ class SymbolicMemory:
             True si la relation a été ajoutée avec succès
         """
         try:
+
+            global current_trace
+            tracer = TreeTracer("🔗 Ajout relation", args={
+                "source_id": source_id,
+                "relation": relation,
+                "target_id": target_id
+            })
+            current_trace = tracer
+
+
             # Vérifier que les entités existent
             if source_id not in self.memory_graph["entities"] or target_id not in self.memory_graph["entities"]:
                 logger.warning(f"Tentative d'ajout de relation avec des entités inexistantes: {source_id}, {target_id}")
@@ -280,13 +297,11 @@ class SymbolicMemory:
                 logger.info(f"Relation ajoutée: {source_id} -{relation}-> {target_id} avec confiance {confidence:.2f}")
             else:
                 logger.debug(f"[BATCH] Relation ajoutée en mémoire: {source_id} -{relation}-> {target_id}")
+            tracer.done("relation ajoutée")
             return True
 
-
-
-
-            
         except Exception as e:
+            tracer.fail(str(e))
             logger.error(f"Erreur lors de l'ajout de relation: {str(e)}")
             return False
     
@@ -460,7 +475,7 @@ class SymbolicMemory:
             return []
     
 
-
+    @trace_step("🧠 symbolic_memory > update_graph_from_text()")
     async def update_graph_from_text(self, text: str, confidence: float = 0.7, valid_from: str = None, valid_to: str = None) -> Dict[str, int]:
         """
         (Méthode désactivée) Anciennement utilisée pour enrichir le graphe à partir d’un texte via LLM local.
@@ -476,6 +491,11 @@ class SymbolicMemory:
             Statistiques sur les mises à jour (entités et relations ajoutées)
         """
         try:
+
+            global current_trace
+            tracer = TreeTracer("🧠 Mise à jour du graphe depuis texte", args={"len_texte": len(text)})
+            current_trace = tracer
+
             # 1. Extraire les entités et les ajouter au graphe
             logger.warning("⏭️ extract_entities_from_text désactivé (LLM call supprimé)")
             return {
@@ -585,7 +605,7 @@ class SymbolicMemory:
                 logger.warning(f"Échec d'ajout pour {len(failed_relations)} relations: {', '.join(failed_relations)}")
             
             self._save_graph()
-
+            tracer.done(f"{entities_added} entités / {relations_added} relations")
             return {
                 "entities_added": entities_added,
                 "relations_added": relations_added
@@ -595,6 +615,7 @@ class SymbolicMemory:
             logger.error(f"Erreur lors de la mise à jour du graphe: {str(e)}")
             import traceback
             logger.error(traceback.format_exc())
+            tracer.fail(str(e))
             return {
                 "entities_added": 0,
                 "relations_added": 0,
@@ -602,7 +623,7 @@ class SymbolicMemory:
             }
 
 
-
+    @trace_step("🔍 symbolic_memory > get_context_for_query()")
     def get_context_for_query(self, query: str, max_results: int = 3) -> str:
         """
         Récupère le contexte pertinent du graphe pour une requête.
@@ -617,6 +638,10 @@ class SymbolicMemory:
         try:
             relevant_entities = []
             
+            global current_trace
+            tracer = TreeTracer("🔍 Récupération du contexte depuis le graphe", args={"query": query})
+            current_trace = tracer
+
             # Recherche simple par correspondance de noms
             for entity_id, entity in self.memory_graph["entities"].items():
                 if entity["name"].lower() in query.lower():
@@ -654,10 +679,12 @@ class SymbolicMemory:
                             context += f"    - {rel['relation']} {rel['target_name']}\n"
                         elif "source_name" in rel:
                             context += f"    - {rel['source_name']} {rel['relation'].replace('reverse_', '')}\n"
-            
+
+            tracer.done(f"{len(relevant_entities)} entités pertinentes")
             return context
             
         except Exception as e:
+            tracer.fail(str(e))
             logger.error(f"Erreur lors de la récupération du contexte du graphe: {str(e)}")
             return ""
 

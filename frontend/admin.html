@@ -156,53 +156,7 @@
 						</div>
 					</section>
 					<!-- Section Modèles LLM -->
-					<section class="admin-section" id="models-section">
-						<div class="section-header">
-							<h3>Modèles configurés</h3>
-						</div>
-						<div class="models-list" id="models-list">
-							<div class="loading-indicator">
-								<i class="fas fa-spinner fa-spin"></i> Chargement des modèles...
-							</div>
-						</div>
-						<div class="section-header">
-							<h3>Tester un modèle</h3>
-						</div>
-						<div class="model-test-container">
-							<div class="form-group">
-								<label for="test-model-select">Modèle :</label>
-								<select id="test-model-select">
-									<option value="fast">Rapide (gemma:2b)</option>
-									<option value="balanced">Équilibré (zephyr)</option>
-									<option value="cloud_fallback">Cloud (GPT)</option>
-								</select>
-							</div>
-							<div class="form-group">
-								<label for="test-prompt">Prompt de test :</label>
-								<textarea id="test-prompt" placeholder="Écrivez un prompt pour tester le modèle..." rows="3">Écris une phrase courte à propos des assistants IA.</textarea>
-							</div>
-							<button class="btn primary" id="run-test-btn">
-							<i class="fas fa-play"></i> Exécuter le test
-							</button>
-							<div class="test-results" id="test-results">
-								<h4>Résultats</h4>
-								<div class="result-metrics">
-									<div class="metric">
-										<span class="label">Temps de réponse :</span>
-										<span class="value" id="response-time">-</span>
-									</div>
-									<div class="metric">
-										<span class="label">Tokens générés :</span>
-										<span class="value" id="tokens-generated">-</span>
-									</div>
-								</div>
-								<div class="result-content" id="test-result-content">
-									<p class="no-results">Lancez un test pour voir les résultats</p>
-								</div>
-							</div>
-						</div>
-					</section>
-                    <!-- Section Mémoire -->
+					<!-- Section Mémoire -->
                     <section class="admin-section" id="memory-section">
                         <!-- DASHBOARD DES STATS DES MEMOIRES -->
                         <div class="memory-stats">

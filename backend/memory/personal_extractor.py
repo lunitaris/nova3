@@ -76,7 +76,8 @@ class ContextualInformationExtractor:
         prompt = prompt.format(message=message)
         
         try:
-            response = await self.model_manager.generate_response(prompt, complexity="low")
+            response = await self.model_manager.generate_response(prompt, complexity="low", caller="personal_extractor") 
+
             
             # Extraire et parser le JSON
             import json
@@ -1024,3 +1025,6 @@ class PersonalContextRetriever:
                         context_parts.append(f"- {cleaned}")
         
         return "\n".join(context_parts)
+
+
+extractor = ContextualInformationExtractor(model_manager, vector_store, symbolic_memory)

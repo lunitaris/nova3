@@ -6,7 +6,6 @@ from typing import List, Dict, Any, Optional
 from datetime import datetime
 
 # Remplacer l'importation relative par une importation absolue
-from backend.models.model_manager import model_manager
 from backend.memory.vector_store import vector_store
 from backend.config import config
 
@@ -72,6 +71,7 @@ class SyntheticMemory:
             prompt = MEMORY_SYNTHESIS_TEMPLATE.replace("{conversation_history}", formatted_history)
             
             # Générer la synthèse avec un modèle léger
+            from backend.models.model_manager import model_manager  # ✅ importer localement ici
             synthesis = await model_manager.generate_response(prompt, complexity="low")
             
             # Stocker la synthèse
@@ -146,6 +146,7 @@ et les faits importants mentionnés par l'utilisateur.
 Résumé unifié:"""
                 
                 # Générer la compression
+                from backend.models.model_manager import model_manager  # ✅ importer localement ici aussi
                 compressed = await model_manager.generate_response(prompt, complexity="medium")
                 
                 # Mise à jour de la mémoire

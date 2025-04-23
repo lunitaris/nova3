@@ -36,25 +36,12 @@ class ComponentStatus(BaseModel):
     details: Optional[Dict[str, Any]] = None
     error: Optional[str] = None
 
-class ModelInfo(BaseModel):
-    id: str
-    name: str
-    type: str
-    status: str
-    parameters: Dict[str, Any]
-
 class MemoryStats(BaseModel):
     vector_count: int
     topics: List[str]
     total_entities: int
     total_relations: int
     size_kb: float
-
-class SystemConfig(BaseModel):
-    models: Dict[str, Any]
-    voice: Dict[str, Any]
-    memory: Dict[str, Any]
-    data_dir: str
 
 class ConfigUpdateRequest(BaseModel):
     section: str
@@ -75,7 +62,6 @@ async def get_system_status():
         
         # Vérifier les statuts des composants
         components = {
-            "llm": await check_llm_status(),
             "stt": await check_stt_status(),
             "tts": await check_tts_status(),
             "memory": await check_memory_status()
@@ -111,66 +97,6 @@ async def get_system_status():
     except Exception as e:
         logger.error(f"Erreur lors de la récupération du statut système: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
-
-async def check_llm_status() -> Dict[str, Any]:
-    """Vérifie l'état des modèles LLM."""
-    try:
-        available_models = []
-        status = "ok"
-        error = None
-        
-        for model_id, model_config in config.models.items():
-            try:
-                # Tester une requête simple
-                if model_id == "fast":
-                    start_time = time.time()
-                    response = await model_manager.generate_response("Test", complexity="low")
-                    elapsed_time = time.time() - start_time
-                    
-                    available_models.append({
-                        "id": model_id,
-                        "name": model_config.name,
-                        "type": model_config.type,
-                        "status": "ok",
-                        "latency": elapsed_time
-                    })
-                else:
-                    # Ne pas tester tous les modèles pour économiser des ressources
-                    available_models.append({
-                        "id": model_id,
-                        "name": model_config.name,
-                        "type": model_config.type,
-                        "status": "unknown"
-                    })
-            except Exception as e:
-                logger.warning(f"Modèle {model_id} non disponible: {str(e)}")
-                available_models.append({
-                    "id": model_id,
-                    "name": model_config.name,
-                    "type": model_config.type,
-                    "status": "error",
-                    "error": str(e)
-                })
-                status = "degraded"
-        
-        if not available_models:
-            status = "error"
-            error = "Aucun modèle disponible"
-        
-        return {
-            "status": status,
-            "details": {
-                "models": available_models
-            },
-            "error": error
-        }
-    
-    except Exception as e:
-        logger.error(f"Erreur lors de la vérification des modèles: {str(e)}")
-        return {
-            "status": "error",
-            "error": str(e)
-        }
 
 async def check_stt_status() -> Dict[str, Any]:
     """Vérifie l'état du système de reconnaissance vocale."""
@@ -298,41 +224,6 @@ async def check_memory_status() -> Dict[str, Any]:
             "error": str(e)
         }
 
-@router.get("/models", response_model=List[ModelInfo])
-async def list_models():
-    """
-    Liste tous les modèles configurés avec leur statut.
-    """
-    try:
-        models_info = []
-        
-        for model_id, model_config in config.models.items():
-            # Vérifier si le modèle est disponible
-            status = "unknown"
-            try:
-                if model_id in model_manager.models:
-                    status = "ok"
-                elif model_config.type == "cloud" and os.environ.get("OPENAI_API_KEY"):
-                    status = "ok"
-                else:
-                    status = "unavailable"
-            except:
-                status = "error"
-            
-            models_info.append(ModelInfo(
-                id=model_id,
-                name=model_config.name,
-                type=model_config.type,
-                status=status,
-                parameters=model_config.parameters
-            ))
-        
-        return models_info
-    
-    except Exception as e:
-        logger.error(f"Erreur lors de la liste des modèles: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Erreur: {str(e)}")
-
 @router.get("/memory/stats", response_model=MemoryStats)
 async def get_memory_stats():
     """
@@ -414,18 +305,6 @@ async def get_config():
     try:
         # Ne pas exposer les clés API ou informations sensibles
         sanitized_config = {
-            "models": {
-                model_id: {
-                    "name": model.name,
-                    "type": model.type,
-                    "priority": model.priority,
-                    "parameters": {
-                        k: v for k, v in model.parameters.items() 
-                        if k not in ["api_key", "token", "secret"]
-                    }
-                }
-                for model_id, model in config.models.items()
-            },
             "voice": {
                 "stt_model": config.voice.stt_model,
                 "tts_model": config.voice.tts_model,

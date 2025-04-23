@@ -17,6 +17,8 @@ from backend.memory.vector_store import vector_store
 from backend.memory.personal_extractor import ConversationMemoryProcessor
 from backend.utils.profiler import profile
 from backend.memory.smart_router import smart_router
+from backend.utils.profiler import trace_step, TreeTracer, current_trace  # AJOUT
+
 
 
 
@@ -518,25 +520,42 @@ class ConversationManager:
 
 
     @profile("process_input")
+    @trace_step("🧠 ConversationManager > process_user_input() ------------------------------------------------")
     async def process_user_input(self, conversation_id: str, user_input: str, user_id: str = "anonymous", mode: str = "chat", websocket = None) -> Dict[str, Any]:
         """
         Traite une entrée utilisateur avec pipeline optimisé utilisant le Smart Router.
         """
         logger.info("🔄 ConversationManager: traitement demande utilisateur - conv_id=%s", conversation_id)
         try:
+
             start_time = time.time()
+            # ✅ Sécurisé même si current_trace est None
+            if current_trace:
+                tracer = current_trace.step(f"🧠 Traitement du message: \"{user_input}\"", args={
+                    "conversation_id": conversation_id,
+                    "user_id": user_id,
+                    "mode": mode
+                })
+            else:
+                tracer = TreeTracer(f"🧠 Traitement du message: \"{user_input}\"", args={
+                    "conversation_id": conversation_id,
+                    "user_id": user_id,
+                    "mode": mode
+                })
+
+
             # Récupérer la conversation
+            step1 = tracer.step("1. Récupération de la conversation")
             conversation = self.get_conversation(conversation_id, user_id)
-            logger.info("📋 ConversationManager: conversation récupérée - msg_count=%d", len(conversation.messages))
+            step1.done(f"{len(conversation.messages)} messages")
             
             # Ajouter le message utilisateur à l'historique
+            step2 = tracer.step("2. Ajout du message utilisateur")
             conversation.add_message(user_input, role="user", metadata={"mode": mode})
-            logger.info("➕ ConversationManager: message utilisateur ajouté")
-
+            step2.done()
             
             # Utiliser le Smart Router pour générer la réponse avec un seul appel LLM
-            router_start = time.time()
-            logger.info("🧭 ConversationManager: appel au SmartRouter")
+            step3 = tracer.step("3. Appel au SmartRouter pour générer ..???")
             result = await smart_router.process_request(
                 user_input=user_input, 
                 conversation_id=conversation_id,
@@ -544,21 +563,22 @@ class ConversationManager:
                 mode=mode,
                 websocket=websocket
             )
-            router_time = time.time() - router_start
-            logger.info("⏱️ ConversationManager: SmartRouter a répondu en %.2f ms", router_time * 1000)
+            step3.done(f"Réponse de {len(result['response'])} caractères")
             
             # Ajouter la réponse à la conversation
+            step4 = tracer.step("4. Ajout de la réponse à la conversation")
             conversation.add_message(result["response"], role="assistant", metadata={"mode": mode})
-            logger.info("💬 ConversationManager: réponse assistant ajoutée, taille=%d", len(result["response"]))
-            
+            step4.done()            
+
             # Générer un titre si c'est une nouvelle conversation
             if len(conversation.messages) <= 4 and not conversation.metadata.get("title"):
+                tracer.step("📌 Génération du titre (async)").done("en tâche de fond")
                 asyncio.create_task(conversation.generate_title())
             
 
             total_time = time.time() - start_time
             logger.info("✅ ConversationManager: requête complète traitée en %.2f ms", total_time * 1000)
-
+            tracer.done("✅ Traitement complet")
             return result
         except Exception as e:
             logger.error(f"Erreur lors du traitement de l'entrée utilisateur: {str(e)}")

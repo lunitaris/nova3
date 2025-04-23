@@ -44,7 +44,7 @@ class ChatManager {
                 window.SymbolicGraphUI.addGraphButton({
                     target: '.header-actions',
                     context: 'chat',
-                    buttonText: 'Graph Symbolique de la conv'
+                    buttonText: 'Graph'
                 });
             }, 1000); // Délai pour s'assurer que le DOM est prêt
         }
@@ -91,7 +91,8 @@ class ChatManager {
                         return;
                     }
                 
-                    const finalContent = data.content || chatManager.accumulatedTokens || "";
+                    const finalContent = chatManager.accumulatedTokens || data.content || "";
+
                     chatManager.currentConversationId = data.conversation_id;
                     chatManager._handleEndOfStreaming(finalContent, data.conversation_id);
                 

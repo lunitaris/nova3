@@ -19,6 +19,8 @@ from backend.memory.symbolic_memory import symbolic_memory
 from backend.memory.conversation import conversation_manager
 from backend.models.model_manager import model_manager
 from backend.utils.profiler import profile
+from backend.utils.profiler import trace_step, TreeTracer  # AJOUT
+
 
 logger = logging.getLogger(__name__)
 
@@ -48,20 +50,38 @@ class ConversationInfo(BaseModel):
 
 # Endpoints
 @router.post("/send", response_model=ChatResponse)
+@trace_step("📩 POST /send (chat.py)")
 async def send_message(message: ChatMessage):
     """
     Envoie un message et reçoit une réponse.
     """
+
+
+    # AJOUT DU TRACER HIÉRARCHIQUE
+    global current_trace
+    tracer = TreeTracer(f"🟢 Message reçu: \"{message.content}\"", args={
+        "mode": message.mode,
+        "conversation_id": message.conversation_id
+    })
+    current_trace = tracer  # Activer le traceur global
+
+
     logger.info("📩 API: requête /send - mode=%s, conv_id=%s", message.mode, message.conversation_id)
     try:
         start_time = time.time()
         logger.info("🧠 API: initialisation mise à jour symbolique")
+
         # 1. Injecter le message dans la mémoire symbolique
+        step_symbolic = tracer.step("🧠 Injection dans mémoire symbolique", prefix="📚")
         asyncio.create_task(symbolic_memory.update_graph_from_text(message.content))
+        step_symbolic.done()
+
+       
 
         process_start = time.time()
         logger.info("⚙️ API: appel au ConversationManager.process_user_input")
         # 2. Puis traitement normal de la conversation
+        step_process = tracer.step("⚙️ Appel à process_user_input", prefix="🧬")
         response = await conversation_manager.process_user_input(
             conversation_id=message.conversation_id,
             user_input=message.content,
@@ -69,16 +89,19 @@ async def send_message(message: ChatMessage):
             mode=message.mode,
             websocket=None  # Pas de streaming pour l'API REST
         )
+        step_process.done("réponse OK")
         process_time = time.time() - process_start
         logger.info("✅ API: réponse générée en %.2f secondes", process_time)
         total_time = time.time() - start_time
         logger.info("🏁 API: traitement total /send en %.2f secondes", total_time)
-        
+        tracer.done("🟢 Traitement terminé")
         return ChatResponse(**response)
-    
+
     except Exception as e:
+        tracer.fail(str(e))  # LOG TERMINAL
         logger.error(f"Erreur lors du traitement du message: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Erreur de traitement: {str(e)}")
+
 
 @router.get("/conversations", response_model=List[ConversationInfo])
 async def list_conversations(
@@ -208,12 +231,10 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str):
                 
 
                 start_time = time.time()
-                if not content:
-                    await websocket.send_json({
-                        "type": "error",
-                        "content": "Message vide"
-                    })
-                    continue
+                if not content.strip():
+                    logger.debug("🛑 Message WebSocket ignoré car vide (init ? reconnect ?)")
+                    continue  # On ignore silencieusement les messages vides au démarrage
+
                 
                 # Envoyer un message de début explicite
                 await websocket.send_json({

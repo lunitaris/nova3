@@ -16,97 +16,15 @@ from langchain_core.callbacks.base import BaseCallbackHandler
 from backend.utils.profiler import profile
 from backend.utils.startup_log import add_startup_event
 import textwrap
-from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
+from backend.models.streaming_callbacks import StreamingWebSocketCallbackHandler
 import asyncio  # <-- Ajout important !
 from typing import Dict, Any, Optional
+from backend.utils.profiler import trace_step, TreeTracer, current_trace  # AJOUT POUR TRACE
 
 
 
 
 logger = logging.getLogger(__name__)
-
-class StreamingWebSocketCallbackHandler(BaseCallbackHandler):
-    """Callback handler pour le streaming vers WebSocket."""
-    
-    def __init__(self, websocket=None):
-        """Initialise le handler avec un WebSocket optionnel."""
-        self.websocket = websocket
-        self.is_active = True
-        self.sending = False  # ← AJOUTE CETTE VARIABLE POUR CASSER LA BOUCLE
-        # AJOUT POUR OPTIMISATION DE STREAMING
-        self.tokens_buffer = []
-        self.last_send_time = time.time()  # 🔧 Pour déclenchement par intervalle
-        self.batch_size = 5  # 🔧 Nombre de tokens avant envoi
-    
-        
-    def on_llm_new_token(self, token: str, **kwargs) -> None:
-        if not self.websocket or not self.is_active:
-            return
-
-        try:
-            self.tokens_buffer.append(token)
-            now = time.time()
-
-            send_now = len(self.tokens_buffer) >= self.batch_size or (now - self.last_send_time) > 0.5
-
-            if send_now:
-                if self.loop and self.loop.is_running():
-                    self.loop.call_soon_threadsafe(
-                        lambda: asyncio.create_task(self._send_batch())
-                    )
-                    self.last_send_time = now
-        except Exception as e:
-            self.is_active = False
-            logger.error(f"[StreamingHandler] Erreur traitement token: {str(e)}")
-
-
-
-    async def _send_batch(self):
-        if not self.websocket or not self.is_active or not self.tokens_buffer:
-            return
-        try:
-            tokens_to_send = "".join(self.tokens_buffer)
-            self.tokens_buffer = []
-            await self.websocket.send_json({
-                "type": "token",
-                "content": tokens_to_send
-            })
-        except Exception as e:
-            self.is_active = False
-            logger.error(f"[StreamingHandler] Erreur envoi batch: {str(e)}")
-
-
-    async def _send_token(self, token: str):
-        """Envoie un token via WebSocket."""
-        try:
-            await self.websocket.send_json({
-                "type": "token",
-                "content": token
-            })
-            logger.debug(f"Token envoyé: {token}")
-        except Exception as e:
-            # Si l'envoi échoue, désactiver ce handler
-            self.is_active = False
-            logger.error(f"Échec d'envoi de token: {str(e)}")
-
-
-
-    async def flush_remaining_tokens(self):
-        if not self.tokens_buffer or not self.websocket or not self.is_active:
-            return
-        try:
-            combined_tokens = "".join(self.tokens_buffer)
-            self.tokens_buffer = []
-            await self.websocket.send_json({
-                "type": "token",
-                "content": combined_tokens
-            })
-            logger.info(f"[StreamingHandler] ✓ Tokens restants envoyés ({len(combined_tokens)} caractères)")
-        except Exception as e:
-            logger.error(f"[StreamingHandler] ❌ Erreur flush: {str(e)}")
-
-
-
 
 class ModelManager:
     """
@@ -182,6 +100,7 @@ class ModelManager:
 
 
     @profile("llm_get_model")
+    @trace_step("⚙️ ModelManager > _get_appropriate_model()")
     def _get_appropriate_model(self, prompt: str, complexity: str = "auto", websocket=None):
         """
         Sélectionne le modèle le plus approprié selon le contexte.
@@ -246,13 +165,11 @@ class ModelManager:
         
         # Pour les modèles locaux
         model = self.models[model_id]
-        
-        # Si WebSocket fourni et streaming demandé, configurer le callback
-        if websocket and hasattr(model, 'callbacks'):               # Nouvelle façon (si le modèle supporte les callbacks dynamiques):
-            model.callbacks.append(StreamingWebSocketCallbackHandler(websocket))
+        logger.info(f"🧠 Modèle final utilisé : {model_id}")
         return model
     
     @profile("generate_response")
+    @trace_step("🧠 ModelManager > generate_response()")
     async def generate_response(self, prompt: str, websocket=None, complexity: str = "auto",max_retries: int = 2,retry_delay: int = 1,caller: str = "unknown") -> str:
         """
         Génère une réponse à partir du prompt.
@@ -285,6 +202,10 @@ class ModelManager:
         • Prompt (début)   : {repr(prompt[:120])}...
         """))
 
+        global current_trace
+        tracer = TreeTracer("📤 Envoi prompt au LLM", args={"caller": caller, "complexity": complexity})
+        current_trace = tracer
+
         
         while retries <= max_retries:
             try:
@@ -293,17 +214,22 @@ class ModelManager:
                 logger.info(f"[ModelManager] ➤ Prompt envoyé (complexité={complexity}) : {safe_prompt}...")
                  
                 # Sélectionner le modèle approprié
+                step_model = tracer.step("🎯 Sélection du modèle")
                 model = self._get_appropriate_model(prompt, complexity, websocket)
+                step_model.done(type(model).__name__)
                 
                 # Générer la réponse
                 logger.info(f"[ModelManager] Prompt word count : {len(prompt.split())}")
+                step_gen = tracer.step("✍️ Génération de la réponse")
                 response = await self._generate_from_model(model, prompt, websocket)
+                step_gen.done(f"{len(response.strip())} caractères")
                 elapsed_time = time.time() - start_time
                 logger.info(f"Réponse générée en {elapsed_time:.2f}s")
                 
                 # Nettoyer la réponse
                 response = response.strip()
                 logger.info(f"[ModelManager] ✅ Réponse générée - taille: {len(response)} caractères")
+                tracer.done("✅ Réponse générée")
                 return response
                 
             except Exception as e:
@@ -321,28 +247,33 @@ class ModelManager:
 
 
     @profile("llm_generation")
+    @trace_step("🧪 ModelManager > _generate_from_model()")
     async def _generate_from_model(self, model, prompt, websocket):
         """Génère la réponse avec le modèle spécifié."""
+
+        global current_trace
+        tracer = TreeTracer("⚙️ Appel du modèle", args={"type": type(model).__name__})
+        current_trace = tracer
 
         # Si modèle OpenAI → logique actuelle conservée
         if isinstance(model, ChatOpenAI):
             if websocket:
-                from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
+                from backend.models.streaming_callbacks import StreamingWebSocketCallbackHandler  # ✅ nouveau chemin
                 callback = StreamingWebSocketCallbackHandler(websocket)
                 response = await model.ainvoke(prompt, config={"callbacks": [callback]})
                 # Envoyer les tokens restants à la fin
                 await callback.flush_remaining_tokens()
+                tracer.done("✅ Réponse générée")
                 return response.content
             else:
                 response = await model.ainvoke(prompt)
+                tracer.done("✅ Réponse générée")
                 return response.content
 
         # ✅ PATCH OLLAMA STREAMING
         if websocket:
-            from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
-            callback = StreamingWebSocketCallbackHandler(websocket)
-            callback.loop = asyncio.get_running_loop()  # Important: capturer la boucle courante
-            
+            from backend.models.streaming_callbacks import StreamingWebSocketCallbackHandler  # ✅ nouveau chemin
+            callback = StreamingWebSocketCallbackHandler(websocket)            
             streamed_chunks = []
             try:
                 # Utiliser astream avec le callback
@@ -351,7 +282,7 @@ class ModelManager:
                 
                 # Vider les tokens restants à la fin du streaming
                 await callback.flush_remaining_tokens()
-                
+                tracer.done("✅ Réponse générée")
                 return "".join(streamed_chunks)
             except Exception as e:
                 logger.error(f"Erreur pendant le streaming: {str(e)}")
@@ -361,6 +292,7 @@ class ModelManager:
                 except:
                     pass
                 # Fallback: continuer avec une génération non-streaming
+                tracer.done("✅ Fallback génération non streaming..")
                 return await model.ainvoke(prompt)
 
         # Si pas de WebSocket, réponse normale

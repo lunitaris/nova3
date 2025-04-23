@@ -15,10 +15,15 @@ from backend.memory.symbolic_memory import symbolic_memory
 from backend.memory.enhanced_symbolic_memory import enhanced_symbolic_memory
 from backend.utils.profiler import profile
 import time
-from backend.models.streaming_handler import StreamingWebSocketCallbackHandler
+from backend.models.streaming_callbacks import StreamingWebSocketCallbackHandler  # ✅ nouveau chemin
+import re
+from backend.memory.personal_extractor import extractor
+from backend.utils.profiler import trace_step, TreeTracer, current_trace  # AJOUT POUR TRACE
+
 
 
 logger = logging.getLogger(__name__)
+
 
 class SmartContextRouter:
     """
@@ -53,6 +58,7 @@ class SmartContextRouter:
         logger.info("🔄 SmartContextRouter initialisé avec cache_ttl=%d sec, cache_max_size=%d", self.cache_ttl, self.cache_max_size)
 
     @profile("smart_router_processing")
+    @trace_step("🎯 SmartRouter > process_request()")
     async def process_request(self, user_input: str, conversation_id: str, user_id: str = "anonymous", mode: str = "chat", websocket = None) -> Dict[str, Any]:
         """
         Traite une requête utilisateur avec un pipeline intelligent optimisé.
@@ -69,12 +75,13 @@ class SmartContextRouter:
         """
         logger.info("🎯 SmartRouter: traitement requête [%s] (mode=%s)", user_input[:30] + "..." if len(user_input) > 30 else user_input, mode)
 
-        # Classification rapide
-        is_memory_command = any(user_input.lower().startswith(prefix) for prefix in self.memory_command_prefixes)
-        has_question_format = any(marker in user_input.lower().split() for marker in self.question_markers)
-        is_short_request = len(user_input.split()) < 8
-        logger.info("🧠 SmartRouter: classification - memory_cmd=%s, question=%s, short=%s", 
-                    is_memory_command, has_question_format, is_short_request)
+        global current_trace
+        tracer = TreeTracer(f"🔄 Traitement SmartRouter : \"{user_input}\"", args={
+            "conversation_id": conversation_id,
+            "user_id": user_id,
+            "mode": mode
+        })
+        current_trace = tracer
 
 
         # 1. Analyse rapide pour classification (sans LLM)
@@ -83,25 +90,40 @@ class SmartContextRouter:
         is_short_request = len(user_input.split()) < 8
         logger.info("🧠 SmartRouter: classification - memory_cmd=%s, question=%s, short=%s", is_memory_command, has_question_format, is_short_request)
 
+        tracer.condition("is_memory_command", is_memory_command)
+        tracer.condition("has_question_format", has_question_format)
+        tracer.condition("is_short_request", is_short_request)
+
         # 2. Traiter les commandes de mémorisation directement
         if is_memory_command:
-            return await self._handle_memory_command(user_input, conversation_id, user_id, mode)
-        
-        
-        # 3. Enrichissement contextuel sélectif sans appel LLM
-        start_time = time.time()
+            mem_step = tracer.step("💾 Commande de mémorisation détectée")
+            result = await self._handle_memory_command(user_input, conversation_id, user_id, mode)
+            mem_step.done("traitée")
+            return result
+
+
+
+        # 3: Extraction intelligente d’informations personnelles
+        ext_step = tracer.step("🔍 Extraction infos personnelles (LLM)")
+        try:
+            result = await extractor.process_message(user_input, user_id=user_id)
+            ext_step.done("infos extraites")
+        except Exception as e:
+            ext_step.fail(f"erreur : {str(e)}")
+
+        # 4. Enrichissement contextuel sélectif sans appel LLM
+        ctx_step = tracer.step("🧩 Enrichissement contextuel")
         context = await self._selective_context_enrichment(user_input, has_question_format, is_short_request)
-        context_time = time.time() - start_time
-        logger.info("📊 SmartRouter: contexte obtenu en %.2f ms, taille=%d caractères", 
-        context_time * 1000, len(context) if context else 0)
+        ctx_step.done(f"{len(context)} caractères")
+
         
-        # 4. Construire le prompt optimisé
+        # 5. Construire le prompt optimisé
         prompt = self._build_optimized_prompt(user_input, context, mode)
         
-        # 5. Appel LLM unique avec niveau de complexité adapté
+        # 6. Appel LLM unique avec niveau de complexité adapté
         complexity = "low" if mode == "voice" or is_short_request else "medium"
         
-        # 6. Générer la réponse (avec ou sans streaming)
+        # 7. Générer la réponse (avec ou sans streaming)
         llm_start = time.time()
         if websocket:
             # Envoyer message de début pour le streaming
@@ -127,7 +149,7 @@ class SmartContextRouter:
             logger.info(f"[SmartRouter] Appel LLM final (sans streaming) | complexité={complexity} | prompt:\n{prompt[:100]}...")
             response_text = await self.model_manager.generate_response(prompt=prompt,complexity=complexity, caller="smart_router")
         
-        # 7. Déclencher une mémorisation asynchrone en arrière-plan
+        # 8. Déclencher une mémorisation asynchrone en arrière-plan
         asyncio.create_task(
             self._background_memory_processing(user_input, user_id, response_text)
         )
@@ -148,7 +170,7 @@ class SmartContextRouter:
                 asyncio.create_task(
                     self._background_memory_processing(user_input, user_id, response_text)
                 )
-        
+        tracer.done("✅ Réponse générée et renvoyée")
         return {
             "response": response_text,
             "conversation_id": conversation_id,
@@ -200,7 +222,7 @@ class SmartContextRouter:
 
 
 
-
+    @trace_step("🧩 SmartRouter > _selective_context_enrichment()")
     @profile("selective_context")
     async def _selective_context_enrichment(self, user_input: str, has_question_format: bool, is_short_request: bool) -> str:
         """
@@ -208,7 +230,15 @@ class SmartContextRouter:
         Optimisé pour éviter les recherches inutiles.
         Version avec cache de l'enrichissement contextuel
         """
-        import time
+
+        global current_trace
+        tracer = TreeTracer("📦 Construction du contexte enrichi", args={
+            "has_question_format": has_question_format,
+            "is_short_request": is_short_request
+        })
+        current_trace = tracer
+        
+        
         logger.info("🔍 SmartRouter: début enrichissement contextuel - question=%s, court=%s", has_question_format, is_short_request)
 
         #######£ Version avec mise en cache ######
@@ -231,14 +261,18 @@ class SmartContextRouter:
         sym_start = time.time()
         # Pour les questions, prioriser le contexte symbolique (plus rapide)
         symbolic_context = ""
+        sym_step = tracer.step("🔹 Enrichissement symbolique")
+
         try:
             if has_question_format:
                 symbolic_context = self.symbolic_memory.get_context_for_query(user_input, max_results=3)
                 if symbolic_context:
                     context_parts.append(symbolic_context)
+                sym_step.done(f"{len(symbolic_context)} caractères")
+            else:
+                sym_step.skip("has_question_format = False")
         except Exception as e:
-            logger.warning(f"[SmartRouter] Erreur enrichissement symbolique: {e}")
-
+            sym_step.fail(str(e))
 
         
         sym_time = time.time() - sym_start
@@ -246,6 +280,7 @@ class SmartContextRouter:
         sym_time * 1000, len(symbolic_context) if symbolic_context else 0)
         syn_start = time.time()
         # Pour les requêtes plus longues ou complexes, ajouter du contexte synthétique
+        syn_step = tracer.step("🔹 Enrichissement synthétique")
         if not is_short_request:
             try:
                 synthetic_memories = self.synthetic_memory.get_relevant_memories(user_input, max_results=2)
@@ -255,14 +290,14 @@ class SmartContextRouter:
                         for mem in synthetic_memories
                     ])
                     context_parts.append(synthetic_context)
-                syn_time = time.time() - syn_start
-                logger.info("📚 SmartRouter: contexte synthétique obtenu en %.2f ms, taille=%d", 
-                syn_time * 1000, len(synthetic_context) if 'synthetic_context' in locals() else 0)
+                syn_step.done(f"{len(synthetic_context)} caractères" if 'synthetic_context' in locals() else "0")
             except Exception as e:
-                logger.warning(f"Erreur récupération contexte synthétique: {str(e)}")
+                syn_step.fail(str(e))
+        else:
+            syn_step.skip("is_short_request = True")
         
         # Pour les requêtes très spécifiques ou personnelles, recherche vectorielle sélective
-        vec_start = time.time()
+        vec_step = tracer.step("🔹 Enrichissement vectoriel")
         if has_question_format and (
             any(term in user_input.lower() for term in ["préfère", "aime", "déteste", "habite", "travaille"])
         ):
@@ -274,23 +309,29 @@ class SmartContextRouter:
                         for res in vector_results
                     ])
                     context_parts.append(vector_context)
-                vec_time = time.time() - vec_start
-                logger.info("📊 SmartRouter: contexte vectoriel obtenu en %.2f ms, taille=%d", 
-                vec_time * 1000, len(vector_context) if 'vector_context' in locals() else 0)
+                vec_step.done(f"{len(vector_context)} caractères" if 'vector_context' in locals() else "0")
             except Exception as e:
-                logger.warning(f"Erreur récupération contexte vectoriel: {str(e)}")
+                vec_step.fail(str(e))
+        else:
+            vec_step.skip("pas de termes personnels ou question absente")
         
         # Combiner tous les contextes
         combined_context = "\n\n".join(filter(None, context_parts))
 
         # 🔧 AJOUT : fallback si le contexte est vide mais la requête semble personnelle
+        fallback_step = tracer.step("🔹 Fallback contexte utilisateur récent")
         if not combined_context and has_question_format and "qui suis-je" in user_input.lower():
             # Extraire les derniers messages utilisateur pour reconstruire un mini-contexte
             recent_context = self.symbolic_memory.get_recent_context(user_id, max_items=2)
             if recent_context:
                 combined_context = "\n\n".join(recent_context)
+                fallback_step.done(f"{len(combined_context)} caractères")
                 logger.info("🧠 SmartRouter: fallback utilisé avec contexte utilisateur récent, taille=%d", len(combined_context))
-        
+            else:
+                fallback_step.skip("aucun contexte récent")
+        else:
+            fallback_step.skip("non applicable")
+
         # Stocker en cache pour les prochaines requêtes similaires
         self.context_cache[cache_key] = (combined_context, current_time)
         logger.info("💾 SmartRouter: contexte mis en cache, taille=%d, état cache=%d/%d", len(combined_context), len(self.context_cache), self.cache_max_size)
@@ -306,7 +347,7 @@ class SmartContextRouter:
             for key in oldest_keys:
                 del self.context_cache[key]
             logger.info("🧹 SmartRouter: nettoyage cache, suppression de %d entrées", len(oldest_keys))
-                
+        tracer.done("📦 Contexte enrichi généré")
         return combined_context
 
     
