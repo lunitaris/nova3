@@ -15,29 +15,45 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Setup Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install dependencies
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y graphviz libgraphviz-dev pkg-config
+
+      - name: Install Python dependencies
         run: |
           pip install networkx pygraphviz cairosvg
-          sudo apt-get update -y
-          sudo apt-get install -y graphviz
 
       - name: Generate call_graph.json
         run: python scripts/static_call_graph.py
 
-      - name: Generate SVG and PNG
+      - name: Generate DOT, SVG and PNG
         run: |
-          python -c "import json, subprocess, networkx as nx; from networkx.drawing.nx_agraph import write_dot; data=json.load(open('call_graph.json')); G=nx.node_link_graph(data, directed=True); write_dot(G,'call_graph.dot'); subprocess.run(['dot','-Tsvg','call_graph.dot','-o','call_graph.svg'], check=True); subprocess.run(['dot','-Tpng','call_graph.dot','-o','call_graph.png'], check=True)"
+          # Create Python script on the fly without here-doc
+          echo '''import json
+import networkx as nx
+from networkx.drawing.nx_agraph import to_agraph
+# Load JSON graph
+data = json.load(open("call_graph.json"))
+G = nx.node_link_graph(data, directed=True)
+# Export to DOT, SVG, PNG
+A = to_agraph(G)
+A.write("call_graph.dot")
+A.draw("call_graph.svg", format="svg")
+A.draw("call_graph.png", format="png")''' > generate_graph.py
+          python generate_graph.py
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: call-graph-assets
           path: |
             call_graph.json
+            call_graph.dot
             call_graph.svg
             call_graph.png
