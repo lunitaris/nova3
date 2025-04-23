@@ -28,8 +28,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Setup Graphviz
-        uses: dawidd6/setup-graphviz@v1
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y graphviz libgraphviz-dev pkg-config
 
       - name: Install Python dependencies
         run: pip install networkx pygraphviz cairosvg
