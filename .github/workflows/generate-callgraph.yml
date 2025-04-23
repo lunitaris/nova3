@@ -12,52 +12,48 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup Python
+      - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Installer dépendances JSON
-        run: pip install networkx
+      - name: Install dependencies
+        run: |
+          pip install networkx pygraphviz cairosvg
+          sudo apt-get update -y
+          sudo apt-get install -y graphviz
 
-      - name: Générer call_graph.json
+      - name: Generate call_graph.json
         run: python scripts/static_call_graph.py
 
-      - name: Installer Graphviz et libs image
+      - name: Generate SVG and PNG
         run: |
-          sudo apt-get update
-          sudo apt-get install -y graphviz
-          pip install pygraphviz cairosvg
+          python - << 'PYCODE'
+          import json
+          import subprocess
+          import networkx as nx
+          from networkx.drawing.nx_agraph import write_dot
 
-      - name: Générer SVG et PNG
-        run: |
-          python <<EOF
-import json
-import subprocess
-import networkx as nx
-# Charger le graphe JSON
-data = json.load(open('call_graph.json'))
-G = nx.node_link_graph(data, directed=True)
-# Export en DOT
-nx.nx_agraph.write_dot(G, 'call_graph.dot')
-# Générer SVG/PNG
-subprocess.run(['dot', '-Tsvg', 'call_graph.dot', '-o', 'call_graph.svg'], check=True)
-subprocess.run(['dot', '-Tpng', 'call_graph.dot', '-o', 'call_graph.png'], check=True)
-EOF
+          # Load graph
+          data = json.load(open('call_graph.json'))
+          G = nx.node_link_graph(data, directed=True)
 
-      - name: Upload Graph Images as Artifact
+          # Write DOT
+          write_dot(G, 'call_graph.dot')
+
+          # Generate images
+          subprocess.run(['dot', '-Tsvg', 'call_graph.dot', '-o', 'call_graph.svg'], check=True)
+          subprocess.run(['dot', '-Tpng', 'call_graph.dot', '-o', 'call_graph.png'], check=True)
+          PYCODE
+
+      - name: Upload artifacts
         uses: actions/upload-artifact@v3
         with:
-          name: call-graph-images
+          name: call-graph-assets
           path: |
+            call_graph.json
             call_graph.svg
             call_graph.png
-
-      - name: Upload JSON as Artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: call-graph-json
-          path: call_graph.json
