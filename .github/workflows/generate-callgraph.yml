@@ -10,23 +10,29 @@ on:
 jobs:
   build-graph:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Cache pip
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('scripts/static_call_graph.py') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Setup Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
 
-      - name: Install system dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y graphviz libgraphviz-dev pkg-config
+      - name: Setup Graphviz
+        uses: mazipan/setup-graphviz@v1
 
       - name: Install Python dependencies
-        run: |
-          pip install networkx pygraphviz cairosvg
+        run: pip install networkx pygraphviz cairosvg
 
       - name: Generate call_graph.json
         run: python scripts/static_call_graph.py
