@@ -34,8 +34,9 @@ jobs:
 
       - name: Générer SVG et PNG
         run: |
-          python - <<EOF
-import json, subprocess
+          python <<EOF
+import json
+import subprocess
 import networkx as nx
 # Charger le graphe JSON
 data = json.load(open('call_graph.json'))
@@ -43,8 +44,8 @@ G = nx.node_link_graph(data, directed=True)
 # Export en DOT
 nx.nx_agraph.write_dot(G, 'call_graph.dot')
 # Générer SVG/PNG
-subprocess.run(['dot','-Tsvg','call_graph.dot','-o','call_graph.svg'], check=True)
-subprocess.run(['dot','-Tpng','call_graph.dot','-o','call_graph.png'], check=True)
+subprocess.run(['dot', '-Tsvg', 'call_graph.dot', '-o', 'call_graph.svg'], check=True)
+subprocess.run(['dot', '-Tpng', 'call_graph.dot', '-o', 'call_graph.png'], check=True)
 EOF
 
       - name: Upload Graph Images as Artifact
