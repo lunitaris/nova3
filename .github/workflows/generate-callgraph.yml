@@ -10,7 +10,6 @@ on:
 jobs:
   build-graph:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -26,27 +25,14 @@ jobs:
           sudo apt-get install -y graphviz libgraphviz-dev pkg-config
 
       - name: Install Python dependencies
-        run: |
-          pip install networkx pygraphviz cairosvg
+        run: pip install networkx pygraphviz cairosvg
 
       - name: Generate call_graph.json
         run: python scripts/static_call_graph.py
 
-      - name: Generate DOT, SVG and PNG
+      - name: Generate call_graph images
         run: |
-          # Create Python script on the fly without here-doc
-          echo '''import json
-import networkx as nx
-from networkx.drawing.nx_agraph import to_agraph
-# Load JSON graph
-data = json.load(open("call_graph.json"))
-G = nx.node_link_graph(data, directed=True)
-# Export to DOT, SVG, PNG
-A = to_agraph(G)
-A.write("call_graph.dot")
-A.draw("call_graph.svg", format="svg")
-A.draw("call_graph.png", format="png")''' > generate_graph.py
-          python generate_graph.py
+          python -c "import json; import networkx as nx; from networkx.drawing.nx_agraph import to_agraph; data=json.load(open('call_graph.json')); G=nx.node_link_graph(data, directed=True); A=to_agraph(G); A.write('call_graph.dot'); A.draw('call_graph.svg', format='svg'); A.draw('call_graph.png', format='png')"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
