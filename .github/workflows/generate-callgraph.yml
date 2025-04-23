@@ -34,7 +34,7 @@ jobs:
           python -c "import json, subprocess, networkx as nx; from networkx.drawing.nx_agraph import write_dot; data=json.load(open('call_graph.json')); G=nx.node_link_graph(data, directed=True); write_dot(G,'call_graph.dot'); subprocess.run(['dot','-Tsvg','call_graph.dot','-o','call_graph.svg'], check=True); subprocess.run(['dot','-Tpng','call_graph.dot','-o','call_graph.png'], check=True)"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v2
         with:
           name: call-graph-assets
           path: |
