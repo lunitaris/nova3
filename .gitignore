@@ -34,6 +34,8 @@ config_API.env
 data/
 *.onnx
 *.json
+!call_graph.json
+
 *.bin
 *.pt
 *.model
