@@ -25,17 +25,18 @@ jobs:
           sudo apt-get install -y graphviz libgraphviz-dev pkg-config
 
       - name: Install Python dependencies
-        run: pip install networkx pygraphviz cairosvg
+        run: |
+          pip install networkx pygraphviz cairosvg
 
       - name: Generate call_graph.json
         run: python scripts/static_call_graph.py
 
       - name: Generate call_graph images
         run: |
-          python -c "import json; import networkx as nx; from networkx.drawing.nx_agraph import to_agraph; data=json.load(open('call_graph.json')); G=nx.node_link_graph(data, directed=True); A=to_agraph(G); A.write('call_graph.dot'); A.draw('call_graph.svg', format='svg'); A.draw('call_graph.png', format='png')"
+          python -c "import json, networkx as nx; from networkx.drawing.nx_agraph import to_agraph; data=json.load(open('call_graph.json')); G=nx.node_link_graph(data, directed=True); A=to_agraph(G); A.write('call_graph.dot'); A.draw('call_graph.svg', format='svg'); A.draw('call_graph.png', format='png')"
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: call-graph-assets
           path: |
