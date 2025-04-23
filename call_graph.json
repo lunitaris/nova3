@@ -2,6 +2,3177 @@
   "directed": true,
   "multigraph": false,
   "graph": {},
-  "nodes": [],
-  "links": []
+  "nodes": [
+    {
+      "id": "__init__"
+    },
+    {
+      "id": "ConnectionManager"
+    },
+    {
+      "id": "get"
+    },
+    {
+      "id": "websocket"
+    },
+    {
+      "id": "post"
+    },
+    {
+      "id": "ChatResponse"
+    },
+    {
+      "id": "include_router"
+    },
+    {
+      "id": "run"
+    },
+    {
+      "id": "append"
+    },
+    {
+      "id": "info"
+    },
+    {
+      "id": "remove"
+    },
+    {
+      "id": "connect"
+    },
+    {
+      "id": "error"
+    },
+    {
+      "id": "accept"
+    },
+    {
+      "id": "send_text"
+    },
+    {
+      "id": "disconnect"
+    },
+    {
+      "id": "receive_text"
+    },
+    {
+      "id": "send_personal_message"
+    },
+    {
+      "id": "len"
+    },
+    {
+      "id": "str"
+    },
+    {
+      "id": "SmartContextRouter"
+    },
+    {
+      "id": "profile"
+    },
+    {
+      "id": "trace_step"
+    },
+    {
+      "id": "trace"
+    },
+    {
+      "id": "TreeTracer"
+    },
+    {
+      "id": "any"
+    },
+    {
+      "id": "condition"
+    },
+    {
+      "id": "step"
+    },
+    {
+      "id": "done"
+    },
+    {
+      "id": "_build_optimized_prompt"
+    },
+    {
+      "id": "time"
+    },
+    {
+      "id": "create_task"
+    },
+    {
+      "id": "join"
+    },
+    {
+      "id": "_selective_context_enrichment"
+    },
+    {
+      "id": "_background_memory_processing"
+    },
+    {
+      "id": "hash"
+    },
+    {
+      "id": "isoformat"
+    },
+    {
+      "id": "remember_explicit_info"
+    },
+    {
+      "id": "split"
+    },
+    {
+      "id": "skip"
+    },
+    {
+      "id": "filter"
+    },
+    {
+      "id": "get_recent_context"
+    },
+    {
+      "id": "startswith"
+    },
+    {
+      "id": "_handle_memory_command"
+    },
+    {
+      "id": "process_message"
+    },
+    {
+      "id": "fail"
+    },
+    {
+      "id": "generate_response"
+    },
+    {
+      "id": "hasattr"
+    },
+    {
+      "id": "debug"
+    },
+    {
+      "id": "get_context_for_query"
+    },
+    {
+      "id": "get_relevant_memories"
+    },
+    {
+      "id": "search_memories"
+    },
+    {
+      "id": "lower"
+    },
+    {
+      "id": "sorted"
+    },
+    {
+      "id": "send_json"
+    },
+    {
+      "id": "now"
+    },
+    {
+      "id": "keys"
+    },
+    {
+      "id": "locals"
+    },
+    {
+      "id": "SyntheticMemory"
+    },
+    {
+      "id": "_load_memories"
+    },
+    {
+      "id": "exists"
+    },
+    {
+      "id": "makedirs"
+    },
+    {
+      "id": "replace"
+    },
+    {
+      "id": "_save_memories"
+    },
+    {
+      "id": "add_memory"
+    },
+    {
+      "id": "items"
+    },
+    {
+      "id": "set"
+    },
+    {
+      "id": "reversed"
+    },
+    {
+      "id": "dirname"
+    },
+    {
+      "id": "open"
+    },
+    {
+      "id": "dump"
+    },
+    {
+      "id": "load"
+    },
+    {
+      "id": "sum"
+    },
+    {
+      "id": "VectorMemoryStore"
+    },
+    {
+      "id": "FakeEmbeddings"
+    },
+    {
+      "id": "_initialize_index"
+    },
+    {
+      "id": "_load_metadata"
+    },
+    {
+      "id": "max"
+    },
+    {
+      "id": "write_index"
+    },
+    {
+      "id": "embed_query"
+    },
+    {
+      "id": "array"
+    },
+    {
+      "id": "add"
+    },
+    {
+      "id": "_save_metadata"
+    },
+    {
+      "id": "_save_index"
+    },
+    {
+      "id": "int"
+    },
+    {
+      "id": "min"
+    },
+    {
+      "id": "search"
+    },
+    {
+      "id": "enumerate"
+    },
+    {
+      "id": "sort"
+    },
+    {
+      "id": "IndexFlatL2"
+    },
+    {
+      "id": "copy"
+    },
+    {
+      "id": "map"
+    },
+    {
+      "id": "read_index"
+    },
+    {
+      "id": "add_startup_event"
+    },
+    {
+      "id": "IndexIVFFlat"
+    },
+    {
+      "id": "astype"
+    },
+    {
+      "id": "train"
+    },
+    {
+      "id": "warning"
+    },
+    {
+      "id": "rebuild_index"
+    },
+    {
+      "id": "zip"
+    },
+    {
+      "id": "delete_memory"
+    },
+    {
+      "id": "float"
+    },
+    {
+      "id": "update"
+    },
+    {
+      "id": "random"
+    },
+    {
+      "id": "fromisoformat"
+    },
+    {
+      "id": "ConversationManager"
+    },
+    {
+      "id": "ConversationMemoryProcessor"
+    },
+    {
+      "id": "_save_conversation"
+    },
+    {
+      "id": "Conversation"
+    },
+    {
+      "id": "_load_conversation"
+    },
+    {
+      "id": "uuid4"
+    },
+    {
+      "id": "getattr"
+    },
+    {
+      "id": "strip"
+    },
+    {
+      "id": "listdir"
+    },
+    {
+      "id": "get_conversation"
+    },
+    {
+      "id": "add_message"
+    },
+    {
+      "id": "_synthesize_old_messages"
+    },
+    {
+      "id": "_update_enhanced_symbolic_memory"
+    },
+    {
+      "id": "pop"
+    },
+    {
+      "id": "synthesize_conversation"
+    },
+    {
+      "id": "endswith"
+    },
+    {
+      "id": "process_request"
+    },
+    {
+      "id": "sleep"
+    },
+    {
+      "id": "update_graph_from_text"
+    },
+    {
+      "id": "generate_title"
+    },
+    {
+      "id": "log_extraction_summary"
+    },
+    {
+      "id": "EnhancedSymbolicMemory"
+    },
+    {
+      "id": "on_exception"
+    },
+    {
+      "id": "ValueError"
+    },
+    {
+      "id": "ClientSession"
+    },
+    {
+      "id": "extract_entities_and_relations_with_chatgpt"
+    },
+    {
+      "id": "get_recent_statements_about"
+    },
+    {
+      "id": "loads"
+    },
+    {
+      "id": "extract_entities_and_relations"
+    },
+    {
+      "id": "add_entity"
+    },
+    {
+      "id": "bool"
+    },
+    {
+      "id": "Exception"
+    },
+    {
+      "id": "json"
+    },
+    {
+      "id": "_call_openai_api"
+    },
+    {
+      "id": "add_relation"
+    },
+    {
+      "id": "format_exc"
+    },
+    {
+      "id": "upper"
+    },
+    {
+      "id": "text"
+    },
+    {
+      "id": "dumps"
+    },
+    {
+      "id": "MemorySynchronizer"
+    },
+    {
+      "id": "get_all_memories"
+    },
+    {
+      "id": "extract_facts_from_memory"
+    },
+    {
+      "id": "find_entity_by_name"
+    },
+    {
+      "id": "group"
+    },
+    {
+      "id": "sync_memory_to_symbolic"
+    },
+    {
+      "id": "query_relations"
+    },
+    {
+      "id": "SymbolicMemory"
+    },
+    {
+      "id": "_load_graph"
+    },
+    {
+      "id": "reload_rules"
+    },
+    {
+      "id": "print"
+    },
+    {
+      "id": "normalize"
+    },
+    {
+      "id": "decode"
+    },
+    {
+      "id": "sub"
+    },
+    {
+      "id": "postprocess_graph"
+    },
+    {
+      "id": "_generate_entity_id"
+    },
+    {
+      "id": "_save_graph"
+    },
+    {
+      "id": "strftime"
+    },
+    {
+      "id": "copy2"
+    },
+    {
+      "id": "encode"
+    },
+    {
+      "id": "extract_relations_from_text"
+    },
+    {
+      "id": "ContextualInformationExtractor"
+    },
+    {
+      "id": "format"
+    },
+    {
+      "id": "MemoryAdjustmentMonitor"
+    },
+    {
+      "id": "_extract_entities"
+    },
+    {
+      "id": "_evaluate_relevance"
+    },
+    {
+      "id": "_store_information"
+    },
+    {
+      "id": "_map_entity_type"
+    },
+    {
+      "id": "_determine_relation_type"
+    },
+    {
+      "id": "get_user_memory_preferences"
+    },
+    {
+      "id": "register_user_reaction"
+    },
+    {
+      "id": "_is_identity_question"
+    },
+    {
+      "id": "_format_personal_context"
+    },
+    {
+      "id": "_update_user_memory_preferences"
+    },
+    {
+      "id": "_extract_topics"
+    },
+    {
+      "id": "_search_vector_memory"
+    },
+    {
+      "id": "_query_symbolic_memory"
+    },
+    {
+      "id": "_get_user_name"
+    },
+    {
+      "id": "_promote_to_permanent"
+    },
+    {
+      "id": "normalize_name"
+    },
+    {
+      "id": "ratio"
+    },
+    {
+      "id": "refine_type"
+    },
+    {
+      "id": "find_similar_entity_id"
+    },
+    {
+      "id": "rewrite_relation"
+    },
+    {
+      "id": "round"
+    },
+    {
+      "id": "SequenceMatcher"
+    },
+    {
+      "id": "CallGraphTracer"
+    },
+    {
+      "id": "CallNode"
+    },
+    {
+      "id": "signature"
+    },
+    {
+      "id": "bind"
+    },
+    {
+      "id": "apply_defaults"
+    },
+    {
+      "id": "generate_mermaid_diagram"
+    },
+    {
+      "id": "wraps"
+    },
+    {
+      "id": "iscoroutinefunction"
+    },
+    {
+      "id": "process_node"
+    },
+    {
+      "id": "collect_stats"
+    },
+    {
+      "id": "_execute_with_tracing"
+    },
+    {
+      "id": "_extract_args"
+    },
+    {
+      "id": "func"
+    },
+    {
+      "id": "_generate_stats_table"
+    },
+    {
+      "id": "init_shared_skill"
+    },
+    {
+      "id": "HomeAutomationSkill"
+    },
+    {
+      "id": "isinstance"
+    },
+    {
+      "id": "broadcast_event"
+    },
+    {
+      "id": "getLogger"
+    },
+    {
+      "id": "setLevel"
+    },
+    {
+      "id": "StreamHandler"
+    },
+    {
+      "id": "setFormatter"
+    },
+    {
+      "id": "addHandler"
+    },
+    {
+      "id": "FileHandler"
+    },
+    {
+      "id": "clear"
+    },
+    {
+      "id": "Formatter"
+    },
+    {
+      "id": "_log"
+    },
+    {
+      "id": "perf_counter"
+    },
+    {
+      "id": "stack"
+    },
+    {
+      "id": "basename"
+    },
+    {
+      "id": "_log_args"
+    },
+    {
+      "id": "range"
+    },
+    {
+      "id": "repr"
+    },
+    {
+      "id": "trace_function"
+    },
+    {
+      "id": "start_as_current_span"
+    },
+    {
+      "id": "__new__"
+    },
+    {
+      "id": "_connect"
+    },
+    {
+      "id": "get_light"
+    },
+    {
+      "id": "abspath"
+    },
+    {
+      "id": "Bridge"
+    },
+    {
+      "id": "_refresh_lights"
+    },
+    {
+      "id": "get_light_objects"
+    },
+    {
+      "id": "_control_room"
+    },
+    {
+      "id": "get_group"
+    },
+    {
+      "id": "set_group"
+    },
+    {
+      "id": "super"
+    },
+    {
+      "id": "create_chat_prompt_template"
+    },
+    {
+      "id": "from_messages"
+    },
+    {
+      "id": "from_template"
+    },
+    {
+      "id": "MessagesPlaceholder"
+    },
+    {
+      "id": "ModelManager"
+    },
+    {
+      "id": "_initialize_models"
+    },
+    {
+      "id": "OllamaLLM"
+    },
+    {
+      "id": "list"
+    },
+    {
+      "id": "ChatOpenAI"
+    },
+    {
+      "id": "dedent"
+    },
+    {
+      "id": "StreamingWebSocketCallbackHandler"
+    },
+    {
+      "id": "ainvoke"
+    },
+    {
+      "id": "_get_appropriate_model"
+    },
+    {
+      "id": "astream"
+    },
+    {
+      "id": "_generate_from_model"
+    },
+    {
+      "id": "flush_remaining_tokens"
+    },
+    {
+      "id": "_init_ollama_model"
+    },
+    {
+      "id": "type"
+    },
+    {
+      "id": "get_running_loop"
+    },
+    {
+      "id": "new_event_loop"
+    },
+    {
+      "id": "set_event_loop"
+    },
+    {
+      "id": "call_soon_threadsafe"
+    },
+    {
+      "id": "_send_batch"
+    },
+    {
+      "id": "LangChainManager"
+    },
+    {
+      "id": "_init_memory_chains"
+    },
+    {
+      "id": "_format_conversation_history"
+    },
+    {
+      "id": "RunnableLambda"
+    },
+    {
+      "id": "HumanMessage"
+    },
+    {
+      "id": "AIMessage"
+    },
+    {
+      "id": "RunnablePassthrough"
+    },
+    {
+      "id": "_extract_duration"
+    },
+    {
+      "id": "divmod"
+    },
+    {
+      "id": "_init_hue_controller"
+    },
+    {
+      "id": "HueLightController"
+    },
+    {
+      "id": "_parse_command"
+    },
+    {
+      "id": "_is_light_device"
+    },
+    {
+      "id": "_execute_hue_action"
+    },
+    {
+      "id": "_execute_action"
+    },
+    {
+      "id": "_extract_location"
+    },
+    {
+      "id": "randint"
+    },
+    {
+      "id": "choice"
+    },
+    {
+      "id": "SkillsManager"
+    },
+    {
+      "id": "_load_skills"
+    },
+    {
+      "id": "_register_skill"
+    },
+    {
+      "id": "skill_class"
+    },
+    {
+      "id": "detect_intent"
+    },
+    {
+      "id": "handle"
+    },
+    {
+      "id": "can_handle"
+    },
+    {
+      "id": "get_examples"
+    },
+    {
+      "id": "_check_piper_installation"
+    },
+    {
+      "id": "unlink"
+    },
+    {
+      "id": "text_chunking"
+    },
+    {
+      "id": "stream_text_to_speech_pcm"
+    },
+    {
+      "id": "NamedTemporaryFile"
+    },
+    {
+      "id": "write"
+    },
+    {
+      "id": "ThreadPoolExecutor"
+    },
+    {
+      "id": "text_to_speech_file"
+    },
+    {
+      "id": "seek"
+    },
+    {
+      "id": "rfind"
+    },
+    {
+      "id": "run_in_executor"
+    },
+    {
+      "id": "read"
+    },
+    {
+      "id": "get_event_loop"
+    },
+    {
+      "id": "basicConfig"
+    },
+    {
+      "id": "ContinuousVoiceProcessor"
+    },
+    {
+      "id": "start"
+    },
+    {
+      "id": "Queue"
+    },
+    {
+      "id": "zeros"
+    },
+    {
+      "id": "PyAudio"
+    },
+    {
+      "id": "frombuffer"
+    },
+    {
+      "id": "tobytes"
+    },
+    {
+      "id": "stop"
+    },
+    {
+      "id": "bytearray"
+    },
+    {
+      "id": "HotwordDetector"
+    },
+    {
+      "id": "_start_continuous_recording"
+    },
+    {
+      "id": "extend"
+    },
+    {
+      "id": "Timer"
+    },
+    {
+      "id": "_init_porcupine"
+    },
+    {
+      "id": "create"
+    },
+    {
+      "id": "concatenate"
+    },
+    {
+      "id": "_get_audio_buffer"
+    },
+    {
+      "id": "Thread"
+    },
+    {
+      "id": "stop_stream"
+    },
+    {
+      "id": "close"
+    },
+    {
+      "id": "terminate"
+    },
+    {
+      "id": "delete"
+    },
+    {
+      "id": "_check_activity"
+    },
+    {
+      "id": "_end_conversation"
+    },
+    {
+      "id": "callback"
+    },
+    {
+      "id": "cancel"
+    },
+    {
+      "id": "setnchannels"
+    },
+    {
+      "id": "setsampwidth"
+    },
+    {
+      "id": "setframerate"
+    },
+    {
+      "id": "writeframes"
+    },
+    {
+      "id": "process"
+    },
+    {
+      "id": "abs"
+    },
+    {
+      "id": "bytes"
+    },
+    {
+      "id": "put"
+    },
+    {
+      "id": "get_sample_size"
+    },
+    {
+      "id": "VocalAssistant"
+    },
+    {
+      "id": "run_assistant"
+    },
+    {
+      "id": "_play_response"
+    },
+    {
+      "id": "stream_long_text"
+    },
+    {
+      "id": "transcribe_file"
+    },
+    {
+      "id": "_process_query"
+    },
+    {
+      "id": "process_user_input"
+    },
+    {
+      "id": "_check_whisper_binary"
+    },
+    {
+      "id": "RuntimeError"
+    },
+    {
+      "id": "access"
+    },
+    {
+      "id": "chmod"
+    },
+    {
+      "id": "create_subprocess_exec"
+    },
+    {
+      "id": "communicate"
+    },
+    {
+      "id": "_get_node_group"
+    },
+    {
+      "id": "get_all_entities"
+    },
+    {
+      "id": "get_all_relations"
+    },
+    {
+      "id": "nodes"
+    },
+    {
+      "id": "edges"
+    },
+    {
+      "id": "Body"
+    },
+    {
+      "id": "_format_graph_d3"
+    },
+    {
+      "id": "DiGraph"
+    },
+    {
+      "id": "_load_symbolic_rules"
+    },
+    {
+      "id": "_save_symbolic_rules"
+    },
+    {
+      "id": "nx_from_graph"
+    },
+    {
+      "id": "_format_graph_cytoscape"
+    },
+    {
+      "id": "add_node"
+    },
+    {
+      "id": "add_edge"
+    },
+    {
+      "id": "HTTPException"
+    },
+    {
+      "id": "JSONResponse"
+    },
+    {
+      "id": "get_cached_status"
+    },
+    {
+      "id": "get_status_details"
+    },
+    {
+      "id": "Query"
+    },
+    {
+      "id": "get_memory_graph"
+    },
+    {
+      "id": "generate_html_report"
+    },
+    {
+      "id": "HTMLResponse"
+    },
+    {
+      "id": "get_rooms"
+    },
+    {
+      "id": "get_all_lights"
+    }
+  ],
+  "links": [
+    {
+      "source": "__init__",
+      "target": "ConnectionManager"
+    },
+    {
+      "source": "__init__",
+      "target": "get"
+    },
+    {
+      "source": "__init__",
+      "target": "websocket"
+    },
+    {
+      "source": "__init__",
+      "target": "post"
+    },
+    {
+      "source": "__init__",
+      "target": "ChatResponse"
+    },
+    {
+      "source": "__init__",
+      "target": "include_router"
+    },
+    {
+      "source": "__init__",
+      "target": "run"
+    },
+    {
+      "source": "__init__",
+      "target": "append"
+    },
+    {
+      "source": "__init__",
+      "target": "info"
+    },
+    {
+      "source": "__init__",
+      "target": "remove"
+    },
+    {
+      "source": "__init__",
+      "target": "connect"
+    },
+    {
+      "source": "__init__",
+      "target": "error"
+    },
+    {
+      "source": "__init__",
+      "target": "accept"
+    },
+    {
+      "source": "__init__",
+      "target": "send_text"
+    },
+    {
+      "source": "__init__",
+      "target": "disconnect"
+    },
+    {
+      "source": "__init__",
+      "target": "receive_text"
+    },
+    {
+      "source": "__init__",
+      "target": "send_personal_message"
+    },
+    {
+      "source": "__init__",
+      "target": "len"
+    },
+    {
+      "source": "__init__",
+      "target": "str"
+    },
+    {
+      "source": "__init__",
+      "target": "SmartContextRouter"
+    },
+    {
+      "source": "__init__",
+      "target": "profile"
+    },
+    {
+      "source": "__init__",
+      "target": "trace_step"
+    },
+    {
+      "source": "__init__",
+      "target": "trace"
+    },
+    {
+      "source": "__init__",
+      "target": "TreeTracer"
+    },
+    {
+      "source": "__init__",
+      "target": "any"
+    },
+    {
+      "source": "__init__",
+      "target": "condition"
+    },
+    {
+      "source": "__init__",
+      "target": "step"
+    },
+    {
+      "source": "__init__",
+      "target": "done"
+    },
+    {
+      "source": "__init__",
+      "target": "_build_optimized_prompt"
+    },
+    {
+      "source": "__init__",
+      "target": "time"
+    },
+    {
+      "source": "__init__",
+      "target": "create_task"
+    },
+    {
+      "source": "__init__",
+      "target": "join"
+    },
+    {
+      "source": "__init__",
+      "target": "_selective_context_enrichment"
+    },
+    {
+      "source": "__init__",
+      "target": "_background_memory_processing"
+    },
+    {
+      "source": "__init__",
+      "target": "hash"
+    },
+    {
+      "source": "__init__",
+      "target": "isoformat"
+    },
+    {
+      "source": "__init__",
+      "target": "remember_explicit_info"
+    },
+    {
+      "source": "__init__",
+      "target": "split"
+    },
+    {
+      "source": "__init__",
+      "target": "skip"
+    },
+    {
+      "source": "__init__",
+      "target": "filter"
+    },
+    {
+      "source": "__init__",
+      "target": "get_recent_context"
+    },
+    {
+      "source": "__init__",
+      "target": "startswith"
+    },
+    {
+      "source": "__init__",
+      "target": "_handle_memory_command"
+    },
+    {
+      "source": "__init__",
+      "target": "process_message"
+    },
+    {
+      "source": "__init__",
+      "target": "fail"
+    },
+    {
+      "source": "__init__",
+      "target": "generate_response"
+    },
+    {
+      "source": "__init__",
+      "target": "hasattr"
+    },
+    {
+      "source": "__init__",
+      "target": "debug"
+    },
+    {
+      "source": "__init__",
+      "target": "get_context_for_query"
+    },
+    {
+      "source": "__init__",
+      "target": "get_relevant_memories"
+    },
+    {
+      "source": "__init__",
+      "target": "search_memories"
+    },
+    {
+      "source": "__init__",
+      "target": "lower"
+    },
+    {
+      "source": "__init__",
+      "target": "sorted"
+    },
+    {
+      "source": "__init__",
+      "target": "send_json"
+    },
+    {
+      "source": "__init__",
+      "target": "now"
+    },
+    {
+      "source": "__init__",
+      "target": "keys"
+    },
+    {
+      "source": "__init__",
+      "target": "locals"
+    },
+    {
+      "source": "__init__",
+      "target": "SyntheticMemory"
+    },
+    {
+      "source": "__init__",
+      "target": "_load_memories"
+    },
+    {
+      "source": "__init__",
+      "target": "exists"
+    },
+    {
+      "source": "__init__",
+      "target": "makedirs"
+    },
+    {
+      "source": "__init__",
+      "target": "replace"
+    },
+    {
+      "source": "__init__",
+      "target": "_save_memories"
+    },
+    {
+      "source": "__init__",
+      "target": "add_memory"
+    },
+    {
+      "source": "__init__",
+      "target": "items"
+    },
+    {
+      "source": "__init__",
+      "target": "set"
+    },
+    {
+      "source": "__init__",
+      "target": "reversed"
+    },
+    {
+      "source": "__init__",
+      "target": "dirname"
+    },
+    {
+      "source": "__init__",
+      "target": "open"
+    },
+    {
+      "source": "__init__",
+      "target": "dump"
+    },
+    {
+      "source": "__init__",
+      "target": "load"
+    },
+    {
+      "source": "__init__",
+      "target": "sum"
+    },
+    {
+      "source": "__init__",
+      "target": "VectorMemoryStore"
+    },
+    {
+      "source": "__init__",
+      "target": "FakeEmbeddings"
+    },
+    {
+      "source": "__init__",
+      "target": "_initialize_index"
+    },
+    {
+      "source": "__init__",
+      "target": "_load_metadata"
+    },
+    {
+      "source": "__init__",
+      "target": "max"
+    },
+    {
+      "source": "__init__",
+      "target": "write_index"
+    },
+    {
+      "source": "__init__",
+      "target": "embed_query"
+    },
+    {
+      "source": "__init__",
+      "target": "array"
+    },
+    {
+      "source": "__init__",
+      "target": "add"
+    },
+    {
+      "source": "__init__",
+      "target": "_save_metadata"
+    },
+    {
+      "source": "__init__",
+      "target": "_save_index"
+    },
+    {
+      "source": "__init__",
+      "target": "int"
+    },
+    {
+      "source": "__init__",
+      "target": "min"
+    },
+    {
+      "source": "__init__",
+      "target": "search"
+    },
+    {
+      "source": "__init__",
+      "target": "enumerate"
+    },
+    {
+      "source": "__init__",
+      "target": "sort"
+    },
+    {
+      "source": "__init__",
+      "target": "IndexFlatL2"
+    },
+    {
+      "source": "__init__",
+      "target": "copy"
+    },
+    {
+      "source": "__init__",
+      "target": "map"
+    },
+    {
+      "source": "__init__",
+      "target": "read_index"
+    },
+    {
+      "source": "__init__",
+      "target": "add_startup_event"
+    },
+    {
+      "source": "__init__",
+      "target": "IndexIVFFlat"
+    },
+    {
+      "source": "__init__",
+      "target": "astype"
+    },
+    {
+      "source": "__init__",
+      "target": "train"
+    },
+    {
+      "source": "__init__",
+      "target": "warning"
+    },
+    {
+      "source": "__init__",
+      "target": "rebuild_index"
+    },
+    {
+      "source": "__init__",
+      "target": "zip"
+    },
+    {
+      "source": "__init__",
+      "target": "delete_memory"
+    },
+    {
+      "source": "__init__",
+      "target": "float"
+    },
+    {
+      "source": "__init__",
+      "target": "update"
+    },
+    {
+      "source": "__init__",
+      "target": "random"
+    },
+    {
+      "source": "__init__",
+      "target": "fromisoformat"
+    },
+    {
+      "source": "__init__",
+      "target": "ConversationManager"
+    },
+    {
+      "source": "__init__",
+      "target": "ConversationMemoryProcessor"
+    },
+    {
+      "source": "__init__",
+      "target": "_save_conversation"
+    },
+    {
+      "source": "__init__",
+      "target": "Conversation"
+    },
+    {
+      "source": "__init__",
+      "target": "_load_conversation"
+    },
+    {
+      "source": "__init__",
+      "target": "uuid4"
+    },
+    {
+      "source": "__init__",
+      "target": "getattr"
+    },
+    {
+      "source": "__init__",
+      "target": "strip"
+    },
+    {
+      "source": "__init__",
+      "target": "listdir"
+    },
+    {
+      "source": "__init__",
+      "target": "get_conversation"
+    },
+    {
+      "source": "__init__",
+      "target": "add_message"
+    },
+    {
+      "source": "__init__",
+      "target": "_synthesize_old_messages"
+    },
+    {
+      "source": "__init__",
+      "target": "_update_enhanced_symbolic_memory"
+    },
+    {
+      "source": "__init__",
+      "target": "pop"
+    },
+    {
+      "source": "__init__",
+      "target": "synthesize_conversation"
+    },
+    {
+      "source": "__init__",
+      "target": "endswith"
+    },
+    {
+      "source": "__init__",
+      "target": "process_request"
+    },
+    {
+      "source": "__init__",
+      "target": "sleep"
+    },
+    {
+      "source": "__init__",
+      "target": "update_graph_from_text"
+    },
+    {
+      "source": "__init__",
+      "target": "generate_title"
+    },
+    {
+      "source": "__init__",
+      "target": "MemorySynchronizer"
+    },
+    {
+      "source": "__init__",
+      "target": "get_all_memories"
+    },
+    {
+      "source": "__init__",
+      "target": "loads"
+    },
+    {
+      "source": "__init__",
+      "target": "extract_facts_from_memory"
+    },
+    {
+      "source": "__init__",
+      "target": "add_entity"
+    },
+    {
+      "source": "__init__",
+      "target": "find_entity_by_name"
+    },
+    {
+      "source": "__init__",
+      "target": "group"
+    },
+    {
+      "source": "__init__",
+      "target": "add_relation"
+    },
+    {
+      "source": "__init__",
+      "target": "sync_memory_to_symbolic"
+    },
+    {
+      "source": "__init__",
+      "target": "query_relations"
+    },
+    {
+      "source": "__init__",
+      "target": "SymbolicMemory"
+    },
+    {
+      "source": "__init__",
+      "target": "_load_graph"
+    },
+    {
+      "source": "__init__",
+      "target": "reload_rules"
+    },
+    {
+      "source": "__init__",
+      "target": "print"
+    },
+    {
+      "source": "__init__",
+      "target": "normalize"
+    },
+    {
+      "source": "__init__",
+      "target": "decode"
+    },
+    {
+      "source": "__init__",
+      "target": "sub"
+    },
+    {
+      "source": "__init__",
+      "target": "postprocess_graph"
+    },
+    {
+      "source": "__init__",
+      "target": "_generate_entity_id"
+    },
+    {
+      "source": "__init__",
+      "target": "_save_graph"
+    },
+    {
+      "source": "__init__",
+      "target": "strftime"
+    },
+    {
+      "source": "__init__",
+      "target": "copy2"
+    },
+    {
+      "source": "__init__",
+      "target": "encode"
+    },
+    {
+      "source": "__init__",
+      "target": "extract_relations_from_text"
+    },
+    {
+      "source": "__init__",
+      "target": "format_exc"
+    },
+    {
+      "source": "__init__",
+      "target": "dumps"
+    },
+    {
+      "source": "__init__",
+      "target": "ContextualInformationExtractor"
+    },
+    {
+      "source": "__init__",
+      "target": "format"
+    },
+    {
+      "source": "__init__",
+      "target": "MemoryAdjustmentMonitor"
+    },
+    {
+      "source": "__init__",
+      "target": "_extract_entities"
+    },
+    {
+      "source": "__init__",
+      "target": "_evaluate_relevance"
+    },
+    {
+      "source": "__init__",
+      "target": "_store_information"
+    },
+    {
+      "source": "__init__",
+      "target": "_map_entity_type"
+    },
+    {
+      "source": "__init__",
+      "target": "_determine_relation_type"
+    },
+    {
+      "source": "__init__",
+      "target": "get_user_memory_preferences"
+    },
+    {
+      "source": "__init__",
+      "target": "register_user_reaction"
+    },
+    {
+      "source": "__init__",
+      "target": "_is_identity_question"
+    },
+    {
+      "source": "__init__",
+      "target": "_format_personal_context"
+    },
+    {
+      "source": "__init__",
+      "target": "_update_user_memory_preferences"
+    },
+    {
+      "source": "__init__",
+      "target": "_extract_topics"
+    },
+    {
+      "source": "__init__",
+      "target": "_search_vector_memory"
+    },
+    {
+      "source": "__init__",
+      "target": "_query_symbolic_memory"
+    },
+    {
+      "source": "__init__",
+      "target": "_get_user_name"
+    },
+    {
+      "source": "__init__",
+      "target": "_promote_to_permanent"
+    },
+    {
+      "source": "__init__",
+      "target": "CallGraphTracer"
+    },
+    {
+      "source": "__init__",
+      "target": "CallNode"
+    },
+    {
+      "source": "__init__",
+      "target": "signature"
+    },
+    {
+      "source": "__init__",
+      "target": "bind"
+    },
+    {
+      "source": "__init__",
+      "target": "apply_defaults"
+    },
+    {
+      "source": "__init__",
+      "target": "generate_mermaid_diagram"
+    },
+    {
+      "source": "__init__",
+      "target": "wraps"
+    },
+    {
+      "source": "__init__",
+      "target": "iscoroutinefunction"
+    },
+    {
+      "source": "__init__",
+      "target": "process_node"
+    },
+    {
+      "source": "__init__",
+      "target": "collect_stats"
+    },
+    {
+      "source": "__init__",
+      "target": "_execute_with_tracing"
+    },
+    {
+      "source": "__init__",
+      "target": "_extract_args"
+    },
+    {
+      "source": "__init__",
+      "target": "func"
+    },
+    {
+      "source": "__init__",
+      "target": "_generate_stats_table"
+    },
+    {
+      "source": "__init__",
+      "target": "broadcast_event"
+    },
+    {
+      "source": "__init__",
+      "target": "getLogger"
+    },
+    {
+      "source": "__init__",
+      "target": "get_running_loop"
+    },
+    {
+      "source": "__init__",
+      "target": "new_event_loop"
+    },
+    {
+      "source": "__init__",
+      "target": "set_event_loop"
+    },
+    {
+      "source": "__init__",
+      "target": "call_soon_threadsafe"
+    },
+    {
+      "source": "__init__",
+      "target": "_send_batch"
+    },
+    {
+      "source": "__init__",
+      "target": "LangChainManager"
+    },
+    {
+      "source": "__init__",
+      "target": "_init_memory_chains"
+    },
+    {
+      "source": "__init__",
+      "target": "_format_conversation_history"
+    },
+    {
+      "source": "__init__",
+      "target": "from_messages"
+    },
+    {
+      "source": "__init__",
+      "target": "RunnableLambda"
+    },
+    {
+      "source": "__init__",
+      "target": "ainvoke"
+    },
+    {
+      "source": "__init__",
+      "target": "HumanMessage"
+    },
+    {
+      "source": "__init__",
+      "target": "MessagesPlaceholder"
+    },
+    {
+      "source": "__init__",
+      "target": "AIMessage"
+    },
+    {
+      "source": "__init__",
+      "target": "RunnablePassthrough"
+    },
+    {
+      "source": "__init__",
+      "target": "__init__"
+    },
+    {
+      "source": "__init__",
+      "target": "_init_hue_controller"
+    },
+    {
+      "source": "__init__",
+      "target": "HueLightController"
+    },
+    {
+      "source": "__init__",
+      "target": "_parse_command"
+    },
+    {
+      "source": "__init__",
+      "target": "super"
+    },
+    {
+      "source": "__init__",
+      "target": "_is_light_device"
+    },
+    {
+      "source": "__init__",
+      "target": "_execute_hue_action"
+    },
+    {
+      "source": "__init__",
+      "target": "_execute_action"
+    },
+    {
+      "source": "__init__",
+      "target": "SkillsManager"
+    },
+    {
+      "source": "__init__",
+      "target": "init_shared_skill"
+    },
+    {
+      "source": "__init__",
+      "target": "_load_skills"
+    },
+    {
+      "source": "__init__",
+      "target": "_register_skill"
+    },
+    {
+      "source": "__init__",
+      "target": "skill_class"
+    },
+    {
+      "source": "__init__",
+      "target": "detect_intent"
+    },
+    {
+      "source": "__init__",
+      "target": "handle"
+    },
+    {
+      "source": "__init__",
+      "target": "can_handle"
+    },
+    {
+      "source": "__init__",
+      "target": "get_examples"
+    },
+    {
+      "source": "__init__",
+      "target": "_check_piper_installation"
+    },
+    {
+      "source": "__init__",
+      "target": "abspath"
+    },
+    {
+      "source": "__init__",
+      "target": "unlink"
+    },
+    {
+      "source": "__init__",
+      "target": "text_chunking"
+    },
+    {
+      "source": "__init__",
+      "target": "stream_text_to_speech_pcm"
+    },
+    {
+      "source": "__init__",
+      "target": "NamedTemporaryFile"
+    },
+    {
+      "source": "__init__",
+      "target": "write"
+    },
+    {
+      "source": "__init__",
+      "target": "ThreadPoolExecutor"
+    },
+    {
+      "source": "__init__",
+      "target": "text_to_speech_file"
+    },
+    {
+      "source": "__init__",
+      "target": "seek"
+    },
+    {
+      "source": "__init__",
+      "target": "rfind"
+    },
+    {
+      "source": "__init__",
+      "target": "run_in_executor"
+    },
+    {
+      "source": "__init__",
+      "target": "read"
+    },
+    {
+      "source": "__init__",
+      "target": "basename"
+    },
+    {
+      "source": "__init__",
+      "target": "get_event_loop"
+    },
+    {
+      "source": "__init__",
+      "target": "basicConfig"
+    },
+    {
+      "source": "__init__",
+      "target": "ContinuousVoiceProcessor"
+    },
+    {
+      "source": "__init__",
+      "target": "start"
+    },
+    {
+      "source": "__init__",
+      "target": "Queue"
+    },
+    {
+      "source": "__init__",
+      "target": "zeros"
+    },
+    {
+      "source": "__init__",
+      "target": "PyAudio"
+    },
+    {
+      "source": "__init__",
+      "target": "frombuffer"
+    },
+    {
+      "source": "__init__",
+      "target": "tobytes"
+    },
+    {
+      "source": "__init__",
+      "target": "stop"
+    },
+    {
+      "source": "__init__",
+      "target": "bytearray"
+    },
+    {
+      "source": "__init__",
+      "target": "HotwordDetector"
+    },
+    {
+      "source": "__init__",
+      "target": "_start_continuous_recording"
+    },
+    {
+      "source": "__init__",
+      "target": "extend"
+    },
+    {
+      "source": "__init__",
+      "target": "Timer"
+    },
+    {
+      "source": "__init__",
+      "target": "_init_porcupine"
+    },
+    {
+      "source": "__init__",
+      "target": "create"
+    },
+    {
+      "source": "__init__",
+      "target": "concatenate"
+    },
+    {
+      "source": "__init__",
+      "target": "_get_audio_buffer"
+    },
+    {
+      "source": "__init__",
+      "target": "Thread"
+    },
+    {
+      "source": "__init__",
+      "target": "stop_stream"
+    },
+    {
+      "source": "__init__",
+      "target": "close"
+    },
+    {
+      "source": "__init__",
+      "target": "terminate"
+    },
+    {
+      "source": "__init__",
+      "target": "delete"
+    },
+    {
+      "source": "__init__",
+      "target": "_check_activity"
+    },
+    {
+      "source": "__init__",
+      "target": "_end_conversation"
+    },
+    {
+      "source": "__init__",
+      "target": "callback"
+    },
+    {
+      "source": "__init__",
+      "target": "cancel"
+    },
+    {
+      "source": "__init__",
+      "target": "setnchannels"
+    },
+    {
+      "source": "__init__",
+      "target": "setsampwidth"
+    },
+    {
+      "source": "__init__",
+      "target": "setframerate"
+    },
+    {
+      "source": "__init__",
+      "target": "writeframes"
+    },
+    {
+      "source": "__init__",
+      "target": "process"
+    },
+    {
+      "source": "__init__",
+      "target": "abs"
+    },
+    {
+      "source": "__init__",
+      "target": "bytes"
+    },
+    {
+      "source": "__init__",
+      "target": "put"
+    },
+    {
+      "source": "__init__",
+      "target": "get_sample_size"
+    },
+    {
+      "source": "__init__",
+      "target": "VocalAssistant"
+    },
+    {
+      "source": "__init__",
+      "target": "run_assistant"
+    },
+    {
+      "source": "__init__",
+      "target": "_play_response"
+    },
+    {
+      "source": "__init__",
+      "target": "stream_long_text"
+    },
+    {
+      "source": "__init__",
+      "target": "transcribe_file"
+    },
+    {
+      "source": "__init__",
+      "target": "_process_query"
+    },
+    {
+      "source": "__init__",
+      "target": "process_user_input"
+    },
+    {
+      "source": "__init__",
+      "target": "_check_whisper_binary"
+    },
+    {
+      "source": "__init__",
+      "target": "RuntimeError"
+    },
+    {
+      "source": "__init__",
+      "target": "access"
+    },
+    {
+      "source": "__init__",
+      "target": "chmod"
+    },
+    {
+      "source": "__init__",
+      "target": "create_subprocess_exec"
+    },
+    {
+      "source": "__init__",
+      "target": "communicate"
+    },
+    {
+      "source": "__init__",
+      "target": "Query"
+    },
+    {
+      "source": "__init__",
+      "target": "HTTPException"
+    },
+    {
+      "source": "__init__",
+      "target": "get_memory_graph"
+    },
+    {
+      "source": "profile",
+      "target": "getLogger"
+    },
+    {
+      "source": "profile",
+      "target": "setLevel"
+    },
+    {
+      "source": "profile",
+      "target": "StreamHandler"
+    },
+    {
+      "source": "profile",
+      "target": "setFormatter"
+    },
+    {
+      "source": "profile",
+      "target": "addHandler"
+    },
+    {
+      "source": "profile",
+      "target": "FileHandler"
+    },
+    {
+      "source": "profile",
+      "target": "items"
+    },
+    {
+      "source": "profile",
+      "target": "clear"
+    },
+    {
+      "source": "profile",
+      "target": "Formatter"
+    },
+    {
+      "source": "profile",
+      "target": "iscoroutinefunction"
+    },
+    {
+      "source": "profile",
+      "target": "wraps"
+    },
+    {
+      "source": "profile",
+      "target": "time"
+    },
+    {
+      "source": "profile",
+      "target": "_log"
+    },
+    {
+      "source": "profile",
+      "target": "TreeTracer"
+    },
+    {
+      "source": "profile",
+      "target": "append"
+    },
+    {
+      "source": "profile",
+      "target": "step"
+    },
+    {
+      "source": "profile",
+      "target": "done"
+    },
+    {
+      "source": "profile",
+      "target": "info"
+    },
+    {
+      "source": "profile",
+      "target": "perf_counter"
+    },
+    {
+      "source": "profile",
+      "target": "round"
+    },
+    {
+      "source": "profile",
+      "target": "stack"
+    },
+    {
+      "source": "profile",
+      "target": "basename"
+    },
+    {
+      "source": "profile",
+      "target": "_log_args"
+    },
+    {
+      "source": "profile",
+      "target": "isinstance"
+    },
+    {
+      "source": "profile",
+      "target": "str"
+    },
+    {
+      "source": "profile",
+      "target": "func"
+    },
+    {
+      "source": "profile",
+      "target": "range"
+    },
+    {
+      "source": "profile",
+      "target": "sum"
+    },
+    {
+      "source": "profile",
+      "target": "len"
+    },
+    {
+      "source": "profile",
+      "target": "fail"
+    },
+    {
+      "source": "profile",
+      "target": "repr"
+    },
+    {
+      "source": "add_startup_event",
+      "target": "append"
+    },
+    {
+      "source": "add_startup_event",
+      "target": "info"
+    },
+    {
+      "source": "add_startup_event",
+      "target": "isinstance"
+    },
+    {
+      "source": "add_startup_event",
+      "target": "get"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "EnhancedSymbolicMemory"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "info"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "on_exception"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "strip"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "set"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "getattr"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "debug"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "hash"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "time"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "replace"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "len"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "warning"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "hasattr"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "ValueError"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "ClientSession"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "extract_entities_and_relations_with_chatgpt"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "get"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "add"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "pop"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "log_extraction_summary"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "get_recent_statements_about"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "int"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "post"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "loads"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "sorted"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "extract_entities_and_relations"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "add_entity"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "error"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "bool"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "Exception"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "json"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "_call_openai_api"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "keys"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "add_relation"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "format_exc"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "str"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "upper"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "text"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "dumps"
+    },
+    {
+      "source": "log_extraction_summary",
+      "target": "split"
+    },
+    {
+      "source": "normalize_name",
+      "target": "get"
+    },
+    {
+      "source": "normalize_name",
+      "target": "strip"
+    },
+    {
+      "source": "normalize_name",
+      "target": "items"
+    },
+    {
+      "source": "normalize_name",
+      "target": "ratio"
+    },
+    {
+      "source": "normalize_name",
+      "target": "normalize_name"
+    },
+    {
+      "source": "normalize_name",
+      "target": "refine_type"
+    },
+    {
+      "source": "normalize_name",
+      "target": "find_similar_entity_id"
+    },
+    {
+      "source": "normalize_name",
+      "target": "rewrite_relation"
+    },
+    {
+      "source": "normalize_name",
+      "target": "lower"
+    },
+    {
+      "source": "normalize_name",
+      "target": "info"
+    },
+    {
+      "source": "normalize_name",
+      "target": "update"
+    },
+    {
+      "source": "normalize_name",
+      "target": "copy"
+    },
+    {
+      "source": "normalize_name",
+      "target": "any"
+    },
+    {
+      "source": "normalize_name",
+      "target": "round"
+    },
+    {
+      "source": "normalize_name",
+      "target": "append"
+    },
+    {
+      "source": "normalize_name",
+      "target": "SequenceMatcher"
+    },
+    {
+      "source": "init_shared_skill",
+      "target": "HomeAutomationSkill"
+    },
+    {
+      "source": "trace_function",
+      "target": "wraps"
+    },
+    {
+      "source": "trace_function",
+      "target": "iscoroutinefunction"
+    },
+    {
+      "source": "trace_function",
+      "target": "start_as_current_span"
+    },
+    {
+      "source": "trace_function",
+      "target": "func"
+    },
+    {
+      "source": "__new__",
+      "target": "profile"
+    },
+    {
+      "source": "__new__",
+      "target": "_connect"
+    },
+    {
+      "source": "__new__",
+      "target": "lower"
+    },
+    {
+      "source": "__new__",
+      "target": "get_light"
+    },
+    {
+      "source": "__new__",
+      "target": "__new__"
+    },
+    {
+      "source": "__new__",
+      "target": "abspath"
+    },
+    {
+      "source": "__new__",
+      "target": "join"
+    },
+    {
+      "source": "__new__",
+      "target": "Bridge"
+    },
+    {
+      "source": "__new__",
+      "target": "_refresh_lights"
+    },
+    {
+      "source": "__new__",
+      "target": "add_startup_event"
+    },
+    {
+      "source": "__new__",
+      "target": "get_light_objects"
+    },
+    {
+      "source": "__new__",
+      "target": "debug"
+    },
+    {
+      "source": "__new__",
+      "target": "keys"
+    },
+    {
+      "source": "__new__",
+      "target": "_control_room"
+    },
+    {
+      "source": "__new__",
+      "target": "items"
+    },
+    {
+      "source": "__new__",
+      "target": "exists"
+    },
+    {
+      "source": "__new__",
+      "target": "warning"
+    },
+    {
+      "source": "__new__",
+      "target": "open"
+    },
+    {
+      "source": "__new__",
+      "target": "load"
+    },
+    {
+      "source": "__new__",
+      "target": "error"
+    },
+    {
+      "source": "__new__",
+      "target": "get_group"
+    },
+    {
+      "source": "__new__",
+      "target": "set_group"
+    },
+    {
+      "source": "__new__",
+      "target": "append"
+    },
+    {
+      "source": "__new__",
+      "target": "super"
+    },
+    {
+      "source": "__new__",
+      "target": "dirname"
+    },
+    {
+      "source": "__new__",
+      "target": "get"
+    },
+    {
+      "source": "__new__",
+      "target": "len"
+    },
+    {
+      "source": "__new__",
+      "target": "min"
+    },
+    {
+      "source": "__new__",
+      "target": "str"
+    },
+    {
+      "source": "__new__",
+      "target": "int"
+    },
+    {
+      "source": "__new__",
+      "target": "max"
+    },
+    {
+      "source": "__new__",
+      "target": "ModelManager"
+    },
+    {
+      "source": "__new__",
+      "target": "trace_step"
+    },
+    {
+      "source": "__new__",
+      "target": "_initialize_models"
+    },
+    {
+      "source": "__new__",
+      "target": "OllamaLLM"
+    },
+    {
+      "source": "__new__",
+      "target": "info"
+    },
+    {
+      "source": "__new__",
+      "target": "TreeTracer"
+    },
+    {
+      "source": "__new__",
+      "target": "isinstance"
+    },
+    {
+      "source": "__new__",
+      "target": "list"
+    },
+    {
+      "source": "__new__",
+      "target": "ChatOpenAI"
+    },
+    {
+      "source": "__new__",
+      "target": "replace"
+    },
+    {
+      "source": "__new__",
+      "target": "dedent"
+    },
+    {
+      "source": "__new__",
+      "target": "StreamingWebSocketCallbackHandler"
+    },
+    {
+      "source": "__new__",
+      "target": "ainvoke"
+    },
+    {
+      "source": "__new__",
+      "target": "split"
+    },
+    {
+      "source": "__new__",
+      "target": "ValueError"
+    },
+    {
+      "source": "__new__",
+      "target": "time"
+    },
+    {
+      "source": "__new__",
+      "target": "step"
+    },
+    {
+      "source": "__new__",
+      "target": "_get_appropriate_model"
+    },
+    {
+      "source": "__new__",
+      "target": "done"
+    },
+    {
+      "source": "__new__",
+      "target": "strip"
+    },
+    {
+      "source": "__new__",
+      "target": "astream"
+    },
+    {
+      "source": "__new__",
+      "target": "bool"
+    },
+    {
+      "source": "__new__",
+      "target": "_generate_from_model"
+    },
+    {
+      "source": "__new__",
+      "target": "flush_remaining_tokens"
+    },
+    {
+      "source": "__new__",
+      "target": "_init_ollama_model"
+    },
+    {
+      "source": "__new__",
+      "target": "startswith"
+    },
+    {
+      "source": "__new__",
+      "target": "repr"
+    },
+    {
+      "source": "__new__",
+      "target": "type"
+    },
+    {
+      "source": "__new__",
+      "target": "sleep"
+    },
+    {
+      "source": "__new__",
+      "target": "locals"
+    },
+    {
+      "source": "create_chat_prompt_template",
+      "target": "from_messages"
+    },
+    {
+      "source": "create_chat_prompt_template",
+      "target": "from_template"
+    },
+    {
+      "source": "create_chat_prompt_template",
+      "target": "enumerate"
+    },
+    {
+      "source": "create_chat_prompt_template",
+      "target": "join"
+    },
+    {
+      "source": "create_chat_prompt_template",
+      "target": "MessagesPlaceholder"
+    },
+    {
+      "source": "create_chat_prompt_template",
+      "target": "append"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "search"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "lower"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "sub"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "strip"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "divmod"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "join"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "int"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "replace"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "append"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "len"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "group"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "sleep"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "info"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "error"
+    },
+    {
+      "source": "_extract_duration",
+      "target": "str"
+    },
+    {
+      "source": "_extract_location",
+      "target": "search"
+    },
+    {
+      "source": "_extract_location",
+      "target": "randint"
+    },
+    {
+      "source": "_extract_location",
+      "target": "choice"
+    },
+    {
+      "source": "_extract_location",
+      "target": "strip"
+    },
+    {
+      "source": "_extract_location",
+      "target": "group"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "post"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "get"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "join"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "put"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "get_all_entities"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "get_all_relations"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "postprocess_graph"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "nodes"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "edges"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "Body"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "info"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "exists"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "warning"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "_format_graph_d3"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "DiGraph"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "items"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "lower"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "append"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "open"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "dump"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "_load_symbolic_rules"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "_save_symbolic_rules"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "nx_from_graph"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "_format_graph_cytoscape"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "add_node"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "add_edge"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "update_graph_from_text"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "error"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "HTTPException"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "bool"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "JSONResponse"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "hasattr"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "format_exc"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "load"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "reload_rules"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "_get_node_group"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "str"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "dumps"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "generate_html_report"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "HTMLResponse"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "CallGraphTracer"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "_refresh_lights"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "get_rooms"
+    },
+    {
+      "source": "_get_node_group",
+      "target": "get_all_lights"
+    },
+    {
+      "source": "get_cached_status",
+      "target": "post"
+    },
+    {
+      "source": "get_cached_status",
+      "target": "update"
+    },
+    {
+      "source": "get_cached_status",
+      "target": "strftime"
+    },
+    {
+      "source": "get_cached_status",
+      "target": "get_status_details"
+    }
+  ]
 }

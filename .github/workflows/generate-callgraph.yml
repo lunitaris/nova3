@@ -1,10 +1,11 @@
-name: Générer Graphe Statique
+name: Générer Graphe Statique et Artefacts
 
 on:
   push:
     paths:
-      - 'mon_project/**'  # ← adapte au dossier de code
+      - 'backend/**'
       - 'scripts/static_call_graph.py'
+      - '.github/workflows/generate-callgraph.yml'
 
 jobs:
   build-graph:
@@ -19,17 +20,47 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Installer dépendances
+      - name: Installer dépendances JSON
         run: pip install networkx
 
-      - name: Générer graphe d'appels
+      - name: Générer call_graph.json
         run: python scripts/static_call_graph.py
 
-      - name: Commit & Push call_graph.json
+      - name: Installer dépendances pour images
         run: |
-          git config user.name github-actions
-          git config user.email actions@github.com
-          git add call_graph.json
-          git commit -m "Update static call graph"
-          git push
-        continue-on-error: true  # Évite d'exploser si rien n’a changé
+          sudo apt-get update
+          sudo apt-get install -y graphviz
+          pip install pygraphviz cairosvg
+
+      - name: Générer SVG et PNG
+        run: |
+          python - << 'EOF'
+import json, subprocess
+import networkx as nx
+
+# Charger le graphe JSON
+with open('call_graph.json') as f:
+    data = json.load(f)
+G = nx.node_link_graph(data, multigraph=False, directed=True)
+
+# Exporter en DOT
+nx.nx_agraph.write_dot(G, 'call_graph.dot')
+
+# Générer SVG et PNG
+subprocess.run(['dot', '-Tsvg', 'call_graph.dot', '-o', 'call_graph.svg'], check=True)
+subprocess.run(['dot', '-Tpng', 'call_graph.dot', '-o', 'call_graph.png'], check=True)
+EOF
+
+      - name: Upload Graph Images as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: call-graph-images
+          path: |
+            call_graph.svg
+            call_graph.png
+
+      - name: Upload JSON as Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: call-graph-json
+          path: call_graph.json
