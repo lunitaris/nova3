@@ -34,7 +34,11 @@ httpx
 numpy<2.0.0
 networkx    # pour Visualiser graph symbolique
 backoff
+networkx
+colorama
 
+# Utility for viewing Calling graphs (dev and debug purpose)
+streamlit
 
 # Skills
 phue

@@ -19,6 +19,8 @@ from backend.models.streaming_callbacks import StreamingWebSocketCallbackHandler
 import re
 from backend.memory.personal_extractor import extractor
 from backend.utils.profiler import trace_step, TreeTracer, current_trace  # AJOUT POUR TRACE
+from backend.utils.call_graph_tracer import call_tracer # Solition de colaude
+
 
 
 
@@ -59,6 +61,7 @@ class SmartContextRouter:
 
     @profile("smart_router_processing")
     @trace_step("🎯 SmartRouter > process_request()")
+    @call_tracer.trace("🧠 SmartRouter: process_request")
     async def process_request(self, user_input: str, conversation_id: str, user_id: str = "anonymous", mode: str = "chat", websocket = None) -> Dict[str, Any]:
         """
         Traite une requête utilisateur avec un pipeline intelligent optimisé.
@@ -224,6 +227,7 @@ class SmartContextRouter:
 
     @trace_step("🧩 SmartRouter > _selective_context_enrichment()")
     @profile("selective_context")
+    @call_tracer.trace("⚡ SmartRouter: context_enrichment")
     async def _selective_context_enrichment(self, user_input: str, has_question_format: bool, is_short_request: bool) -> str:
         """
         Sélectionne et récupère le contexte pertinent selon le type de requête.

@@ -7,6 +7,7 @@ import json
 import asyncio
 import psutil
 import time
+from fastapi.responses import HTMLResponse
 
 
 from backend.config import config
@@ -17,6 +18,7 @@ from backend.memory.vector_store import vector_store
 from backend.utils.singletons import stt_engine
 from backend.utils.singletons import tts_engine
 from backend.utils.singletons import hue_controller
+from backend.utils.call_graph_tracer import call_tracer
 
 logger = logging.getLogger(__name__)
 
@@ -807,3 +809,18 @@ async def get_lights_and_rooms():
         logger.error(f"Erreur lors du chargement combiné lumières/pièces: {str(e)}")
         raise HTTPException(status_code=500, detail="Erreur lors du chargement des lumières et pièces")
 
+
+
+###### Solution de tracing de fonctions proposé par Claude3.
+@router.get("/debug/call-graph")
+async def get_call_graph():
+    """Génère un graphe des appels de fonctions"""
+    html_report = call_tracer.generate_html_report()
+    return HTMLResponse(content=html_report)
+
+# Pour réinitialiser le traceur
+@router.post("/debug/reset-tracer")
+async def reset_tracer():
+    global call_tracer
+    call_tracer = CallGraphTracer()
+    return {"status": "tracer reset"}
