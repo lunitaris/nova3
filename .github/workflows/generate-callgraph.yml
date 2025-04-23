@@ -15,7 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      - name: Setup Python
         uses: actions/setup-python@v4
         with:
           python-version: '3.10'
@@ -31,23 +31,7 @@ jobs:
 
       - name: Generate SVG and PNG
         run: |
-          python - << 'PYCODE'
-          import json
-          import subprocess
-          import networkx as nx
-          from networkx.drawing.nx_agraph import write_dot
-
-          # Load graph
-          data = json.load(open('call_graph.json'))
-          G = nx.node_link_graph(data, directed=True)
-
-          # Write DOT
-          write_dot(G, 'call_graph.dot')
-
-          # Generate images
-          subprocess.run(['dot', '-Tsvg', 'call_graph.dot', '-o', 'call_graph.svg'], check=True)
-          subprocess.run(['dot', '-Tpng', 'call_graph.dot', '-o', 'call_graph.png'], check=True)
-          PYCODE
+          python -c "import json, subprocess, networkx as nx; from networkx.drawing.nx_agraph import write_dot; data=json.load(open('call_graph.json')); G=nx.node_link_graph(data, directed=True); write_dot(G,'call_graph.dot'); subprocess.run(['dot','-Tsvg','call_graph.dot','-o','call_graph.svg'], check=True); subprocess.run(['dot','-Tpng','call_graph.dot','-o','call_graph.png'], check=True)"
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v3
