@@ -17,7 +17,7 @@ from backend.memory.symbolic_memory import symbolic_memory
 from backend.memory.vector_store import vector_store
 from backend.utils.singletons import stt_engine
 from backend.utils.singletons import tts_engine
-from backend.utils.singletons import hue_controller
+from backend.utils.singletons import hue_controller, init_shared_skill
 from backend.utils.call_graph_tracer import call_tracer
 
 logger = logging.getLogger(__name__)

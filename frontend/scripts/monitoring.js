@@ -7,10 +7,10 @@ function allStatusesAvailable(components) {
 
 
 
-async function fetchSystemStatus() {
+  async function fetchSystemStatus() {
     try {
-        // Appel direct à l'endpoint de diagnostic qui fonctionne
-        const res = await fetch(`${CONFIG.API_BASE_URL}/api/admin/status/details`);
+        // Appeler l'endpoint correct qui retourne toutes les infos
+        const res = await fetch(`${CONFIG.API_BASE_URL}/api/admin/status`);
         
         if (!res.ok) {
             console.error("Erreur HTTP:", res.status);
@@ -21,10 +21,24 @@ async function fetchSystemStatus() {
         const data = await res.json();
         console.log("Données de statut reçues:", data);
         
-        // Mise à jour de l'indicateur avec le statut reçu
-        const statusFinal = allStatusesAvailable(data.components) ? data.status : "unknown";
+        // Mise à jour de l'indicateur principal
+        const statusFinal = data.status || "unknown";
         updateIndicator(statusFinal, data);
 
+        // Mise à jour des jauges de ressources système
+        if (data.cpu_usage !== undefined) {
+            setGaugeValue('cpu-gauge', data.cpu_usage);
+        }
+        
+        if (data.memory_usage && data.memory_usage.used_percent) {
+            setGaugeValue('memory-gauge', data.memory_usage.used_percent);
+        }
+        
+        if (data.disk_usage && data.disk_usage.used_percent) {
+            setGaugeValue('disk-gauge', data.disk_usage.used_percent);
+        }
+
+        // Mise à jour des mini-indicateurs
         updateMiniIndicators(data);
         
     } catch (error) {
@@ -34,6 +48,30 @@ async function fetchSystemStatus() {
 }
 
 
+function setGaugeValue(gaugeId, value) {
+    const gauge = document.getElementById(gaugeId);
+    if (gauge) {
+        const gaugeValue = gauge.querySelector('.gauge-value');
+        const gaugeLabel = gauge.querySelector('.gauge-label');
+        
+        if (gaugeValue) {
+            gaugeValue.style.height = `${value}%`;
+            
+            // Changer la couleur en fonction de la valeur
+            if (value > 90) {
+                gaugeValue.className = 'gauge-value critical';
+            } else if (value > 75) {
+                gaugeValue.className = 'gauge-value warning';
+            } else {
+                gaugeValue.className = 'gauge-value';
+            }
+        }
+        
+        if (gaugeLabel) {
+            gaugeLabel.textContent = `${Math.round(value)}%`;
+        }
+    }
+}
 
 function updateMiniIndicators(data) {
     const statusMap = {
@@ -60,50 +98,43 @@ function updateMiniIndicators(data) {
 
 
 
-// Fonction pour mettre à jour l'indicateur
-function updateIndicator(status, data) {
-    const indicator = document.getElementById("system-status-indicator");
-    if (!indicator) return;
-    
-    let symbol, color;
-    
-    switch(status) {
-        case "ok":
-            symbol = "🟢";
-            color = "green";
-            break;
-        case "degraded":
-            symbol = "🟡";
-            color = "orange";
-            break;
-        case "error":
-            symbol = "🔴";
-            color = "red";
-            break;
-        case "unknown":
-            symbol = "⏳";
-            color = "gray";
-            break;
-        default:
-            symbol = "⚠️";
-            color = "gray";
+  function updateIndicator(status, data) {
+    // Mise à jour de la carte système principale
+    const systemCard = document.getElementById("system-status-card");
+    if (systemCard) {
+        const statusDot = systemCard.querySelector(".status-dot");
+        const statusText = systemCard.querySelector(".status-text");
+        
+        if (statusDot) {
+            statusDot.className = `status-dot ${status}`;
+        }
+        
+        if (statusText) {
+            statusText.textContent = status === "ok" ? "Opérationnel" :
+                                    status === "degraded" ? "Dégradé" :
+                                    status === "error" ? "Erreur" : "Inconnu";
+        }
     }
     
-    indicator.textContent = symbol;
-    indicator.style.color = color;
-    
-    // Créer un titre détaillé pour le survol
-    let title = `État système: ${status.toUpperCase()}`;
-    title += `\nMis à jour: ${new Date().toLocaleTimeString()}`;
-    
-    // Si des données détaillées sont disponibles, les ajouter
+    // Mise à jour des cartes de composants
     if (data && data.components) {
-        if (data.components.llm) title += `\nLLM: ${data.components.llm.status}`;
-        if (data.components.tts) title += `\nTTS: ${data.components.tts.status}`;
-        if (data.components.stt) title += `\nSTT: ${data.components.stt.status}`;
+        for (const [component, compStatus] of Object.entries(data.components)) {
+            const card = document.getElementById(`${component}-status-card`);
+            if (card) {
+                const statusDot = card.querySelector(".status-dot");
+                const statusText = card.querySelector(".status-text");
+                
+                if (statusDot) {
+                    statusDot.className = `status-dot ${compStatus.status}`;
+                }
+                
+                if (statusText) {
+                    statusText.textContent = compStatus.status === "ok" ? "Opérationnel" :
+                                            compStatus.status === "error" ? "Erreur" : "Inconnu";
+                }
+            }
+        }
     }
-    
-    indicator.title = title;
 }
 
 // Initialisation
