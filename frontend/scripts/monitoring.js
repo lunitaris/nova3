@@ -5,11 +5,8 @@ function allStatusesAvailable(components) {
 
   
 
-
-
   async function fetchSystemStatus() {
     try {
-        // Appeler l'endpoint correct qui retourne toutes les infos
         const res = await fetch(`${CONFIG.API_BASE_URL}/api/admin/status`);
         
         if (!res.ok) {
@@ -21,25 +18,49 @@ function allStatusesAvailable(components) {
         const data = await res.json();
         console.log("Données de statut reçues:", data);
         
-        // Mise à jour de l'indicateur principal
-        const statusFinal = data.status || "unknown";
-        updateIndicator(statusFinal, data);
-
         // Mise à jour des jauges de ressources système
         if (data.cpu_usage !== undefined) {
             setGaugeValue('cpu-gauge', data.cpu_usage);
         }
         
-        if (data.memory_usage && data.memory_usage.used_percent) {
+        if (data.memory_usage && data.memory_usage.used_percent !== undefined) {
             setGaugeValue('memory-gauge', data.memory_usage.used_percent);
         }
         
-        if (data.disk_usage && data.disk_usage.used_percent) {
+        if (data.disk_usage && data.disk_usage.used_percent !== undefined) {
             setGaugeValue('disk-gauge', data.disk_usage.used_percent);
         }
-
-        // Mise à jour des mini-indicateurs
-        updateMiniIndicators(data);
+        
+        // Mise à jour des statuts des composants
+        if (data.components) {
+            for (const [component, status] of Object.entries(data.components)) {
+                const card = document.getElementById(`${component}-status-card`);
+                if (card) {
+                    const statusDot = card.querySelector('.status-dot');
+                    const statusText = card.querySelector('.status-text');
+                    
+                    if (statusDot) {
+                        statusDot.className = `status-dot ${status.status}`;
+                    }
+                    
+                    if (statusText) {
+                        statusText.textContent = getStatusText(status.status);
+                    }
+                }
+                
+                // Mise à jour des mini-indicateurs
+                const miniIndicator = document.getElementById(`status-${component}`);
+                if (miniIndicator) {
+                    const statusIcon = status.status === 'ok' ? '🟢' : 
+                                     status.status === 'degraded' ? '🟡' : 
+                                     status.status === 'error' ? '🔴' : '⏳';
+                    miniIndicator.textContent = statusIcon;
+                }
+            }
+        }
+        
+        // Mise à jour de l'indicateur principal
+        updateIndicator(data.status || "unknown", data);
         
     } catch (error) {
         console.error("Erreur lors de la récupération du statut:", error);
@@ -48,11 +69,24 @@ function allStatusesAvailable(components) {
 }
 
 
+function getStatusText(status) {
+    switch(status) {
+        case 'ok':
+            return 'Opérationnel';
+        case 'degraded':
+            return 'Dégradé';
+        case 'error':
+            return 'Erreur';
+        default:
+            return 'Inconnu';
+    }
+}
+
 function setGaugeValue(gaugeId, value) {
     const gauge = document.getElementById(gaugeId);
     if (gauge) {
         const gaugeValue = gauge.querySelector('.gauge-value');
-        const gaugeLabel = gauge.querySelector('.gauge-label');
+        const gaugeLabel = gauge.parentElement.querySelector('.gauge-label');
         
         if (gaugeValue) {
             gaugeValue.style.height = `${value}%`;
